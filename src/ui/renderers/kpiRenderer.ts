@@ -54,22 +54,23 @@ export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcom
     UI.kpiNetRealizedApy.textContent = fmtPct(res.netRealizedAPY, false);
   }
   if (UI.kpiFeeDragBadge) {
-    UI.kpiFeeDragBadge.textContent = `-${res.feeDragAPY.toFixed(2)}% fee (${state.days}d)`;
+    UI.kpiFeeDragBadge.textContent = `-${res.feeDragAPY.toFixed(2)}% fee`;
   }
   if (UI.valFeeDragAnnual) {
     UI.valFeeDragAnnual.textContent = `-${res.feeDragAPY.toFixed(2)}% APY (${state.days}d)`;
   }
 
-  // 3-Month US Treasury Bills Benchmark comparison (+X.XX% vs 4.35% T-Bills)
+  // 3-Month US Treasury Bills Benchmark comparison (+X.XX% vs T-Bills)
   if (UI.kpiTbillSpreadBadge) {
     const isSpreadPositive = res.excessSpreadAPY >= 0;
-    UI.kpiTbillSpreadBadge.textContent = `${isSpreadPositive ? '+' : ''}${res.excessSpreadAPY.toFixed(2)}% vs ${res.tbillRate.toFixed(2)}% T-Bills`;
+    UI.kpiTbillSpreadBadge.textContent = `${isSpreadPositive ? '+' : ''}${res.excessSpreadAPY.toFixed(2)}% vs T-Bills`;
+    UI.kpiTbillSpreadBadge.title = `Alpha spread over 3-Month US Treasury Bills (${res.tbillRate.toFixed(2)}% risk-free rate)`;
     UI.kpiTbillSpreadBadge.className = isSpreadPositive
-      ? 'px-1.5 py-0.5 rounded font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800 text-[10px] font-mono'
-      : 'px-1.5 py-0.5 rounded font-bold text-rose-400 bg-rose-950/80 border border-rose-800 text-[10px] font-mono';
+      ? 'px-1.5 py-0.5 rounded font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800 text-[10px] font-mono shrink-0'
+      : 'px-1.5 py-0.5 rounded font-bold text-rose-400 bg-rose-950/80 border border-rose-800 text-[10px] font-mono shrink-0';
   }
 
-  if (UI.kpiTotalApy) UI.kpiTotalApy.textContent = `Gross: ${fmtPct(res.totalStrategyAPY, false)}`;
+  if (UI.kpiTotalApy) UI.kpiTotalApy.textContent = fmtPct(res.totalStrategyAPY, false);
   if (UI.kpiSpotApyContrib) UI.kpiSpotApyContrib.textContent = fmtPct(res.spotAPYContrib);
   if (UI.kpiPerpApyContrib) UI.kpiPerpApyContrib.textContent = fmtPct(res.perpAPYContrib);
   if (UI.kpiApyMode) UI.kpiApyMode.textContent = state.mode === 'unified' ? 'UNIFIED 100%' : `${state.splitSpot}% SPOT`;

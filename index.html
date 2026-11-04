@@ -165,13 +165,13 @@
           <span>Net Realized APY</span>
           <span id="kpi-apy-mode" class="text-[9px] px-1 rounded bg-slate-800 text-cyan-300 font-mono">UNIFIED</span>
         </div>
-        <div class="mt-1 flex items-baseline gap-2">
+        <div class="mt-1 flex items-baseline justify-between gap-1">
           <span id="kpi-net-realized-apy" class="text-2xl font-bold font-mono text-emerald-400">12.80%</span>
-          <span class="text-xs font-mono font-medium text-slate-400" id="kpi-fee-drag-badge">-0.40% fee</span>
+          <span id="kpi-tbill-spread-badge" class="px-1.5 py-0.5 rounded font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800 text-[10px] font-mono shrink-0" title="Excess alpha spread over 3-Month US Treasury Bills (4.35% risk-free rate)">+8.46% vs T-Bills</span>
         </div>
-        <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1 font-mono">
-          <span id="kpi-tbill-spread-badge" class="px-1.5 py-0.5 rounded font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800">+8.45% vs 4.35% T-Bills</span>
-          <span id="kpi-total-apy" class="text-slate-400 font-medium">Gross: 13.2%</span>
+        <div class="text-[10px] text-slate-400 mt-1 font-mono flex items-center justify-between">
+          <span>Gross: <strong id="kpi-total-apy" class="text-slate-300 font-medium">13.20%</strong></span>
+          <span id="kpi-fee-drag-badge" class="text-rose-400/90 font-mono">-0.41% fee</span>
         </div>
       </div>
 
@@ -378,13 +378,8 @@
                 </svg>
                 TRADED INSTRUMENTS
               </h2>
-              <span id="inst-pair-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold truncate max-w-[120px] sm:max-w-[150px] xl:max-w-none">
+              <span id="inst-pair-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold truncate max-w-[130px] sm:max-w-[170px] xl:max-w-none">
                 wstETH / ETH-USDT PERP
-              </span>
-              <span id="badge-forward-carry" class="group relative inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/80 font-bold cursor-help" title="Forward Carry (Contango) Rationale: Crypto futures maintain persistent positive funding because natural market demand is net-long. Speculators pay continuous funding to rent leverage, creating a perpetual positive carry harvest for delta-neutral hedgers.">
-                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                FORWARD CARRY (CONTANGO)
-                <svg class="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </span>
             </div>
             <!-- Quick Asset Filter/Selector -->
@@ -429,7 +424,14 @@
                   <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
                   LEG 2: SHORT PERP
                 </span>
-                <span id="inst-perp-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">LINEAR PERP</span>
+                <div class="flex items-center gap-1.5">
+                  <span id="badge-forward-carry" class="group relative inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-950/90 text-indigo-300 border border-indigo-700/80 font-bold cursor-help" title="Forward Carry (Contango) Rationale: Crypto futures maintain persistent positive funding because natural market demand is net-long. Speculators pay continuous funding to rent leverage, creating a perpetual positive carry harvest for delta-neutral hedgers.">
+                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                    FORWARD CARRY
+                    <svg class="w-2.5 h-2.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  </span>
+                  <span id="inst-perp-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">LINEAR PERP</span>
+                </div>
               </div>
               <div class="flex items-baseline justify-between gap-1 min-w-0">
                 <div id="inst-perp-symbol" class="text-base font-bold text-white tracking-tight truncate">ETH-USDT PERP</div>
