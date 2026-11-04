@@ -61,12 +61,12 @@
 
       <!-- Account Mode Switcher Tabs -->
       <div class="flex items-center bg-brand-card p-1 rounded-xl border border-brand-border text-xs font-mono">
-        <button id="mode-btn-unified" onclick="setAccountMode('unified')" 
+        <button id="mode-btn-unified" data-action="set-mode" data-mode="unified" 
           class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
           Unified Margin (Cross-Collateral)
         </button>
-        <button id="mode-btn-isolated" onclick="setAccountMode('isolated')" 
+        <button id="mode-btn-isolated" data-action="set-mode" data-mode="isolated" 
           class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           Isolated Margin (USDC)
@@ -97,11 +97,11 @@
         <!-- Venue Switcher Pill in Top Feed Ribbon -->
         <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[10px] font-mono shrink-0">
           <span class="text-slate-500 text-[9px] px-1.5">VENUE:</span>
-          <button type="button" onclick="setFundingVenue('binance')" id="feed-venue-btn-binance"
+          <button type="button" data-action="set-venue" data-venue="binance" id="feed-venue-btn-binance"
             class="px-2 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer">Binance</button>
-          <button type="button" onclick="setFundingVenue('hyperliquid')" id="feed-venue-btn-hyperliquid"
+          <button type="button" data-action="set-venue" data-venue="hyperliquid" id="feed-venue-btn-hyperliquid"
             class="px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Hyperliquid</button>
-          <button type="button" onclick="setFundingVenue('average')" id="feed-venue-btn-average"
+          <button type="button" data-action="set-venue" data-venue="average" id="feed-venue-btn-average"
             class="px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Average</button>
         </div>
 
@@ -129,14 +129,14 @@
       <!-- Live Sync Controls -->
       <div class="flex items-center gap-2 shrink-0">
         <span id="feed-last-updated" class="text-[10px] text-slate-500 hidden md:inline">Syncing feeds...</span>
-        <button id="btn-open-historical-modal" onclick="openHistoricalModal()" 
+        <button id="btn-open-historical-modal" data-action="open-historical-modal" 
           class="px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition flex items-center gap-1.5 text-[11px] font-mono cursor-pointer" title="View multi-venue historical funding rates and carry analytics">
           <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
           </svg>
           <span class="hidden sm:inline">Historical Carry</span> Analytics
         </button>
-        <button id="btn-refresh-feed" onclick="refreshLiveRates()" 
+        <button id="btn-refresh-feed" data-action="refresh-live-rates" 
           class="px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 transition flex items-center gap-1.5 text-[11px] font-mono cursor-pointer" title="Fetch latest funding rates and staking yields">
           <svg id="refresh-icon" class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -285,7 +285,7 @@
                 <span class="text-[11px] text-slate-400 hidden sm:inline font-mono">(Simulated Spot Shock)</span>
               </div>
               <div class="flex items-center gap-2">
-                <button onclick="setPriceChange(0)" title="Reset price shock to 0%" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">Reset (0%)</button>
+                <button data-action="set-price-change" data-pct="0" title="Reset price shock to 0%" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">Reset (0%)</button>
                 <span id="val-price-move" class="font-mono font-bold text-base text-cyan-300 bg-cyan-950/80 px-2.5 py-0.5 rounded-lg border border-cyan-800/80">0.0%</span>
               </div>
             </div>
@@ -293,13 +293,13 @@
             <input type="range" id="input-price-move" min="-100" max="100" step="0.5" value="0" class="w-full cursor-pointer">
 
             <div class="flex justify-between text-[11px] font-mono text-slate-400 select-none">
-              <button type="button" onclick="setPriceChange(-100)" class="hover:text-rose-400 transition cursor-pointer text-left">-100% (Capitulation)</button>
-              <button type="button" onclick="setPriceChange(-50)" class="hover:text-slate-300 transition cursor-pointer hidden sm:inline">-50%</button>
-              <button type="button" onclick="setPriceChange(-20)" class="hover:text-slate-300 transition cursor-pointer">-20%</button>
-              <button type="button" onclick="setPriceChange(0)" class="hover:text-cyan-300 font-bold transition cursor-pointer">0% (Entry)</button>
-              <button type="button" onclick="setPriceChange(20)" class="hover:text-slate-300 transition cursor-pointer">+20%</button>
-              <button type="button" onclick="setPriceChange(50)" class="hover:text-slate-300 transition cursor-pointer hidden sm:inline">+50%</button>
-              <button type="button" onclick="setPriceChange(100)" class="hover:text-emerald-400 transition cursor-pointer text-right">+100% (2x Rally)</button>
+              <button type="button" data-action="set-price-change" data-pct="-100" class="hover:text-rose-400 transition cursor-pointer text-left">-100% (Capitulation)</button>
+              <button type="button" data-action="set-price-change" data-pct="-50" class="hover:text-slate-300 transition cursor-pointer hidden sm:inline">-50%</button>
+              <button type="button" data-action="set-price-change" data-pct="-20" class="hover:text-slate-300 transition cursor-pointer">-20%</button>
+              <button type="button" data-action="set-price-change" data-pct="0" class="hover:text-cyan-300 font-bold transition cursor-pointer">0% (Entry)</button>
+              <button type="button" data-action="set-price-change" data-pct="20" class="hover:text-slate-300 transition cursor-pointer">+20%</button>
+              <button type="button" data-action="set-price-change" data-pct="50" class="hover:text-slate-300 transition cursor-pointer hidden sm:inline">+50%</button>
+              <button type="button" data-action="set-price-change" data-pct="100" class="hover:text-emerald-400 transition cursor-pointer text-right">+100% (2x Rally)</button>
             </div>
           </div>
         </div>
@@ -372,10 +372,10 @@
             <!-- Quick Asset Filter/Selector -->
             <div class="flex items-center gap-1 text-[10px] font-mono shrink-0" id="asset-selector-group">
               <span class="text-slate-500 text-[10px] mr-0.5">ASSET:</span>
-              <button onclick="setTradedAsset('ETH')" id="asset-btn-eth" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition">ETH</button>
-              <button onclick="setTradedAsset('BTC')" id="asset-btn-btc" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">BTC</button>
-              <button onclick="setTradedAsset('SOL')" id="asset-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">SOL</button>
-              <button onclick="openTriadModal()" id="btn-triad-info" class="ml-1 text-slate-400 hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-600 transition flex items-center gap-1 text-[10px] font-mono" title="Institutional Asset Whitelist: Why only BTC, ETH, and SOL?">
+              <button data-action="set-traded-asset" data-asset="ETH" id="asset-btn-eth" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition">ETH</button>
+              <button data-action="set-traded-asset" data-asset="BTC" id="asset-btn-btc" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">BTC</button>
+              <button data-action="set-traded-asset" data-asset="SOL" id="asset-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">SOL</button>
+              <button data-action="open-triad-modal" id="btn-triad-info" class="ml-1 text-slate-400 hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-600 transition flex items-center gap-1 text-[10px] font-mono" title="Institutional Asset Whitelist: Why only BTC, ETH, and SOL?">
                 <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 <span class="hidden sm:inline">Why 3?</span>
               </button>
@@ -451,7 +451,7 @@
               </svg>
               MODEL PARAMETERS
             </h2>
-            <button onclick="resetDefaults()" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300">Reset</button>
+            <button data-action="reset-defaults" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300">Reset</button>
           </div>
 
           <!-- UNIFIED MARGIN PRESETS (Visible in Unified Mode) -->
@@ -466,21 +466,21 @@
 
             <!-- The 4 Core Institutional Presets -->
             <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
-              <div onclick="applyCollateralPreset('inverse_100')" id="btn-preset-100" role="button" tabindex="0"
+              <div data-action="apply-collateral-preset" data-preset="inverse_100" id="btn-preset-100" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
                 <div class="font-bold text-white">100% (Inverse)</div>
                 <div class="text-[10px] text-slate-400">0% Haircut | 0.0% Stake</div>
                 <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: Infinite (∞)</div>
               </div>
 
-              <div onclick="applyCollateralPreset('btc_eth_95')" id="btn-preset-95" role="button" tabindex="0"
+              <div data-action="apply-collateral-preset" data-preset="btc_eth_95" id="btn-preset-95" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
                 <div class="font-bold text-white">95% (BTC / ETH)</div>
                 <div class="text-[10px] text-slate-400">5% Haircut | 0.0% Stake</div>
                 <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +1,718% move</div>
               </div>
 
-              <div onclick="applyCollateralPreset('wsteth_90')" id="btn-preset-90" role="button" tabindex="0"
+              <div data-action="apply-collateral-preset" data-preset="wsteth_90" id="btn-preset-90" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition cursor-pointer select-none">
                 <div class="font-bold text-cyan-300">90% (wstETH)</div>
                 <div id="subtext-preset-90" class="text-[10px] text-slate-300">10% Haircut | 3.2% Stake</div>
@@ -488,15 +488,15 @@
               </div>
 
               <!-- 85% SOL LRT Preset with Inline Segmented Yield Sub-Pill -->
-              <div onclick="applyCollateralPreset('sol_lrt_85')" id="btn-preset-85" role="button" tabindex="0"
+              <div data-action="apply-collateral-preset" data-preset="sol_lrt_85" id="btn-preset-85" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none flex flex-col justify-between">
                 <div class="flex items-center justify-between gap-1">
                   <div class="font-bold text-white truncate">85% (SOL)</div>
                   <!-- Inline Yield Mode Sub-Pill -->
                   <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[9px] font-mono shrink-0" title="Solana Token Inflation: Toggle Real (net of ~5.4% dilution) vs Nominal yield">
-                    <button type="button" onclick="event.stopPropagation(); setSolYieldType('real')" id="btn-sol-real"
+                    <button type="button" data-action="set-sol-yield" data-yield="real" id="btn-sol-real"
                       class="px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm">Real</button>
-                    <button type="button" onclick="event.stopPropagation(); setSolYieldType('nominal')" id="btn-sol-nominal"
+                    <button type="button" data-action="set-sol-yield" data-yield="nominal" id="btn-sol-nominal"
                       class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white">Nom</button>
                   </div>
                 </div>
@@ -516,10 +516,10 @@
             <div class="flex items-center justify-between text-xs">
               <label class="font-semibold text-slate-300">Underlying Asset</label>
               <div class="flex items-center gap-1 text-[10px] font-mono">
-                <button onclick="setTradedAsset('ETH')" id="iso-btn-eth" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">ETH</button>
-                <button onclick="setTradedAsset('BTC')" id="iso-btn-btc" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition">BTC</button>
-                <button onclick="setTradedAsset('SOL')" id="iso-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">SOL</button>
-                <button onclick="openTriadModal()" class="ml-1 text-slate-400 hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-600 transition flex items-center gap-1 text-[10px]" title="Institutional Asset Whitelist: Why only BTC, ETH, and SOL?">
+                <button data-action="set-traded-asset" data-asset="ETH" id="iso-btn-eth" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">ETH</button>
+                <button data-action="set-traded-asset" data-asset="BTC" id="iso-btn-btc" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition">BTC</button>
+                <button data-action="set-traded-asset" data-asset="SOL" id="iso-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">SOL</button>
+                <button data-action="open-triad-modal" class="ml-1 text-slate-400 hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-600 transition flex items-center gap-1 text-[10px]" title="Institutional Asset Whitelist: Why only BTC, ETH, and SOL?">
                   <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                   <span class="hidden sm:inline">Why 3?</span>
                 </button>
@@ -536,13 +536,13 @@
                 <span id="label-btclst-mode" class="text-xs font-bold text-amber-300">LBTC (Babylon LST)</span>
               </div>
               <div class="grid grid-cols-3 gap-1 text-[10px] font-mono">
-                <button onclick="setBtcVariant('native')" id="btn-btc-native" class="py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate">
+                <button data-action="set-btc-variant" data-variant="native" id="btn-btc-native" class="py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate">
                   Native BTC (0%)
                 </button>
-                <button onclick="setBtcVariant('lbtc')" id="btn-btc-lbtc" class="py-1 px-1 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold transition text-center truncate">
+                <button data-action="set-btc-variant" data-variant="lbtc" id="btn-btc-lbtc" class="py-1 px-1 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold transition text-center truncate">
                   LBTC (3.2%)
                 </button>
-                <button onclick="setBtcVariant('solvbtc')" id="btn-btc-solvbtc" class="py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate">
+                <button data-action="set-btc-variant" data-variant="solvbtc" id="btn-btc-solvbtc" class="py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate">
                   SolvBTC.BBN (3.5%)
                 </button>
               </div>
@@ -558,10 +558,10 @@
               </div>
               <input type="range" id="input-split" min="30" max="85" step="1" value="50" class="w-full">
               <div class="flex items-center justify-between gap-1.5 pt-1">
-                <button onclick="setSplit(50)" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">50/50 (1x)</button>
-                <button onclick="setSplit(67)" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">67/33 (2x)</button>
-                <button onclick="setSplit(75)" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">75/25 (3x)</button>
-                <button onclick="setSplit(80)" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">80/20 (4x)</button>
+                <button data-action="set-split" data-split="50" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">50/50 (1x)</button>
+                <button data-action="set-split" data-split="67" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">67/33 (2x)</button>
+                <button data-action="set-split" data-split="75" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">75/25 (3x)</button>
+                <button data-action="set-split" data-split="80" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">80/20 (4x)</button>
               </div>
               <p id="split-helper-text" class="text-[11px] text-slate-400 font-mono pt-0.5">
                 Effective Short Leverage: 1.00x (Liquidation buffer: +99.0%)
@@ -590,10 +590,10 @@
             </div>
             <input type="range" id="input-days" min="1" max="365" step="1" value="90" class="w-full">
             <div class="flex justify-between gap-1 pt-0.5">
-              <button onclick="setDays(30)" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">30d</button>
-              <button onclick="setDays(90)" class="w-full py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800">90d</button>
-              <button onclick="setDays(180)" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">180d</button>
-              <button onclick="setDays(365)" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">365d (1y)</button>
+              <button data-action="set-days" data-days="30" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">30d</button>
+              <button data-action="set-days" data-days="90" class="w-full py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800">90d</button>
+              <button data-action="set-days" data-days="180" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">180d</button>
+              <button data-action="set-days" data-days="365" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">365d (1y)</button>
             </div>
           </div>
 
@@ -607,22 +607,22 @@
             <!-- Rolling Trailing Horizon Pills for Staking -->
             <div class="flex items-center gap-1 flex-wrap py-0.5">
               <span class="text-[9px] text-slate-500 font-mono">APPLY:</span>
-              <button type="button" id="pill-stake-live" onclick="applyHistoricalStaking('live')" 
+              <button type="button" id="pill-stake-live" data-action="apply-historical-staking" data-window="live" 
                 class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/80 hover:bg-cyan-900 transition flex items-center gap-1 font-mono cursor-pointer" 
                 title="Snap staking rate to live protocol yield">
                 ⚡ Live: <span id="label-pill-stake-live">2.30%</span>
               </button>
-              <button type="button" id="pill-stake-7d" onclick="applyHistoricalStaking('7d')" 
+              <button type="button" id="pill-stake-7d" data-action="apply-historical-staking" data-window="7d" 
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
                 title="Apply 7-day trailing average staking APY">
                 7d: <span id="label-pill-stake-7d">2.28%</span>
               </button>
-              <button type="button" id="pill-stake-30d" onclick="applyHistoricalStaking('30d')" 
+              <button type="button" id="pill-stake-30d" data-action="apply-historical-staking" data-window="30d" 
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
                 title="Apply 30-day trailing average staking APY">
                 30d: <span id="label-pill-stake-30d">2.31%</span>
               </button>
-              <button type="button" id="pill-stake-90d" onclick="applyHistoricalStaking('90d')" 
+              <button type="button" id="pill-stake-90d" data-action="apply-historical-staking" data-window="90d" 
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
                 title="Apply 90-day trailing average staking APY">
                 90d: <span id="label-pill-stake-90d">2.35%</span>
@@ -648,11 +648,11 @@
                 <label class="font-semibold text-slate-300">Perp Funding APR</label>
                 <!-- Venue Switcher Pill on Slider -->
                 <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[9px] font-mono shrink-0">
-                  <button type="button" onclick="setFundingVenue('binance')" id="slider-venue-btn-binance"
+                  <button type="button" data-action="set-venue" data-venue="binance" id="slider-venue-btn-binance"
                     class="px-1.5 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer">Binance</button>
-                  <button type="button" onclick="setFundingVenue('hyperliquid')" id="slider-venue-btn-hyperliquid"
+                  <button type="button" data-action="set-venue" data-venue="hyperliquid" id="slider-venue-btn-hyperliquid"
                     class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Hyperliquid</button>
-                  <button type="button" onclick="setFundingVenue('average')" id="slider-venue-btn-average"
+                  <button type="button" data-action="set-venue" data-venue="average" id="slider-venue-btn-average"
                     class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Average</button>
                 </div>
               </div>
@@ -662,22 +662,22 @@
             <!-- Rolling Trailing Horizon Pills for Funding -->
             <div class="flex items-center gap-1 flex-wrap py-0.5">
               <span class="text-[9px] text-slate-500 font-mono">APPLY:</span>
-              <button type="button" id="pill-fund-live" onclick="applyHistoricalFunding('live')" 
+              <button type="button" id="pill-fund-live" data-action="apply-historical-funding" data-window="live" 
                 class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/80 hover:bg-cyan-900 transition flex items-center gap-1 font-mono cursor-pointer" 
                 title="Snap funding rate to selected live exchange rate">
                 ⚡ Live: <span id="label-pill-fund-live">+10.95%</span>
               </button>
-              <button type="button" id="pill-fund-7d" onclick="applyHistoricalFunding('7d')" 
+              <button type="button" id="pill-fund-7d" data-action="apply-historical-funding" data-window="7d" 
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
                 title="Apply 7-day trailing average perp funding rate">
                 7d: <span id="label-pill-fund-7d">+10.42%</span>
               </button>
-              <button type="button" id="pill-fund-30d" onclick="applyHistoricalFunding('30d')" 
+              <button type="button" id="pill-fund-30d" data-action="apply-historical-funding" data-window="30d" 
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
                 title="Apply 30-day trailing average perp funding rate">
                 30d: <span id="label-pill-fund-30d">+10.15%</span>
               </button>
-              <button type="button" id="pill-fund-90d" onclick="applyHistoricalFunding('90d')" 
+              <button type="button" id="pill-fund-90d" data-action="apply-historical-funding" data-window="90d" 
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
                 title="Apply 90-day trailing average perp funding rate">
                 90d: <span id="label-pill-fund-90d">+9.80%</span>
@@ -712,27 +712,27 @@
             <!-- Rolling / Scenario Presets for Depeg -->
             <div class="flex items-center gap-1 flex-wrap py-0.5" id="container-depeg-pills">
               <span class="text-[9px] text-slate-500 font-mono">APPLY:</span>
-              <button type="button" id="pill-depeg-live" onclick="applyLiveDepeg()"
+              <button type="button" id="pill-depeg-live" data-action="apply-live-depeg"
                 class="text-[10px] px-2 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800/80 hover:bg-rose-900/60 transition flex items-center gap-1 font-mono cursor-pointer"
                 title="Snap discount to current live secondary market rate">
                 ⚡ Live: <span id="label-pill-depeg-live">0.08%</span>
               </button>
-              <button type="button" id="pill-depeg-0" onclick="setDepeg(0)"
+              <button type="button" id="pill-depeg-0" data-action="set-depeg" data-pct="0"
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition font-mono cursor-pointer"
                 title="Zero depeg: Perfect 1:1 backing / parity">
                 0% (Parity)
               </button>
-              <button type="button" id="pill-depeg-2" onclick="setDepeg(2)"
+              <button type="button" id="pill-depeg-2" data-action="set-depeg" data-pct="2"
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition font-mono cursor-pointer"
                 title="Mild depeg: 2% secondary market discount">
                 2% (Mild)
               </button>
-              <button type="button" id="pill-depeg-5" onclick="setDepeg(5)"
+              <button type="button" id="pill-depeg-5" data-action="set-depeg" data-pct="5"
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition font-mono cursor-pointer"
                 title="Severe depeg: 5% liquidity crunch">
                 5% (Severe)
               </button>
-              <button type="button" id="pill-depeg-8" onclick="setDepeg(8)"
+              <button type="button" id="pill-depeg-8" data-action="set-depeg" data-pct="8"
                 class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition font-mono cursor-pointer"
                 title="Black swan: 8% tail risk liquidation cascade">
                 8% (Black Swan)
@@ -800,7 +800,7 @@
             Only BTC, ETH, and SOL qualify for institutional delta-neutral execution due to 80%–98% CEX valuation ratios and multi-billion perp liquidity.
           </p>
         </div>
-        <button onclick="openTriadModal()" class="w-full mt-2 py-1.5 px-2.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 hover:text-white border border-cyan-700/60 transition text-[11px] font-mono font-semibold flex items-center justify-center gap-1.5">
+        <button data-action="open-triad-modal" class="w-full mt-2 py-1.5 px-2.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 hover:text-white border border-cyan-700/60 transition text-[11px] font-mono font-semibold flex items-center justify-center gap-1.5">
           <span>Read Whitelist Analysis</span>
           <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
@@ -830,7 +830,7 @@
           </p>
         </div>
         
-        <button onclick="closeTriadModal()" id="btn-triad-close" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" aria-label="Close modal">
+        <button data-action="close-triad-modal" id="btn-triad-close" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" aria-label="Close modal">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
           </svg>
@@ -1002,7 +1002,7 @@
       <!-- Modal Footer -->
       <div class="px-5 py-3 border-t border-brand-border bg-brand-card/90 flex items-center justify-between shrink-0">
         <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">DELTA-Q ENGINE // RISK POLICY SPECIFICATION</span>
-        <button onclick="closeTriadModal()" id="btn-triad-close-footer" class="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs transition">
+        <button data-action="close-triad-modal" id="btn-triad-close-footer" class="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs transition">
           Close Guide
         </button>
       </div>
@@ -1031,23 +1031,23 @@
           <!-- Asset Selector (ETH / BTC / SOL) -->
           <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700 text-xs font-mono">
             <span class="text-slate-500 text-[10px] px-1.5 hidden sm:inline">ASSET:</span>
-            <button type="button" id="hist-btn-asset-eth" onclick="setHistoricalAsset('ETH')" 
+            <button type="button" id="hist-btn-asset-eth" data-action="set-historical-asset" data-asset="ETH" 
               class="px-2.5 py-1 rounded-md font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm transition cursor-pointer">ETH</button>
-            <button type="button" id="hist-btn-asset-btc" onclick="setHistoricalAsset('BTC')" 
+            <button type="button" id="hist-btn-asset-btc" data-action="set-historical-asset" data-asset="BTC" 
               class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">BTC</button>
-            <button type="button" id="hist-btn-asset-sol" onclick="setHistoricalAsset('SOL')" 
+            <button type="button" id="hist-btn-asset-sol" data-action="set-historical-asset" data-asset="SOL" 
               class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">SOL</button>
           </div>
 
           <!-- Timeframe Range Switcher -->
           <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700 text-xs font-mono">
-            <button type="button" id="hist-btn-range-30" onclick="setHistoricalTimeframe(30)" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">30D</button>
-            <button type="button" id="hist-btn-range-90" onclick="setHistoricalTimeframe(90)" class="px-2.5 py-1 rounded-md font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm transition cursor-pointer">90D</button>
-            <button type="button" id="hist-btn-range-180" onclick="setHistoricalTimeframe(180)" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">180D</button>
+            <button type="button" id="hist-btn-range-30" data-action="set-historical-timeframe" data-tf="30" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">30D</button>
+            <button type="button" id="hist-btn-range-90" data-action="set-historical-timeframe" data-tf="90" class="px-2.5 py-1 rounded-md font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm transition cursor-pointer">90D</button>
+            <button type="button" id="hist-btn-range-180" data-action="set-historical-timeframe" data-tf="180" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">180D</button>
           </div>
 
           <!-- Close 'X' Button -->
-          <button onclick="closeHistoricalModal()" id="btn-historical-close" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition" aria-label="Close Modal">
+          <button data-action="close-historical-modal" id="btn-historical-close" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition" aria-label="Close Modal">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
@@ -1161,15 +1161,15 @@
       <div class="px-5 py-3 border-t border-brand-border bg-brand-card/90 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div class="flex items-center gap-2">
           <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider hidden sm:inline">Apply to Model (<span id="hist-footer-asset-label" class="text-cyan-300 font-bold">ETH</span>):</span>
-          <button onclick="applyHistoricalWindowToAll('30d')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs border border-slate-700 transition cursor-pointer">
+          <button data-action="apply-historical-window-to-all" data-window="30d" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs border border-slate-700 transition cursor-pointer">
             Apply 30d Avg to Model
           </button>
-          <button onclick="applyHistoricalWindowToAll('90d')" class="px-3 py-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 font-bold font-mono text-xs border border-cyan-700 transition cursor-pointer">
+          <button data-action="apply-historical-window-to-all" data-window="90d" class="px-3 py-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 font-bold font-mono text-xs border border-cyan-700 transition cursor-pointer">
             Apply 90d Avg to Model
           </button>
         </div>
 
-        <button onclick="closeHistoricalModal()" id="btn-historical-close-footer" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs transition cursor-pointer">
+        <button data-action="close-historical-modal" id="btn-historical-close-footer" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs transition cursor-pointer">
           Close
         </button>
       </div>

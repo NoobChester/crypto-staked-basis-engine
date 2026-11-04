@@ -28,13 +28,13 @@ import {
 import {
   getUIElements,
   renderUI,
-  bindInputListeners,
   renderHistoricalPills,
   renderHistoricalModal,
   updateHistoricalTooltip,
   updateDepegControl,
   type UIElements
 } from './ui/dom.js';
+import { setupEventDelegation, bindSliderListeners } from './ui/events.js';
 import { drawChart, setupChartInteractions } from './ui/chart.js';
 import { drawHistoricalChart, drawHistoricalSubChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
 
@@ -623,63 +623,36 @@ export function closeTriadModal(): void {
   }
 }
 
-declare global {
-  interface Window {
-    setAccountMode: typeof setAccountMode;
-    setTradedAsset: typeof setTradedAsset;
-    setBtcVariant: typeof setBtcVariant;
-    applyCollateralPreset: typeof applyCollateralPreset;
-    setSolYieldType: typeof setSolYieldType;
-    setPriceChange: typeof setPriceChange;
-    setDays: typeof setDays;
-    setSplit: typeof setSplit;
-    resetDefaults: typeof resetDefaults;
-    openTriadModal: typeof openTriadModal;
-    closeTriadModal: typeof closeTriadModal;
-    applyLiveFunding: typeof applyLiveFunding;
-    applyLiveStaking: typeof applyLiveStaking;
-    applyHistoricalFunding: typeof applyHistoricalFunding;
-    applyHistoricalStaking: typeof applyHistoricalStaking;
-    applyHistoricalWindowToAll: typeof applyHistoricalWindowToAll;
-    applyLiveDepeg: typeof applyLiveDepeg;
-    setDepeg: typeof setDepeg;
-    openHistoricalModal: typeof openHistoricalModal;
-    closeHistoricalModal: typeof closeHistoricalModal;
-    setHistoricalAsset: typeof setHistoricalAsset;
-    setHistoricalTimeframe: typeof setHistoricalTimeframe;
-    setFundingVenue: typeof setFundingVenue;
-    refreshLiveRates: typeof refreshLiveRates;
-  }
-}
-
-window.setAccountMode = setAccountMode;
-window.setTradedAsset = setTradedAsset;
-window.setBtcVariant = setBtcVariant;
-window.applyCollateralPreset = applyCollateralPreset;
-window.setSolYieldType = setSolYieldType;
-window.setPriceChange = setPriceChange;
-window.setDays = setDays;
-window.setSplit = setSplit;
-window.resetDefaults = resetDefaults;
-window.openTriadModal = openTriadModal;
-window.closeTriadModal = closeTriadModal;
-window.applyLiveFunding = applyLiveFunding;
-window.applyLiveStaking = applyLiveStaking;
-window.applyHistoricalFunding = applyHistoricalFunding;
-window.applyHistoricalStaking = applyHistoricalStaking;
-window.applyHistoricalWindowToAll = applyHistoricalWindowToAll;
-window.applyLiveDepeg = applyLiveDepeg;
-window.setDepeg = setDepeg;
-window.openHistoricalModal = openHistoricalModal;
-window.closeHistoricalModal = closeHistoricalModal;
-window.setHistoricalAsset = setHistoricalAsset;
-window.setHistoricalTimeframe = setHistoricalTimeframe;
-window.setFundingVenue = setFundingVenue;
-window.refreshLiveRates = refreshLiveRates;
 
 function init() {
   UI = getUIElements();
-  bindInputListeners(UI, state, updateApp);
+  setupEventDelegation({
+    setAccountMode,
+    setTradedAsset,
+    setBtcVariant,
+    applyCollateralPreset,
+    setSolYieldType,
+    setPriceChange,
+    setDays,
+    setSplit,
+    resetDefaults,
+    openTriadModal,
+    closeTriadModal,
+    applyLiveFunding,
+    applyLiveStaking,
+    applyHistoricalFunding,
+    applyHistoricalStaking,
+    applyHistoricalWindowToAll,
+    applyLiveDepeg,
+    setDepeg,
+    openHistoricalModal,
+    closeHistoricalModal,
+    setHistoricalAsset,
+    setHistoricalTimeframe,
+    setFundingVenue,
+    refreshLiveRates
+  });
+  bindSliderListeners(UI, state, updateApp);
   setupChartInteractions(UI.canvas, UI, () => state);
 
   if (UI.canvas && UI.canvas.parentElement) {

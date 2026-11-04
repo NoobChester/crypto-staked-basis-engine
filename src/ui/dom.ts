@@ -3,7 +3,6 @@
  * @description DOM element caching, UI event listeners, and component renderer barrel.
  */
 
-import { fmtUSD, fmtPct, type HedgingState } from '../math/hedging.js';
 
 export interface UIElements {
   modeUnifiedBtn: HTMLElement | null;
@@ -428,80 +427,4 @@ export { renderMarketData, renderHistoricalPills } from './renderers/feedRendere
 export { renderHistoricalModal, updateHistoricalTooltip } from './renderers/historicalModalRenderer.js';
 export { updateDepegControl } from './renderers/depegRenderer.js';
 
-export function bindInputListeners(
-  UI: UIElements,
-  state: HedgingState,
-  onUpdate: () => void
-): void {
-  if (UI.inputPriceMove) {
-    UI.inputPriceMove.addEventListener('input', (e) => {
-      state.priceMove = parseFloat((e.target as HTMLInputElement).value);
-      if (UI.valPriceMove) UI.valPriceMove.textContent = fmtPct(state.priceMove);
-      onUpdate();
-    });
-  }
-
-  if (UI.inputCapital) {
-    UI.inputCapital.addEventListener('input', (e) => {
-      const val = Math.max(100, parseFloat((e.target as HTMLInputElement).value) || 1000);
-      state.capital = val;
-      if (UI.valCapital) UI.valCapital.textContent = fmtUSD(val);
-      onUpdate();
-    });
-  }
-
-  if (UI.inputDays) {
-    UI.inputDays.addEventListener('input', (e) => {
-      state.days = parseInt((e.target as HTMLInputElement).value);
-      if (UI.valDays) UI.valDays.textContent = `${state.days} Day${state.days === 1 ? '' : 's'}`;
-      onUpdate();
-    });
-  }
-
-  if (UI.inputFunding) {
-    UI.inputFunding.addEventListener('input', (e) => {
-      state.fundingAPR = parseFloat((e.target as HTMLInputElement).value);
-      state.isLiveFunding = false;
-      (state as any).fundingWindow = 'custom';
-      if (UI.valFunding) {
-        UI.valFunding.textContent = fmtPct(state.fundingAPR) + ' APR';
-        UI.valFunding.className = `font-mono font-bold ${state.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-      }
-      onUpdate();
-    });
-  }
-
-  if (UI.inputStaking) {
-    UI.inputStaking.addEventListener('input', (e) => {
-      state.stakingAPY = parseFloat((e.target as HTMLInputElement).value);
-      state.isLiveStaking = false;
-      (state as any).stakingWindow = 'custom';
-      if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
-      onUpdate();
-    });
-  }
-
-  if (UI.inputDepeg) {
-    UI.inputDepeg.addEventListener('input', (e) => {
-      state.depegPct = parseFloat((e.target as HTMLInputElement).value);
-      if (UI.valDepeg) UI.valDepeg.textContent = state.depegPct.toFixed(1) + '% Discount';
-      onUpdate();
-    });
-  }
-
-  if (UI.inputSplit) {
-    UI.inputSplit.addEventListener('input', (e) => {
-      const spotPct = parseInt((e.target as HTMLInputElement).value);
-      state.splitSpot = spotPct;
-      const marginPct = 100 - spotPct;
-      if (UI.valSplit) UI.valSplit.textContent = `${spotPct}% Spot / ${marginPct}% Margin`;
-
-      const lev = spotPct / marginPct;
-      const rLiq = (((marginPct / spotPct) - state.mmr) / (1 + state.mmr)) * 100;
-      if (UI.splitHelperText) {
-        UI.splitHelperText.textContent = `Effective Short Leverage: ${lev.toFixed(2)}x (Liquidation buffer: +${rLiq.toFixed(1)}%)`;
-      }
-      onUpdate();
-    });
-  }
-}
+export { bindSliderListeners as bindInputListeners } from "./events.js";
