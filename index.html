@@ -286,22 +286,22 @@
       <div class="lg:col-span-5 space-y-4">
         
         <!-- ACTIVE INSTRUMENTS TRADED PANEL -->
-        <div class="bg-brand-card rounded-2xl border border-brand-border p-4 space-y-3">
-          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border pb-2.5">
-            <div class="flex items-center gap-2">
-              <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
-              <h2 class="text-xs font-bold tracking-tight text-white uppercase font-mono flex items-center gap-1.5">
+        <div id="traded-instruments-panel" class="bg-brand-card rounded-2xl border border-brand-border p-4 flex flex-col justify-between sm:h-[340px]">
+          <div class="flex items-center justify-between gap-2 border-b border-brand-border pb-2.5 min-w-0">
+            <div class="flex items-center gap-2 min-w-0">
+              <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"></div>
+              <h2 class="text-xs font-bold tracking-tight text-white uppercase font-mono flex items-center gap-1.5 shrink-0">
                 <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
                 </svg>
                 TRADED INSTRUMENTS
               </h2>
-              <span id="inst-pair-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">
+              <span id="inst-pair-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold truncate max-w-[120px] sm:max-w-[150px] xl:max-w-none">
                 wstETH / ETH-USDT PERP
               </span>
             </div>
             <!-- Quick Asset Filter/Selector -->
-            <div class="flex items-center gap-1 text-[10px] font-mono" id="asset-selector-group">
+            <div class="flex items-center gap-1 text-[10px] font-mono shrink-0" id="asset-selector-group">
               <span class="text-slate-500 text-[10px] mr-0.5">ASSET:</span>
               <button onclick="setTradedAsset('ETH')" id="asset-btn-eth" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition">ETH</button>
               <button onclick="setTradedAsset('BTC')" id="asset-btn-btc" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">BTC</button>
@@ -312,7 +312,7 @@
           <!-- Traded Legs 2-Column Grid -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
             <!-- Leg 1: Spot Long -->
-            <div class="p-3 bg-brand-surface/85 rounded-xl border border-emerald-900/40 relative overflow-hidden space-y-1.5">
+            <div class="p-3 bg-brand-surface/85 rounded-xl border border-emerald-900/40 relative overflow-hidden flex flex-col justify-between h-[124px]">
               <div class="flex items-center justify-between">
                 <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -320,19 +320,19 @@
                 </span>
                 <span id="inst-spot-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">LST SPOT</span>
               </div>
-              <div class="flex items-baseline justify-between">
-                <div id="inst-spot-symbol" class="text-base font-bold text-white tracking-tight">wstETH</div>
-                <div id="inst-spot-yield" class="text-[11px] font-bold text-emerald-400">+3.2% APY</div>
+              <div class="flex items-baseline justify-between gap-1 min-w-0">
+                <div id="inst-spot-symbol" class="text-base font-bold text-white tracking-tight truncate">wstETH</div>
+                <div id="inst-spot-yield" class="text-[11px] font-bold text-emerald-400 shrink-0">+3.2% APY</div>
               </div>
               <div id="inst-spot-desc" class="text-[10px] text-slate-400 truncate">Lido Wrapped Staked ETH</div>
               <div class="pt-1.5 border-t border-slate-800/90 flex items-center justify-between text-[11px]">
-                <span class="text-slate-400">Initial Allocation:</span>
-                <span id="inst-spot-amount" class="font-bold text-cyan-300 font-mono">$10,000.00</span>
+                <span class="text-slate-400 shrink-0">Initial Allocation:</span>
+                <span id="inst-spot-amount" class="font-bold text-cyan-300 font-mono truncate text-right">$10,000.00</span>
               </div>
             </div>
 
             <!-- Leg 2: Derivative Short -->
-            <div class="p-3 bg-brand-surface/85 rounded-xl border border-rose-900/40 relative overflow-hidden space-y-1.5">
+            <div class="p-3 bg-brand-surface/85 rounded-xl border border-rose-900/40 relative overflow-hidden flex flex-col justify-between h-[124px]">
               <div class="flex items-center justify-between">
                 <span class="text-[10px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1">
                   <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
@@ -340,34 +340,33 @@
                 </span>
                 <span id="inst-perp-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">LINEAR PERP</span>
               </div>
-              <div class="flex items-baseline justify-between">
-                <div id="inst-perp-symbol" class="text-base font-bold text-white tracking-tight">ETH-USDT PERP</div>
-                <div id="inst-perp-rate" class="text-[11px] font-bold text-emerald-400">+10.0% APR</div>
+              <div class="flex items-baseline justify-between gap-1 min-w-0">
+                <div id="inst-perp-symbol" class="text-base font-bold text-white tracking-tight truncate">ETH-USDT PERP</div>
+                <div id="inst-perp-rate" class="text-[11px] font-bold text-emerald-400 shrink-0">+10.0% APR</div>
               </div>
               <div id="inst-perp-desc" class="text-[10px] text-slate-400 truncate">Ethereum Linear Perpetual</div>
               <div class="pt-1.5 border-t border-slate-800/90 flex items-center justify-between text-[11px]">
-                <span class="text-slate-400">Hedge Notional:</span>
-                <span id="inst-perp-amount" class="font-bold text-rose-300 font-mono">-$10,000.00</span>
+                <span class="text-slate-400 shrink-0">Hedge Notional:</span>
+                <span id="inst-perp-amount" class="font-bold text-rose-300 font-mono truncate text-right">-$10,000.00</span>
               </div>
             </div>
           </div>
 
           <!-- Margin / Collateral Architecture Strip -->
-          <div class="p-2.5 rounded-xl bg-brand-surface/60 border border-slate-800/90 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-            <div class="flex items-center gap-2">
-              <span class="text-slate-400">Margin Collateral:</span>
-              <span id="inst-margin-desc" class="text-white font-medium">wstETH (Unified Cross-Margin, 10% Haircut)</span>
+          <div class="p-2.5 rounded-xl bg-brand-surface/60 border border-slate-800/90 flex flex-col justify-center space-y-1 text-[11px] font-mono h-[58px]">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-slate-400 text-[10px]">Margin Collateral:</span>
+              <span class="px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 font-bold border border-cyan-800/70 text-[9px] shrink-0">Δ = 0.00 NEUTRAL</span>
             </div>
-            <div class="flex items-center gap-1.5">
-              <span class="text-slate-400">Target:</span>
-              <span class="px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 font-bold border border-cyan-800/70">Δ = 0.00 NEUTRAL</span>
+            <div id="inst-margin-desc" class="text-white font-medium truncate text-[11px]">
+              wstETH (Unified Cross-Margin, 10% Haircut)
             </div>
           </div>
 
           <!-- Dynamic Institutional Collateral Notice -->
-          <div id="inst-collateral-note" class="text-[10px] font-mono px-2.5 py-1.5 rounded-lg bg-brand-surface/40 border border-slate-800 text-slate-400 flex items-start gap-1.5 leading-snug">
-            <svg class="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span id="inst-collateral-note-text">Cross-collateralized: Spot collateral appreciation cushions perp losses</span>
+          <div id="inst-collateral-note" class="text-[10px] font-mono px-2.5 py-1.5 rounded-lg bg-brand-surface/40 border border-slate-800 text-slate-400 flex items-start gap-1.5 leading-snug h-[48px] overflow-hidden">
+            <svg class="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span id="inst-collateral-note-text" class="line-clamp-2">Cross-collateralized: Spot collateral appreciation cushions perp losses</span>
           </div>
         </div>
         

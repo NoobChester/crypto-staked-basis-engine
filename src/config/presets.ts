@@ -93,14 +93,14 @@ export const BTC_LST_VARIANTS: Record<BtcVariant, BtcLstVariant> = {
     name: 'Lombard Staked Bitcoin (Babylon LST)',
     stakingAPY: 3.2,
     tag: 'BABYLON LST',
-    note: 'Babylon Staking Active: LBTC held in Web3 custody (~3.2% APY). Hedged with cash margin on CEX (Bypasses CEX collateral whitelists).'
+    note: 'Babylon Staking Active: LBTC held in Web3 custody (~3.2% APY). Hedged with CEX cash margin.'
   },
   solvbtc: {
     symbol: 'SolvBTC.BBN',
     name: 'Solv Babylon Staked BTC',
     stakingAPY: 3.5,
     tag: 'BABYLON LST',
-    note: 'Babylon Staking Active: SolvBTC.BBN held in Web3 custody (~3.5% APY). Hedged with cash margin on CEX (Bypasses CEX collateral whitelists).'
+    note: 'Babylon Staking Active: SolvBTC.BBN held in Web3 custody (~3.5% APY). Hedged with CEX cash margin.'
   },
   native: {
     symbol: 'BTC',
@@ -196,7 +196,7 @@ export function getInstrumentDetails(s: StrategyStateLike): InstrumentDetails {
       marginDesc: `100% Native ${sym} Collateral (0% Haircut, 1:1 Base)`,
       note: sym === 'BTC'
         ? 'Coin-Margined: Native BTC collateral only. Babylon LSTs (LBTC/SolvBTC) require Isolated Margin.'
-        : 'Coin-Margined 1:1 inverse hedge.'
+        : 'Coin-Margined: 1:1 inverse hedge with native ETH collateral. Zero liquidation risk.'
     };
   } else {
     // btc_eth_95
@@ -211,8 +211,8 @@ export function getInstrumentDetails(s: StrategyStateLike): InstrumentDetails {
       perpTag: 'LINEAR PERP',
       marginDesc: `${sym} Spot Collateral (Unified Cross-Margin, 5% Haircut)`,
       note: sym === 'BTC'
-        ? 'CEX Collateral Restricted: Desks do not whitelist Babylon LSTs (LBTC/SolvBTC) for cross-margin. Switch to Isolated Margin to model them.'
-        : 'Spot ETH cross-margin.'
+        ? 'CEX Collateral Restricted: Desks do not whitelist Babylon LSTs for cross-margin. Use Isolated mode.'
+        : 'Spot ETH cross-margin: Direct ETH collateral cushion with 5% haircut buffer.'
     };
   }
 }
