@@ -1,9 +1,19 @@
 # Crypto Staked Basis (DELTA-Q Quant Engine)
 
-[![Tests](https://img.shields.io/badge/tests-14%2F14%20passing-emerald?style=flat-square&logo=vitest)](tests/hedging.test.ts)
+[![Live Demo](https://img.shields.io/badge/Live%20Terminal-Online%20Simulation-06b6d4?style=flat-square&logo=googlechrome&logoColor=white)](https://noobchester.github.io/crypto-staked-basis-engine/)
+[![Tests](https://img.shields.io/badge/tests-45%2F45%20passing-emerald?style=flat-square&logo=vitest)](tests/hedging.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x%20strict-blue?style=flat-square&logo=typescript)](tsconfig.json)
 [![Vite](https://img.shields.io/badge/Vite-HMR%20active-646CFF?style=flat-square&logo=vite)](vite.config.ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg?style=flat-square)](LICENSE)
+
+<div align="center">
+  <br />
+  <a href="https://noobchester.github.io/crypto-staked-basis-engine/">
+    <img src="https://img.shields.io/badge/▶_LAUNCH_QUANT_TERMINAL-080d1a?style=for-the-badge&logoColor=06b6d4&color=06b6d4" height="42" alt="Launch Live Quant Terminal" />
+  </a>
+  <p><em>Click to simulate institutional cash-and-carry carry arbitrage in-browser (Zero Install, Zero Server)</em></p>
+  <br />
+</div>
 
 An institutional quantitative modeling, simulation, and risk engine designed for **Crypto Staked Basis Trading** (cash-and-carry carry arbitrage, popularized by protocols like Ethena).
 
