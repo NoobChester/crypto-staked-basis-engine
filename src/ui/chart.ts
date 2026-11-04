@@ -289,3 +289,4 @@ export function setupChartInteractions(
     tooltipEls.tooltip?.classList.add('hidden');
   });
 }
+
