@@ -1,18 +1,28 @@
 /**
  * @file app.ts
- * @description Main application orchestrator, state store, and event dispatcher.
+ * @description Main application orchestrator, state store, event dispatcher, and live feed coordinator.
  */
 
 import { calculateOutcome, fmtPct, type HedgingState } from './math/hedging.js';
 import {
   COLLATERAL_PRESETS,
   BTC_LST_VARIANTS,
+  updatePresetsWithLiveData,
   type MarginMode,
   type TradedAsset,
   type BtcVariant,
   type CollateralPresetKey,
   type SolYieldType
 } from './config/presets.js';
+import {
+  fetchLiveMarketData,
+  getLatestMarketData,
+  subscribeMarketData,
+  startAutoRefresh,
+  setFundingVenue as setServiceFundingVenue,
+  type FundingVenue,
+  type MarketDataSnapshot
+} from './services/marketData.js';
 import { getUIElements, renderUI, bindInputListeners, type UIElements } from './ui/dom.js';
 import { drawChart, setupChartInteractions } from './ui/chart.js';
 
@@ -21,6 +31,8 @@ export const state: HedgingState & {
   btcVariant: BtcVariant;
   activePreset: CollateralPresetKey;
   solYieldType: SolYieldType;
+  isLiveFunding: boolean;
+  isLiveStaking: boolean;
 } = {
   mode: 'unified',
   capital: 10000,
@@ -35,7 +47,9 @@ export const state: HedgingState & {
   activePreset: 'wsteth_90',
   collateralRatio: 0.90,
   solYieldType: 'real',
-  splitSpot: 50
+  splitSpot: 50,
+  isLiveFunding: true,
+  isLiveStaking: true
 };
 
 let UI: UIElements;
@@ -45,6 +59,86 @@ export function updateApp(): void {
   const res = calculateOutcome(state.priceMove, state);
   renderUI(UI, state, res);
   drawChart(UI.canvas, state, res);
+}
+
+export function applyLiveFunding(): void {
+  const data = getLatestMarketData();
+  const asset = state.tradedAsset || 'ETH';
+  const liveRate = data[asset]?.perpFundingAPR ?? 10.0;
+  state.fundingAPR = liveRate;
+  state.isLiveFunding = true;
+  if (UI?.inputFunding) UI.inputFunding.value = liveRate.toString();
+  if (UI?.valFunding) {
+    UI.valFunding.textContent = fmtPct(liveRate) + ' APR';
+    UI.valFunding.className = `font-mono font-bold ${liveRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  updateApp();
+}
+
+export function applyLiveStaking(): void {
+  const data = getLatestMarketData();
+  const asset = state.tradedAsset || 'ETH';
+  let liveStaking = 0.0;
+
+  if (state.mode === 'unified') {
+    if (state.activePreset === 'wsteth_90') {
+      liveStaking = data.ETH.stakingAPY;
+    } else if (state.activePreset === 'sol_lrt_85') {
+      liveStaking = (state.solYieldType === 'nominal')
+        ? (data.SOL.nominalStakingAPY ?? 7.2)
+        : (data.SOL.realStakingAPY ?? 1.8);
+    } else {
+      liveStaking = 0.0;
+    }
+  } else {
+    if (asset === 'ETH') {
+      liveStaking = data.ETH.stakingAPY;
+    } else if (asset === 'SOL') {
+      liveStaking = (state.solYieldType === 'nominal')
+        ? (data.SOL.nominalStakingAPY ?? 7.2)
+        : (data.SOL.realStakingAPY ?? 1.8);
+    } else if (asset === 'BTC') {
+      if (state.btcVariant === 'lbtc') liveStaking = data.btcLst.lbtc.stakingAPY;
+      else if (state.btcVariant === 'solvbtc') liveStaking = data.btcLst.solvbtc.stakingAPY;
+      else liveStaking = 0.0;
+    }
+  }
+
+  state.stakingAPY = liveStaking;
+  state.isLiveStaking = true;
+  if (UI?.inputStaking) UI.inputStaking.value = liveStaking.toString();
+  if (UI?.valStaking) UI.valStaking.textContent = liveStaking.toFixed(1) + '% APY';
+  updateApp();
+}
+
+export function setFundingVenue(venue: FundingVenue): void {
+  setServiceFundingVenue(venue);
+  if (state.isLiveFunding) {
+    applyLiveFunding();
+  } else {
+    updateApp();
+  }
+}
+
+export async function refreshLiveRates(): Promise<void> {
+  if (UI?.refreshIcon) UI.refreshIcon.classList.add('animate-spin');
+  if (UI?.refreshBtnLabel) UI.refreshBtnLabel.textContent = 'Syncing...';
+
+  try {
+    const data = await fetchLiveMarketData();
+    updatePresetsWithLiveData(data);
+
+    if (state.isLiveFunding) {
+      applyLiveFunding();
+    }
+    if (state.isLiveStaking) {
+      applyLiveStaking();
+    }
+  } finally {
+    if (UI?.refreshIcon) UI.refreshIcon.classList.remove('animate-spin');
+    if (UI?.refreshBtnLabel) UI.refreshBtnLabel.textContent = 'Sync Live Rates';
+    updateApp();
+  }
 }
 
 export function setAccountMode(mode: MarginMode): void {
@@ -67,13 +161,16 @@ export function setAccountMode(mode: MarginMode): void {
     if (UI.panelUnifiedPresets) UI.panelUnifiedPresets.classList.add('hidden');
     if (UI.panelIsolatedSplit) UI.panelIsolatedSplit.classList.remove('hidden');
     if (UI.chartSubCaption) UI.chartSubCaption.textContent = 'Isolated cash margin: Sharp rallies can deplete collateral and trigger liquidation';
-    if (state.tradedAsset === 'BTC') {
-      const btcMeta = BTC_LST_VARIANTS[state.btcVariant] || BTC_LST_VARIANTS.lbtc;
-      state.stakingAPY = btcMeta.stakingAPY;
-      if (UI.inputStaking) UI.inputStaking.value = state.stakingAPY.toString();
-      if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
-    } else if (state.tradedAsset === 'SOL') {
-      state.stakingAPY = (state.solYieldType === 'nominal') ? 7.2 : 1.8;
+    
+    if (state.isLiveStaking) {
+      applyLiveStaking();
+    } else {
+      if (state.tradedAsset === 'BTC') {
+        const btcMeta = BTC_LST_VARIANTS[state.btcVariant] || BTC_LST_VARIANTS.lbtc;
+        state.stakingAPY = btcMeta.stakingAPY;
+      } else if (state.tradedAsset === 'SOL') {
+        state.stakingAPY = (state.solYieldType === 'nominal') ? 7.2 : 1.8;
+      }
       if (UI.inputStaking) UI.inputStaking.value = state.stakingAPY.toString();
       if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
     }
@@ -83,6 +180,18 @@ export function setAccountMode(mode: MarginMode): void {
 
 export function setTradedAsset(asset: TradedAsset): void {
   state.tradedAsset = asset;
+  const data = getLatestMarketData();
+
+  if (state.isLiveFunding) {
+    const liveRate = data[asset]?.perpFundingAPR ?? 10.0;
+    state.fundingAPR = liveRate;
+    if (UI.inputFunding) UI.inputFunding.value = liveRate.toString();
+    if (UI.valFunding) {
+      UI.valFunding.textContent = fmtPct(liveRate) + ' APR';
+      UI.valFunding.className = `font-mono font-bold ${liveRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    }
+  }
+
   if (state.mode === 'unified') {
     if (asset === 'SOL') {
       applyCollateralPreset('sol_lrt_85');
@@ -102,24 +211,37 @@ export function setTradedAsset(asset: TradedAsset): void {
       }
     }
   } else {
-    if (asset === 'BTC') {
-      const btcMeta = BTC_LST_VARIANTS[state.btcVariant] || BTC_LST_VARIANTS.lbtc;
-      state.stakingAPY = btcMeta.stakingAPY;
-    } else if (asset === 'ETH') {
-      state.stakingAPY = 3.2;
-    } else if (asset === 'SOL') {
-      state.stakingAPY = (state.solYieldType === 'nominal') ? 7.2 : 1.8;
+    if (state.isLiveStaking) {
+      applyLiveStaking();
+    } else {
+      if (asset === 'BTC') {
+        const btcMeta = BTC_LST_VARIANTS[state.btcVariant] || BTC_LST_VARIANTS.lbtc;
+        state.stakingAPY = btcMeta.stakingAPY;
+      } else if (asset === 'ETH') {
+        state.stakingAPY = 3.2;
+      } else if (asset === 'SOL') {
+        state.stakingAPY = (state.solYieldType === 'nominal') ? 7.2 : 1.8;
+      }
+      if (UI.inputStaking) UI.inputStaking.value = state.stakingAPY.toString();
+      if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
     }
-    if (UI.inputStaking) UI.inputStaking.value = state.stakingAPY.toString();
-    if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
   }
   updateApp();
 }
 
 export function setBtcVariant(variant: BtcVariant): void {
   state.btcVariant = variant;
-  const btcMeta = BTC_LST_VARIANTS[variant] || BTC_LST_VARIANTS.lbtc;
-  state.stakingAPY = btcMeta.stakingAPY;
+  const data = getLatestMarketData();
+
+  if (state.isLiveStaking) {
+    if (variant === 'lbtc') state.stakingAPY = data.btcLst.lbtc.stakingAPY;
+    else if (variant === 'solvbtc') state.stakingAPY = data.btcLst.solvbtc.stakingAPY;
+    else state.stakingAPY = 0.0;
+  } else {
+    const btcMeta = BTC_LST_VARIANTS[variant] || BTC_LST_VARIANTS.lbtc;
+    state.stakingAPY = btcMeta.stakingAPY;
+  }
+
   if (UI.inputStaking) UI.inputStaking.value = state.stakingAPY.toString();
   if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
   updateApp();
@@ -127,6 +249,7 @@ export function setBtcVariant(variant: BtcVariant): void {
 
 export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
   state.activePreset = presetKey;
+  const data = getLatestMarketData();
   
   ['btn-preset-100', 'btn-preset-95', 'btn-preset-90', 'btn-preset-85'].forEach(id => {
     const el = document.getElementById(id);
@@ -157,8 +280,11 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
   if (presetConfig) {
     state.collateralRatio = presetConfig.collateralRatio;
     if (presetKey === 'sol_lrt_85') {
-      state.stakingAPY = (state.solYieldType === 'nominal') ? 7.2 : 1.8;
       state.tradedAsset = 'SOL';
+      state.stakingAPY = state.isLiveStaking
+        ? ((state.solYieldType === 'nominal') ? (data.SOL.nominalStakingAPY ?? 7.2) : (data.SOL.realStakingAPY ?? 1.8))
+        : ((state.solYieldType === 'nominal') ? (presetConfig.nominalAPY ?? 7.2) : (presetConfig.realAPY ?? 1.8));
+
       if (UI.valCollateralRatio) UI.valCollateralRatio.textContent = presetConfig.badgeLabel;
       if (UI.collateralRatioExplainer && presetConfig.getExplainer) {
         UI.collateralRatioExplainer.textContent = presetConfig.getExplainer(state.solYieldType);
@@ -174,22 +300,33 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
       }
       const subtext85 = document.getElementById('subtext-preset-85');
       if (subtext85) {
-        subtext85.textContent = (state.solYieldType === 'nominal') ? '15% Haircut | 7.2% Nom Stake' : '15% Haircut | 1.8% Real Stake';
+        const val = (state.solYieldType === 'nominal') ? (data.SOL.nominalStakingAPY ?? 7.2) : (data.SOL.realStakingAPY ?? 1.8);
+        subtext85.textContent = `15% Haircut | ${val.toFixed(1)}% ${state.solYieldType === 'nominal' ? 'Nom' : 'Real'} Stake`;
       }
     } else if (presetKey === 'wsteth_90') {
-      state.stakingAPY = presetConfig.stakingAPY;
+      state.stakingAPY = state.isLiveStaking ? data.ETH.stakingAPY : presetConfig.stakingAPY;
       state.tradedAsset = 'ETH';
       if (UI.valCollateralRatio) UI.valCollateralRatio.textContent = presetConfig.badgeLabel;
       if (UI.collateralRatioExplainer && presetConfig.explainer) {
         UI.collateralRatioExplainer.textContent = presetConfig.explainer;
       }
     } else {
-      state.stakingAPY = presetConfig.stakingAPY;
+      state.stakingAPY = 0.0;
       if (state.tradedAsset !== 'BTC' && state.tradedAsset !== 'ETH') state.tradedAsset = 'BTC';
       if (UI.valCollateralRatio) UI.valCollateralRatio.textContent = presetConfig.badgeLabel;
       if (UI.collateralRatioExplainer && presetConfig.explainer) {
         UI.collateralRatioExplainer.textContent = presetConfig.explainer;
       }
+    }
+  }
+
+  if (state.isLiveFunding) {
+    const liveFunding = data[state.tradedAsset]?.perpFundingAPR ?? 10.0;
+    state.fundingAPR = liveFunding;
+    if (UI.inputFunding) UI.inputFunding.value = liveFunding.toString();
+    if (UI.valFunding) {
+      UI.valFunding.textContent = fmtPct(liveFunding) + ' APR';
+      UI.valFunding.className = `font-mono font-bold ${liveFunding >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
     }
   }
 
@@ -201,20 +338,28 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
 
 export function setSolYieldType(type: SolYieldType): void {
   state.solYieldType = type;
+  const data = getLatestMarketData();
   
-  if (type === 'nominal') {
-    state.stakingAPY = 7.2;
-    if (UI.btnSolNominal) UI.btnSolNominal.className = 'px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm';
-    if (UI.btnSolReal) UI.btnSolReal.className = 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white';
+  if (state.isLiveStaking) {
+    state.stakingAPY = (type === 'nominal') ? (data.SOL.nominalStakingAPY ?? 7.2) : (data.SOL.realStakingAPY ?? 1.8);
   } else {
-    state.stakingAPY = 1.8;
-    if (UI.btnSolReal) UI.btnSolReal.className = 'px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm';
-    if (UI.btnSolNominal) UI.btnSolNominal.className = 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white';
+    state.stakingAPY = (type === 'nominal') ? 7.2 : 1.8;
+  }
+
+  if (UI.btnSolNominal && UI.btnSolReal) {
+    if (type === 'nominal') {
+      UI.btnSolNominal.className = 'px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm';
+      UI.btnSolReal.className = 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white';
+    } else {
+      UI.btnSolReal.className = 'px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm';
+      UI.btnSolNominal.className = 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white';
+    }
   }
 
   const subtext85 = document.getElementById('subtext-preset-85');
   if (subtext85) {
-    subtext85.textContent = (type === 'nominal') ? '15% Haircut | 7.2% Nom Stake' : '15% Haircut | 1.8% Real Stake';
+    const val = (type === 'nominal') ? (data.SOL.nominalStakingAPY ?? 7.2) : (data.SOL.realStakingAPY ?? 1.8);
+    subtext85.textContent = `15% Haircut | ${val.toFixed(1)}% ${type === 'nominal' ? 'Nom' : 'Real'} Stake`;
   }
 
   if (state.activePreset !== 'sol_lrt_85') {
@@ -266,11 +411,13 @@ export function resetDefaults(): void {
   state.tradedAsset = 'ETH';
   state.btcVariant = 'lbtc';
   state.solYieldType = 'real';
+  state.isLiveFunding = true;
+  state.isLiveStaking = true;
+
   if (UI.labelSolYieldMode) UI.labelSolYieldMode.textContent = 'Real (+1.8%)';
   if (UI.btnSolReal) UI.btnSolReal.className = 'py-1 px-2 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold';
   if (UI.btnSolNominal) UI.btnSolNominal.className = 'py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300';
-  const subtext85 = document.getElementById('subtext-preset-85');
-  if (subtext85) subtext85.textContent = '15% Haircut | 1.8% Real Stake';
+  
   setAccountMode('unified');
   applyCollateralPreset('wsteth_90');
   setPriceChange(0);
@@ -278,14 +425,14 @@ export function resetDefaults(): void {
   state.capital = 10000;
   if (UI.inputCapital) UI.inputCapital.value = '10000';
   if (UI.valCapital) UI.valCapital.textContent = '$10,000';
-  state.fundingAPR = 10.0;
-  if (UI.inputFunding) UI.inputFunding.value = '10.0';
-  if (UI.valFunding) UI.valFunding.textContent = '+10.00% APR';
+  
   state.depegPct = 0.0;
   if (UI.inputDepeg) UI.inputDepeg.value = '0.0';
   if (UI.valDepeg) UI.valDepeg.textContent = '0.0% Discount';
   setSplit(50);
-  updateApp();
+
+  applyLiveFunding();
+  applyLiveStaking();
 }
 
 export function openTriadModal(): void {
@@ -315,6 +462,10 @@ declare global {
     resetDefaults: typeof resetDefaults;
     openTriadModal: typeof openTriadModal;
     closeTriadModal: typeof closeTriadModal;
+    applyLiveFunding: typeof applyLiveFunding;
+    applyLiveStaking: typeof applyLiveStaking;
+    setFundingVenue: typeof setFundingVenue;
+    refreshLiveRates: typeof refreshLiveRates;
   }
 }
 
@@ -329,6 +480,10 @@ window.setSplit = setSplit;
 window.resetDefaults = resetDefaults;
 window.openTriadModal = openTriadModal;
 window.closeTriadModal = closeTriadModal;
+window.applyLiveFunding = applyLiveFunding;
+window.applyLiveStaking = applyLiveStaking;
+window.setFundingVenue = setFundingVenue;
+window.refreshLiveRates = refreshLiveRates;
 
 function init() {
   UI = getUIElements();
@@ -356,6 +511,28 @@ function init() {
       closeTriadModal();
     }
   });
+
+  // Subscribe to live market data feeds
+  subscribeMarketData((snapshot: MarketDataSnapshot) => {
+    updatePresetsWithLiveData(snapshot);
+    if (state.isLiveFunding) {
+      const liveRate = snapshot[state.tradedAsset]?.perpFundingAPR ?? state.fundingAPR;
+      state.fundingAPR = liveRate;
+      if (UI?.inputFunding) UI.inputFunding.value = liveRate.toString();
+      if (UI?.valFunding) {
+        UI.valFunding.textContent = fmtPct(liveRate) + ' APR';
+        UI.valFunding.className = `font-mono font-bold ${liveRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+    }
+    if (state.isLiveStaking) {
+      applyLiveStaking();
+    } else {
+      updateApp();
+    }
+  });
+
+  // Start periodic 60s background polling
+  startAutoRefresh(60000);
 
   applyCollateralPreset('wsteth_90');
   setSplit(50);

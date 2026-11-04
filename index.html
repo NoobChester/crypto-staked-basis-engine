@@ -77,6 +77,68 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
 
+    <!-- Market Feed Status Ribbon -->
+    <div id="market-feed-bar" class="bg-brand-card/90 rounded-2xl p-3 px-4 border border-brand-border backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 text-xs font-mono shadow-sm">
+      <div class="flex items-center gap-3 flex-wrap min-w-0">
+        <!-- Live status pulse badge -->
+        <div class="flex items-center gap-2">
+          <span class="relative flex h-2.5 w-2.5">
+            <span id="feed-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="feed-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <span id="feed-status-badge" class="font-bold text-white tracking-wider text-[11px] flex items-center gap-1.5">
+            LIVE MARKET FEEDS
+          </span>
+          <span id="feed-status-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
+            SYNCED
+          </span>
+        </div>
+
+        <!-- Venue Switcher Pill in Top Feed Ribbon -->
+        <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[10px] font-mono shrink-0">
+          <span class="text-slate-500 text-[9px] px-1.5">VENUE:</span>
+          <button type="button" onclick="setFundingVenue('binance')" id="feed-venue-btn-binance"
+            class="px-2 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer">Binance</button>
+          <button type="button" onclick="setFundingVenue('hyperliquid')" id="feed-venue-btn-hyperliquid"
+            class="px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Hyperliquid</button>
+          <button type="button" onclick="setFundingVenue('average')" id="feed-venue-btn-average"
+            class="px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Average</button>
+        </div>
+
+        <!-- Live Ticker for Active Asset / Pair -->
+        <div class="hidden sm:flex items-center gap-2.5 text-slate-300 text-[11px] border-l border-slate-800 pl-3">
+          <span id="feed-perp-info" class="flex items-center gap-1">
+            <span class="text-slate-500">Perp Funding:</span>
+            <span id="feed-live-funding-val" class="text-emerald-400 font-bold font-mono">+10.95% APR</span>
+            <span id="feed-funding-source" class="text-[9px] text-slate-500">(Binance)</span>
+          </span>
+          <span class="text-slate-700">•</span>
+          <span id="feed-spot-info" class="flex items-center gap-1">
+            <span class="text-slate-500">Spot Staking:</span>
+            <span id="feed-live-staking-val" class="text-cyan-400 font-bold font-mono">+2.30% APY</span>
+            <span id="feed-staking-source" class="text-[9px] text-slate-500">(Lido)</span>
+          </span>
+          <span class="text-slate-700">•</span>
+          <span id="feed-price-info" class="flex items-center gap-1">
+            <span class="text-slate-500">Mark:</span>
+            <span id="feed-live-price-val" class="text-white font-bold font-mono">$2,316.99</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- Live Sync Controls -->
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="feed-last-updated" class="text-[10px] text-slate-500 hidden md:inline">Syncing feeds...</span>
+        <button id="btn-refresh-feed" onclick="refreshLiveRates()" 
+          class="px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 transition flex items-center gap-1.5 text-[11px] font-mono cursor-pointer" title="Fetch latest funding rates and staking yields">
+          <svg id="refresh-icon" class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          <span id="refresh-btn-label">Sync Live Rates</span>
+        </button>
+      </div>
+    </div>
+
     <!-- KPI Metrics Ribbon -->
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
       <!-- Net Portfolio Value -->
@@ -414,7 +476,7 @@
               <div onclick="applyCollateralPreset('wsteth_90')" id="btn-preset-90" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition cursor-pointer select-none">
                 <div class="font-bold text-cyan-300">90% (wstETH)</div>
-                <div class="text-[10px] text-slate-300">10% Haircut | 3.2% Stake</div>
+                <div id="subtext-preset-90" class="text-[10px] text-slate-300">10% Haircut | 3.2% Stake</div>
                 <div class="text-[9px] text-emerald-300 mt-0.5">Buffer: +852% move</div>
               </div>
 
@@ -531,7 +593,23 @@
           <!-- Annualized Funding Rate APR (WITH EXACT 29.41% ALIGNMENT) -->
           <div class="space-y-1">
             <div class="flex items-center justify-between text-xs">
-              <label class="font-semibold text-slate-300">Annualized Perp Funding Rate (APR)</label>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <label class="font-semibold text-slate-300">Perp Funding APR</label>
+                <!-- Venue Switcher Pill on Slider -->
+                <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[9px] font-mono shrink-0">
+                  <button type="button" onclick="setFundingVenue('binance')" id="slider-venue-btn-binance"
+                    class="px-1.5 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer">Binance</button>
+                  <button type="button" onclick="setFundingVenue('hyperliquid')" id="slider-venue-btn-hyperliquid"
+                    class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Hyperliquid</button>
+                  <button type="button" onclick="setFundingVenue('average')" id="slider-venue-btn-average"
+                    class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Average</button>
+                </div>
+                <button type="button" id="btn-use-live-funding" onclick="applyLiveFunding()" 
+                  class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition flex items-center gap-1 font-mono cursor-pointer" 
+                  title="Snap funding rate to selected live exchange rate">
+                  <span>⚡ Live: <span id="label-live-funding-snap">+10.95%</span></span>
+                </button>
+              </div>
               <span id="val-funding" class="font-mono text-emerald-400 font-bold">+10.00% APR</span>
             </div>
             <input type="range" id="input-funding" min="-25" max="60" step="0.5" value="10" class="w-full">
@@ -541,20 +619,34 @@
               <span class="absolute -translate-x-1/2 text-slate-300 font-bold" style="left: 29.41%;">0%</span>
               <span class="absolute right-0 text-emerald-400">+60% (Euphoria)</span>
             </div>
+            <div class="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-0.5">
+              <span id="desc-funding-source">Source: Binance Futures (ETHUSDT)</span>
+              <span id="feed-next-funding-countdown" class="text-slate-400">Next settlement in ~3h</span>
+            </div>
           </div>
 
           <!-- Staking APR Slider -->
           <div class="space-y-1">
             <div class="flex items-center justify-between text-xs">
-              <label class="font-semibold text-slate-300">Spot Staking APY (Preset-Linked)</label>
+              <div class="flex items-center gap-1.5">
+                <label class="font-semibold text-slate-300">Spot Staking APY (Preset-Linked)</label>
+                <button type="button" id="btn-use-live-staking" onclick="applyLiveStaking()" 
+                  class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition flex items-center gap-1 font-mono cursor-pointer" 
+                  title="Snap staking rate to live protocol yield">
+                  <span>⚡ Live: <span id="label-live-staking-snap">2.30%</span></span>
+                </button>
+              </div>
               <span id="val-staking" class="font-mono text-emerald-400 font-bold">3.2% APY</span>
             </div>
             <input type="range" id="input-staking" min="0" max="15" step="0.1" value="3.2" class="w-full">
             <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
               <span>0% (Vanilla Spot)</span>
-              <span>3.2% (wstETH)</span>
-              <span>1.8% / 7.2% (SOL)</span>
+              <span>2.3% (wstETH)</span>
+              <span>1.8% / 4.9% (SOL)</span>
               <span>15% (High Restake)</span>
+            </div>
+            <div class="text-[10px] font-mono text-slate-500 pt-0.5" id="desc-staking-source">
+              Source: Lido Protocol (stETH)
             </div>
           </div>
 

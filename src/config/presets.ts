@@ -3,6 +3,8 @@
  * @description Collateral presets, asset definitions, and institutional margin metadata.
  */
 
+import type { MarketDataSnapshot } from '../services/marketData.js';
+
 export type TradedAsset = 'ETH' | 'BTC' | 'SOL';
 export type MarginMode = 'unified' | 'isolated';
 export type SolYieldType = 'nominal' | 'real';
@@ -217,3 +219,30 @@ export function getInstrumentDetails(s: StrategyStateLike): InstrumentDetails {
   }
 }
 
+/**
+ * Dynamically updates whitelist preset staking yields and metadata using live market data.
+ */
+export function updatePresetsWithLiveData(data: MarketDataSnapshot): void {
+  // Update Lido wstETH preset with live Lido/DeFiLlama APY
+  COLLATERAL_PRESETS.wsteth_90.stakingAPY = data.ETH.stakingAPY;
+  COLLATERAL_PRESETS.wsteth_90.explainer = `Lido wstETH (Ethereum LST). Live ${data.ETH.stakingAPY.toFixed(1)}% base staking APY with an 8.5x (+852%) upside buffer. (${data.ETH.stakingSource})`;
+
+  // Update Solana LRT preset with live Jito nominal and real yield
+  const solNominal = data.SOL.nominalStakingAPY ?? 7.2;
+  const solReal = data.SOL.realStakingAPY ?? 1.8;
+  COLLATERAL_PRESETS.sol_lrt_85.nominalAPY = solNominal;
+  COLLATERAL_PRESETS.sol_lrt_85.realAPY = solReal;
+  COLLATERAL_PRESETS.sol_lrt_85.stakingAPY = solReal;
+  COLLATERAL_PRESETS.sol_lrt_85.getExplainer = (type: SolYieldType) => {
+    return type === 'nominal'
+      ? `Solana LRT (Live Nominal ${solNominal.toFixed(1)}% APR): Gross staking emissions from ${data.SOL.stakingSource}; unadjusted for ~5.4% annual network inflation dilution.`
+      : `Solana LRT (Live Real ${solReal.toFixed(1)}% APY): Net economic yield after stripping ~5.4% annual network dilution drag on USD purchasing power. +545% runway. (${data.SOL.stakingSource})`;
+  };
+
+  // Update Babylon BTC LST variants
+  BTC_LST_VARIANTS.lbtc.stakingAPY = data.btcLst.lbtc.stakingAPY;
+  BTC_LST_VARIANTS.lbtc.note = `Babylon Staking Active: LBTC held in Web3 custody (~${data.btcLst.lbtc.stakingAPY.toFixed(1)}% APY). Hedged with CEX cash margin. (${data.btcLst.lbtc.source})`;
+
+  BTC_LST_VARIANTS.solvbtc.stakingAPY = data.btcLst.solvbtc.stakingAPY;
+  BTC_LST_VARIANTS.solvbtc.note = `Babylon Staking Active: SolvBTC.BBN held in Web3 custody (~${data.btcLst.solvbtc.stakingAPY.toFixed(1)}% APY). Hedged with CEX cash margin. (${data.btcLst.solvbtc.source})`;
+}

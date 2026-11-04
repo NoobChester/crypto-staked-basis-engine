@@ -5,6 +5,7 @@
 
 import { fmtUSD, fmtPct, type HedgingState, type HedgingOutcome } from '../math/hedging.js';
 import { getInstrumentDetails } from '../config/presets.js';
+import { getLatestMarketData } from '../services/marketData.js';
 
 export interface UIElements {
   modeUnifiedBtn: HTMLElement | null;
@@ -102,11 +103,73 @@ export interface UIElements {
   btnTriadInfo: HTMLElement | null;
   btnTriadClose: HTMLElement | null;
   btnTriadCloseFooter: HTMLElement | null;
+
+  // Live Market Feed Elements
+  marketFeedBar: HTMLElement | null;
+  feedPing: HTMLElement | null;
+  feedDot: HTMLElement | null;
+  feedStatusBadge: HTMLElement | null;
+  feedStatusTag: HTMLElement | null;
+  feedLiveFundingVal: HTMLElement | null;
+  feedFundingSource: HTMLElement | null;
+  feedLiveStakingVal: HTMLElement | null;
+  feedStakingSource: HTMLElement | null;
+  feedLivePriceVal: HTMLElement | null;
+  feedLastUpdated: HTMLElement | null;
+  btnRefreshFeed: HTMLElement | null;
+  refreshIcon: HTMLElement | null;
+  refreshBtnLabel: HTMLElement | null;
+  btnUseLiveFunding: HTMLElement | null;
+  labelLiveFundingSnap: HTMLElement | null;
+  descFundingSource: HTMLElement | null;
+  btnUseLiveStaking: HTMLElement | null;
+  labelLiveStakingSnap: HTMLElement | null;
+  descStakingSource: HTMLElement | null;
+  feedNextFundingCountdown: HTMLElement | null;
+  subtextPreset90: HTMLElement | null;
+  subtextPreset85: HTMLElement | null;
+  feedVenueBtnBinance: HTMLElement | null;
+  feedVenueBtnHyperliquid: HTMLElement | null;
+  feedVenueBtnAverage: HTMLElement | null;
+  sliderVenueBtnBinance: HTMLElement | null;
+  sliderVenueBtnHyperliquid: HTMLElement | null;
+  sliderVenueBtnAverage: HTMLElement | null;
+
   [key: string]: HTMLElement | HTMLInputElement | HTMLCanvasElement | null;
 }
 
 export function getUIElements(): UIElements {
   return {
+    marketFeedBar: document.getElementById('market-feed-bar'),
+    feedPing: document.getElementById('feed-ping'),
+    feedDot: document.getElementById('feed-dot'),
+    feedStatusBadge: document.getElementById('feed-status-badge'),
+    feedStatusTag: document.getElementById('feed-status-tag'),
+    feedLiveFundingVal: document.getElementById('feed-live-funding-val'),
+    feedFundingSource: document.getElementById('feed-funding-source'),
+    feedLiveStakingVal: document.getElementById('feed-live-staking-val'),
+    feedStakingSource: document.getElementById('feed-staking-source'),
+    feedLivePriceVal: document.getElementById('feed-live-price-val'),
+    feedLastUpdated: document.getElementById('feed-last-updated'),
+    btnRefreshFeed: document.getElementById('btn-refresh-feed'),
+    refreshIcon: document.getElementById('refresh-icon'),
+    refreshBtnLabel: document.getElementById('refresh-btn-label'),
+    btnUseLiveFunding: document.getElementById('btn-use-live-funding'),
+    labelLiveFundingSnap: document.getElementById('label-live-funding-snap'),
+    descFundingSource: document.getElementById('desc-funding-source'),
+    btnUseLiveStaking: document.getElementById('btn-use-live-staking'),
+    labelLiveStakingSnap: document.getElementById('label-live-staking-snap'),
+    descStakingSource: document.getElementById('desc-staking-source'),
+    feedNextFundingCountdown: document.getElementById('feed-next-funding-countdown'),
+    subtextPreset90: document.getElementById('subtext-preset-90'),
+    subtextPreset85: document.getElementById('subtext-preset-85'),
+    feedVenueBtnBinance: document.getElementById('feed-venue-btn-binance'),
+    feedVenueBtnHyperliquid: document.getElementById('feed-venue-btn-hyperliquid'),
+    feedVenueBtnAverage: document.getElementById('feed-venue-btn-average'),
+    sliderVenueBtnBinance: document.getElementById('slider-venue-btn-binance'),
+    sliderVenueBtnHyperliquid: document.getElementById('slider-venue-btn-hyperliquid'),
+    sliderVenueBtnAverage: document.getElementById('slider-venue-btn-average'),
+
     modeUnifiedBtn: document.getElementById('mode-btn-unified'),
     modeIsolatedBtn: document.getElementById('mode-btn-isolated'),
     panelUnifiedPresets: document.getElementById('panel-unified-presets'),
@@ -418,6 +481,178 @@ export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcom
   if (UI.instCollateralNoteText && inst.note) {
     UI.instCollateralNoteText.textContent = inst.note;
   }
+
+  renderMarketData(UI, state);
+}
+
+export function renderMarketData(UI: UIElements, state: HedgingState): void {
+  const data = getLatestMarketData();
+  const asset = state.tradedAsset || 'ETH';
+  const assetRates = data[asset] || data.ETH;
+
+  // Render Status Badge & Ping Indicator
+  if (UI.feedStatusTag && UI.feedPing && UI.feedDot) {
+    if (data.isLoading) {
+      UI.feedStatusTag.textContent = 'SYNCING';
+      UI.feedStatusTag.className = 'text-[9px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold';
+      UI.feedPing.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75';
+      UI.feedDot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500';
+    } else if (data.isLive) {
+      UI.feedStatusTag.textContent = 'LIVE';
+      UI.feedStatusTag.className = 'text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold';
+      UI.feedPing.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+      UI.feedDot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500';
+    } else {
+      UI.feedStatusTag.textContent = 'FALLBACK';
+      UI.feedStatusTag.className = 'text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-bold';
+      UI.feedPing.className = 'hidden';
+      UI.feedDot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-500';
+    }
+  }
+
+  // Determine current asset's staking live rate & source
+  let liveStakingVal = assetRates.stakingAPY;
+  let liveStakingSource = assetRates.stakingSource;
+
+  if (asset === 'ETH') {
+    liveStakingVal = data.ETH.stakingAPY;
+    liveStakingSource = data.ETH.stakingSource;
+  } else if (asset === 'BTC') {
+    if (state.mode === 'isolated') {
+      const v = state.btcVariant || 'lbtc';
+      if (v === 'lbtc') {
+        liveStakingVal = data.btcLst.lbtc.stakingAPY;
+        liveStakingSource = data.btcLst.lbtc.source;
+      } else if (v === 'solvbtc') {
+        liveStakingVal = data.btcLst.solvbtc.stakingAPY;
+        liveStakingSource = data.btcLst.solvbtc.source;
+      } else {
+        liveStakingVal = 0.0;
+        liveStakingSource = 'Native Cold Custody (0%)';
+      }
+    } else {
+      liveStakingVal = 0.0;
+      liveStakingSource = 'Unified CEX Whitelist (0%)';
+    }
+  } else if (asset === 'SOL') {
+    if (state.solYieldType === 'nominal') {
+      liveStakingVal = data.SOL.nominalStakingAPY ?? 7.2;
+      liveStakingSource = `${data.SOL.stakingSource} (Nominal)`;
+    } else {
+      liveStakingVal = data.SOL.realStakingAPY ?? 1.8;
+      liveStakingSource = `${data.SOL.stakingSource} (Real net of inflation)`;
+    }
+  }
+
+  // Update Ribbon Values
+  if (UI.feedLiveFundingVal) {
+    UI.feedLiveFundingVal.textContent = `${fmtPct(assetRates.perpFundingAPR)} APR`;
+    UI.feedLiveFundingVal.className = `font-bold font-mono ${assetRates.perpFundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  if (UI.feedFundingSource) {
+    const srcShort = assetRates.fundingSource.includes('Binance') ? 'Binance' : (assetRates.fundingSource.includes('Hyperliquid') ? 'Hyperliquid' : (assetRates.fundingSource.includes('Consensus') ? 'Average' : 'Preset'));
+    UI.feedFundingSource.textContent = `(${srcShort})`;
+  }
+
+  // Update Venue Switcher Buttons
+  const activeVenue = data.selectedVenue || 'binance';
+  const venueKeys = [
+    { key: 'binance', feedBtn: UI.feedVenueBtnBinance, sliderBtn: UI.sliderVenueBtnBinance },
+    { key: 'hyperliquid', feedBtn: UI.feedVenueBtnHyperliquid, sliderBtn: UI.sliderVenueBtnHyperliquid },
+    { key: 'average', feedBtn: UI.feedVenueBtnAverage, sliderBtn: UI.sliderVenueBtnAverage }
+  ] as const;
+
+  venueKeys.forEach(({ key, feedBtn, sliderBtn }) => {
+    const isAct = key === activeVenue;
+    if (feedBtn) {
+      feedBtn.className = isAct
+        ? 'px-2 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer'
+        : 'px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer';
+    }
+    if (sliderBtn) {
+      sliderBtn.className = isAct
+        ? 'px-1.5 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer'
+        : 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer';
+    }
+  });
+
+  if (UI.feedLiveStakingVal) {
+    UI.feedLiveStakingVal.textContent = liveStakingVal > 0 ? `+${liveStakingVal.toFixed(2)}% APY` : '0.00% APY';
+  }
+  if (UI.feedStakingSource) {
+    let srcShort = 'Native';
+    if (asset === 'ETH') srcShort = 'Lido';
+    else if (asset === 'SOL') srcShort = 'Jito';
+    else if (asset === 'BTC' && state.mode === 'isolated') {
+      srcShort = state.btcVariant === 'lbtc' ? 'Lombard' : (state.btcVariant === 'solvbtc' ? 'Solv' : 'Cold');
+    }
+    UI.feedStakingSource.textContent = `(${srcShort})`;
+  }
+
+  if (UI.feedLivePriceVal) {
+    UI.feedLivePriceVal.textContent = fmtUSD(assetRates.markPrice);
+  }
+
+  // Update Next Funding Countdown
+  if (UI.feedNextFundingCountdown) {
+    if (assetRates.nextFundingTime && assetRates.nextFundingTime > Date.now()) {
+      const diffMs = assetRates.nextFundingTime - Date.now();
+      const hours = Math.floor(diffMs / 3600000);
+      const mins = Math.floor((diffMs % 3600000) / 60000);
+      UI.feedNextFundingCountdown.textContent = `Next settlement in ~${hours}h ${mins}m`;
+    } else {
+      UI.feedNextFundingCountdown.textContent = 'Settles 3x daily (00/08/16 UTC)';
+    }
+  }
+
+  // Update Slider Live Snap Buttons & Source Labels
+  if (UI.labelLiveFundingSnap) {
+    UI.labelLiveFundingSnap.textContent = fmtPct(assetRates.perpFundingAPR);
+  }
+  if (UI.descFundingSource) {
+    UI.descFundingSource.textContent = `Source: ${assetRates.fundingSource}`;
+  }
+
+  if (UI.labelLiveStakingSnap) {
+    UI.labelLiveStakingSnap.textContent = `${liveStakingVal.toFixed(2)}%`;
+  }
+  if (UI.descStakingSource) {
+    UI.descStakingSource.textContent = `Source: ${liveStakingSource}`;
+  }
+
+  // Update Preset Cards Subtexts with Live Yields
+  if (UI.subtextPreset90) {
+    UI.subtextPreset90.textContent = `10% Haircut | ${data.ETH.stakingAPY.toFixed(1)}% Live Stake`;
+  }
+  if (UI.subtextPreset85) {
+    const solVal = state.solYieldType === 'nominal' ? (data.SOL.nominalStakingAPY ?? 7.2) : (data.SOL.realStakingAPY ?? 1.8);
+    UI.subtextPreset85.textContent = `15% Haircut | ${solVal.toFixed(1)}% ${state.solYieldType === 'nominal' ? 'Nom' : 'Real'} Stake`;
+  }
+
+  // Update Isolated BTC LST button labels
+  if (UI.btnBtcLbtc) {
+    UI.btnBtcLbtc.textContent = `LBTC (${data.btcLst.lbtc.stakingAPY.toFixed(1)}%)`;
+  }
+  if (UI.btnBtcSolvbtc) {
+    UI.btnBtcSolvbtc.textContent = `SolvBTC (${data.btcLst.solvbtc.stakingAPY.toFixed(1)}%)`;
+  }
+
+  // Update Last Synced
+  if (UI.feedLastUpdated) {
+    if (!data.lastSynced) {
+      UI.feedLastUpdated.textContent = 'Syncing feeds...';
+    } else {
+      const elapsedSec = Math.max(0, Math.floor((Date.now() - data.lastSynced) / 1000));
+      if (elapsedSec < 10) {
+        UI.feedLastUpdated.textContent = 'Synced just now';
+      } else if (elapsedSec < 60) {
+        UI.feedLastUpdated.textContent = `Synced ${elapsedSec}s ago`;
+      } else {
+        const mins = Math.floor(elapsedSec / 60);
+        UI.feedLastUpdated.textContent = `Synced ${mins}m ago`;
+      }
+    }
+  }
 }
 
 export function bindInputListeners(
@@ -453,6 +688,7 @@ export function bindInputListeners(
   if (UI.inputFunding) {
     UI.inputFunding.addEventListener('input', (e) => {
       state.fundingAPR = parseFloat((e.target as HTMLInputElement).value);
+      state.isLiveFunding = false;
       if (UI.valFunding) {
         UI.valFunding.textContent = fmtPct(state.fundingAPR) + ' APR';
         UI.valFunding.className = `font-mono font-bold ${state.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
@@ -464,6 +700,7 @@ export function bindInputListeners(
   if (UI.inputStaking) {
     UI.inputStaking.addEventListener('input', (e) => {
       state.stakingAPY = parseFloat((e.target as HTMLInputElement).value);
+      state.isLiveStaking = false;
       if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
       onUpdate();
     });

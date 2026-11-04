@@ -21,6 +21,8 @@ export interface HedgingState {
   btcVariant?: BtcVariant;
   activePreset?: CollateralPresetKey;
   solYieldType?: SolYieldType;
+  isLiveFunding?: boolean;
+  isLiveStaking?: boolean;
 }
 
 export interface HedgingOutcome {
