@@ -1,0 +1,220 @@
+/**
+ * @file kpiRenderer.ts
+ * @description Renders main scenario KPI outcome cards, Net Delta, Liquidation distance, and PnL breakdown table.
+ */
+
+import { fmtUSD, fmtPct, type HedgingState, type HedgingOutcome } from '../../math/hedging.js';
+import { getInstrumentDetails } from '../../config/presets.js';
+import type { UIElements } from '../dom.js';
+import { renderMarketData } from './feedRenderer.js';
+
+export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcome): void {
+  if (UI.kpiNetValue) UI.kpiNetValue.textContent = fmtUSD(res.totalPortfolioVal);
+  if (UI.kpiStartingCap) UI.kpiStartingCap.textContent = fmtUSD(res.C);
+  if (UI.kpiRoi) {
+    UI.kpiRoi.textContent = fmtPct(res.roiPct);
+    UI.kpiRoi.className = `text-xs font-mono font-semibold ${res.roiPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+
+  if (UI.kpiTotalApy) UI.kpiTotalApy.textContent = fmtPct(res.totalStrategyAPY, false) + ' APY';
+  if (UI.kpiSpotApyContrib) UI.kpiSpotApyContrib.textContent = fmtPct(res.spotAPYContrib);
+  if (UI.kpiPerpApyContrib) UI.kpiPerpApyContrib.textContent = fmtPct(res.perpAPYContrib);
+  if (UI.kpiApyMode) UI.kpiApyMode.textContent = state.mode === 'unified' ? 'UNIFIED 100%' : `${state.splitSpot}% SPOT`;
+
+  if (UI.kpiLiqDistance && UI.kpiLiqStatus && UI.kpiLiqThresholdLabel) {
+    if (res.rLiq === Infinity) {
+      UI.kpiLiqDistance.textContent = 'IMMUNE\u00A0(∞)';
+      UI.kpiLiqStatus.textContent = 'ZERO RISK';
+      UI.kpiLiqStatus.className = 'shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono';
+      UI.kpiLiqThresholdLabel.textContent = 'Mathematically impossible';
+    } else if (res.isLiquidated) {
+      UI.kpiLiqDistance.textContent = 'LIQUIDATED';
+      UI.kpiLiqStatus.textContent = 'BREACHED';
+      UI.kpiLiqStatus.className = 'text-[10px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-mono';
+      UI.kpiLiqThresholdLabel.textContent = `Breached at ${fmtPct(res.rLiq * 100)}`;
+    } else {
+      UI.kpiLiqDistance.textContent = fmtPct(res.distanceToLiqPct);
+      UI.kpiLiqThresholdLabel.textContent = fmtPct(res.rLiq * 100);
+      if (res.distanceToLiqPct < 20) {
+        UI.kpiLiqStatus.textContent = 'DANGER';
+        UI.kpiLiqStatus.className = 'text-[10px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-mono animate-subtle';
+      } else if (res.distanceToLiqPct < 60) {
+        UI.kpiLiqStatus.textContent = 'WARNING';
+        UI.kpiLiqStatus.className = 'text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-mono';
+      } else {
+        UI.kpiLiqStatus.textContent = 'SAFE';
+        UI.kpiLiqStatus.className = 'text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono';
+      }
+    }
+  }
+
+  const totalCash = res.fundingYieldTotal + res.stakingYieldTotal;
+  if (UI.kpiAccruedYield) {
+    UI.kpiAccruedYield.textContent = (totalCash >= 0 ? '+' : '') + fmtUSD(totalCash);
+    UI.kpiAccruedYield.className = `text-2xl font-bold font-mono ${totalCash >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  if (UI.kpiFundingCash) UI.kpiFundingCash.textContent = fmtUSD(res.fundingYieldTotal);
+  if (UI.kpiStakingCash) UI.kpiStakingCash.textContent = fmtUSD(res.stakingYieldTotal);
+  if (UI.kpiHorizonTag) UI.kpiHorizonTag.textContent = `${state.days}d`;
+
+  if (UI.kpiDelta && UI.kpiDeltaTag) {
+    UI.kpiDelta.textContent = fmtUSD(res.netDelta);
+    if (res.isLiquidated) {
+      UI.kpiDelta.className = 'text-2xl font-bold font-mono text-rose-400';
+      UI.kpiDeltaTag.textContent = '100% NAKED LONG';
+      UI.kpiDeltaTag.className = 'text-[10px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-mono animate-subtle';
+    } else {
+      UI.kpiDelta.className = 'text-2xl font-bold font-mono text-cyan-400';
+      UI.kpiDeltaTag.textContent = 'NEUTRAL (Δ=0)';
+      UI.kpiDeltaTag.className = 'text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono';
+    }
+  }
+
+  if (UI.liqBanner && UI.alertLiqTrigger) {
+    if (res.isLiquidated) {
+      UI.liqBanner.classList.remove('hidden');
+      UI.alertLiqTrigger.textContent = fmtPct(res.rLiq * 100);
+    } else {
+      UI.liqBanner.classList.add('hidden');
+    }
+  }
+
+  if (UI.breakdownSpotVal) UI.breakdownSpotVal.textContent = fmtUSD(res.spotVal);
+  if (UI.breakdownSpotPnl) UI.breakdownSpotPnl.textContent = `PnL: ${res.spotPnL >= 0 ? '+' : ''}${fmtUSD(res.spotPnL)}`;
+
+  if (UI.labelShortCollat && UI.breakdownShortVal && UI.breakdownShortPnl) {
+    if (state.mode === 'unified') {
+      UI.labelShortCollat.textContent = 'Short Perp Equity / Loss';
+    } else {
+      UI.labelShortCollat.textContent = 'Short Perp Margin & PnL';
+    }
+    UI.breakdownShortVal.textContent = fmtUSD(res.perpMarginVal);
+    UI.breakdownShortPnl.textContent = `PnL: ${res.perpPnL >= 0 ? '+' : ''}${fmtUSD(res.perpPnL)}`;
+  }
+
+  if (UI.breakdownFunding) UI.breakdownFunding.textContent = (res.fundingYieldTotal >= 0 ? '+' : '') + fmtUSD(res.fundingYieldTotal);
+  if (UI.breakdownFundingRate) UI.breakdownFundingRate.textContent = `Rate: ${fmtPct(state.fundingAPR)} APR`;
+  if (UI.breakdownStaking) UI.breakdownStaking.textContent = `+${fmtUSD(res.stakingYieldTotal)}`;
+  if (UI.breakdownStakingRate) UI.breakdownStakingRate.textContent = `Rate: ${state.stakingAPY.toFixed(1)}% APY`;
+  if (UI.breakdownDepeg) UI.breakdownDepeg.textContent = `-${fmtUSD(res.depegLoss)}`;
+  if (UI.breakdownDepegPct) UI.breakdownDepegPct.textContent = `Discount: ${state.depegPct.toFixed(1)}%`;
+  if (UI.breakdownNetPnl) {
+    UI.breakdownNetPnl.textContent = (res.netPnL >= 0 ? '+' : '') + fmtUSD(res.netPnL);
+    UI.breakdownNetPnl.className = `text-sm font-bold font-mono mt-0.5 ${res.netPnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  if (UI.breakdownNetRoi) {
+    UI.breakdownNetRoi.textContent = `ROI: ${fmtPct(res.roiPct)}`;
+    UI.breakdownNetRoi.className = `text-[10px] font-mono mt-0.5 ${res.roiPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}`;
+  }
+
+  if (UI.stateBadge) {
+    if (res.isLiquidated) {
+      UI.stateBadge.textContent = 'UNHEDGED SPOT LONG';
+      UI.stateBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-rose-950 text-rose-300 border border-rose-800 font-bold font-mono';
+    } else if (state.mode === 'unified') {
+      UI.stateBadge.textContent = 'CROSS-COLLATERALIZED HEDGE';
+      UI.stateBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold font-mono';
+    } else {
+      UI.stateBadge.textContent = 'ISOLATED DELTA NEUTRAL';
+      UI.stateBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold font-mono';
+    }
+  }
+
+  const inst = getInstrumentDetails(state);
+  if (UI.instPairBadge) UI.instPairBadge.textContent = inst.pairBadge;
+  if (UI.chartInstrumentsBadge) UI.chartInstrumentsBadge.textContent = 'PAIR: ' + inst.pairBadge;
+  if (UI.instSpotSymbol) UI.instSpotSymbol.textContent = inst.spotSymbol;
+  if (UI.instSpotDesc) UI.instSpotDesc.textContent = inst.spotName;
+  if (UI.instSpotTag) UI.instSpotTag.textContent = inst.spotTag;
+  if (UI.instSpotYield) UI.instSpotYield.textContent = (state.stakingAPY > 0 ? `+${state.stakingAPY.toFixed(1)}% APY` : '0.0% APY');
+  if (UI.instSpotAmount) UI.instSpotAmount.textContent = fmtUSD(res.S0) + (state.mode === 'isolated' ? ` (${state.splitSpot}%)` : ' (100%)');
+
+  if (UI.instPerpSymbol) UI.instPerpSymbol.textContent = inst.perpSymbol;
+  if (UI.instPerpDesc) UI.instPerpDesc.textContent = inst.perpName;
+  if (UI.instPerpTag) UI.instPerpTag.textContent = inst.perpTag;
+  if (UI.instPerpRate) {
+    UI.instPerpRate.textContent = `${fmtPct(state.fundingAPR)} APR`;
+    UI.instPerpRate.className = `text-[11px] font-bold ${state.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  if (UI.instPerpAmount) UI.instPerpAmount.textContent = '-' + fmtUSD(res.N0) + (state.mode === 'isolated' ? ` (-${state.splitSpot}%)` : ' (-1.00x)');
+
+  if (UI.instMarginDesc) {
+    if (state.mode === 'isolated') {
+      UI.instMarginDesc.textContent = `USDC Cash Margin (${fmtUSD(res.M0)} in Isolated Derivatives Account)`;
+    } else {
+      UI.instMarginDesc.textContent = inst.marginDesc;
+    }
+  }
+
+  const activeAsset = state.tradedAsset || 'ETH';
+  ['assetBtnEth', 'assetBtnBtc', 'assetBtnSol'].forEach(btnKey => {
+    const btn = UI[btnKey];
+    if (!btn) return;
+    const assetName = btnKey.replace('assetBtn', '').toUpperCase();
+    if (assetName === activeAsset) {
+      btn.className = 'px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition';
+    } else {
+      btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition';
+    }
+  });
+
+  if (UI.labelSpotCollat) {
+    UI.labelSpotCollat.innerHTML = `Spot Long (${inst.spotSymbol}) <span class="text-[9px] px-1 rounded bg-slate-800 text-cyan-300 font-semibold">SPOT</span>`;
+  }
+  if (UI.labelShortCollat) {
+    if (state.mode === 'unified') {
+      UI.labelShortCollat.innerHTML = `Short Perp (${inst.perpSymbol}) <span class="text-[9px] px-1 rounded bg-slate-800 text-rose-300 font-semibold">DERIVATIVE</span>`;
+    } else {
+      UI.labelShortCollat.innerHTML = `Short Perp & USDC Margin <span class="text-[9px] px-1 rounded bg-slate-800 text-rose-300 font-semibold">ISOLATED</span>`;
+    }
+  }
+
+  if (UI.kpiDeltaSub) {
+    UI.kpiDeltaSub.textContent = `Long ${inst.spotSymbol} Δ minus Short ${inst.perpSymbol} Δ`;
+  }
+
+  if (UI.boxIsolatedBtcLst) {
+    if (state.mode === 'isolated' && state.tradedAsset === 'BTC') {
+      UI.boxIsolatedBtcLst.classList.remove('hidden');
+    } else {
+      UI.boxIsolatedBtcLst.classList.add('hidden');
+    }
+  }
+
+  if (UI.labelBtcLstMode) {
+    const v = state.btcVariant || 'lbtc';
+    if (v === 'lbtc') {
+      UI.labelBtcLstMode.textContent = 'LBTC (Babylon LST, +3.2%)';
+      if (UI.btnBtcLbtc) UI.btnBtcLbtc.className = 'py-1 px-1 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold transition text-center truncate';
+      if (UI.btnBtcSolvbtc) UI.btnBtcSolvbtc.className = 'py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate';
+      if (UI.btnBtcNative) UI.btnBtcNative.className = 'py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate';
+    } else if (v === 'solvbtc') {
+      UI.labelBtcLstMode.textContent = 'SolvBTC.BBN (Babylon LST, +3.5%)';
+      if (UI.btnBtcSolvbtc) UI.btnBtcSolvbtc.className = 'py-1 px-1 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold transition text-center truncate';
+      if (UI.btnBtcLbtc) UI.btnBtcLbtc.className = 'py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate';
+      if (UI.btnBtcNative) UI.btnBtcNative.className = 'py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate';
+    } else {
+      UI.labelBtcLstMode.textContent = 'Native BTC (Pure Spot, 0%)';
+      if (UI.btnBtcNative) UI.btnBtcNative.className = 'py-1 px-1 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold transition text-center truncate';
+      if (UI.btnBtcLbtc) UI.btnBtcLbtc.className = 'py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate';
+      if (UI.btnBtcSolvbtc) UI.btnBtcSolvbtc.className = 'py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate';
+    }
+  }
+
+  ['isoBtnEth', 'isoBtnBtc', 'isoBtnSol'].forEach(btnKey => {
+    const btn = UI[btnKey];
+    if (!btn) return;
+    const a = btnKey.replace('isoBtn', '').toUpperCase();
+    if (a === state.tradedAsset) {
+      btn.className = 'px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition';
+    } else {
+      btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition';
+    }
+  });
+
+  if (UI.instCollateralNoteText && inst.note) {
+    UI.instCollateralNoteText.textContent = inst.note;
+  }
+
+  renderMarketData(UI, state);
+}
