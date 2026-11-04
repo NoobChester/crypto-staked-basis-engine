@@ -210,3 +210,4 @@ export function fmtPct(val, plus = true) {
   const sign = (plus && val > 0) ? '+' : '';
   return sign + val.toFixed(2) + '%';
 }
+

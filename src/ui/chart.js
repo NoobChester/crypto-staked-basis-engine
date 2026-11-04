@@ -278,3 +278,4 @@ export function setupChartInteractions(canvas, tooltipEls, getState) {
     tooltipEls.tooltip.classList.add('hidden');
   });
 }
+

@@ -141,3 +141,4 @@ Follow [`.gemini/rules/git-workflow.md`](file:///c:/Users/User/crypto%20portfoli
 - Run `git diff` to self-review before committing.
 - Commit atomically using Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `chore:`).
 - Merge cleanly to `master` and delete the topic branch.
+

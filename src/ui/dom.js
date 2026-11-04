@@ -418,3 +418,4 @@ export function bindInputListeners(UI, state, onUpdate) {
     });
   }
 }
+
