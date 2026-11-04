@@ -1,20 +1,28 @@
 /**
- * @file chart.js
+ * @file chart.ts
  * @description HTML5 Canvas 2D rendering engine for PnL curves, liquidation cliffs,
  * entry reference baselines, and interactive tooltip tracking.
  */
 
-import { calculateOutcome, fmtUSD, fmtPct } from '../math/hedging.js';
+import { calculateOutcome, fmtUSD, fmtPct, type HedgingState, type HedgingOutcome } from '../math/hedging.js';
 
-/**
- * Renders the strategy PnL curve and benchmark on the provided canvas.
- * @param {HTMLCanvasElement} canvas
- * @param {object} state Current application state
- * @param {object} currentRes Outcome calculated at state.priceMove
- */
-export function drawChart(canvas, state, currentRes) {
+export interface TooltipElements {
+  tooltip: HTMLElement | null;
+  ttPrice: HTMLElement | null;
+  ttVal: HTMLElement | null;
+  ttRoi: HTMLElement | null;
+  ttStatus: HTMLElement | null;
+}
+
+export function drawChart(
+  canvas: HTMLCanvasElement | null,
+  state: HedgingState,
+  currentRes: HedgingOutcome
+): void {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
 
@@ -31,8 +39,8 @@ export function drawChart(canvas, state, currentRes) {
   const plotH = H - pad.top - pad.bottom;
 
   const stepCount = 140;
-  const pnlPoints = [];
-  const spotPoints = [];
+  const pnlPoints: Array<{ x: number; y: number; isLiq: boolean }> = [];
+  const spotPoints: Array<{ x: number; y: number }> = [];
 
   let minVal = Infinity;
   let maxVal = -Infinity;
@@ -42,7 +50,6 @@ export function drawChart(canvas, state, currentRes) {
     const outcome = calculateOutcome(pMove, state);
     pnlPoints.push({ x: pMove, y: outcome.totalPortfolioVal, isLiq: outcome.isLiquidated });
 
-    // Unhedged spot benchmark
     const unhedged = state.capital * (1 + (pMove / 100));
     spotPoints.push({ x: pMove, y: unhedged });
 
@@ -53,10 +60,10 @@ export function drawChart(canvas, state, currentRes) {
   const yMin = Math.max(0, Math.floor(minVal * 0.85 / 1000) * 1000);
   const yMax = Math.ceil(maxVal * 1.15 / 1000) * 1000;
 
-  function toCanvasX(pMove) {
+  function toCanvasX(pMove: number) {
     return pad.left + ((pMove - (-100)) / 200) * plotW;
   }
-  function toCanvasY(val) {
+  function toCanvasY(val: number) {
     return pad.top + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
   }
 
@@ -119,11 +126,9 @@ export function drawChart(canvas, state, currentRes) {
   if (rLiqPct <= 100 && rLiqPct > -100) {
     const liqX = toCanvasX(rLiqPct);
 
-    // Danger zone tint
     ctx.fillStyle = 'rgba(244, 63, 94, 0.08)';
     ctx.fillRect(liqX, pad.top, (pad.left + plotW) - liqX, plotH);
 
-    // Dashed Red Cliff Line
     ctx.strokeStyle = '#f43f5e';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([5, 4]);
@@ -180,9 +185,9 @@ export function drawChart(canvas, state, currentRes) {
 
     ctx.lineWidth = 2.5;
     if (pt1.isLiq || pt2.isLiq) {
-      ctx.strokeStyle = '#f43f5e'; // Crimson if wiped
+      ctx.strokeStyle = '#f43f5e';
     } else {
-      ctx.strokeStyle = '#06b6d4'; // Cyan if safely protected
+      ctx.strokeStyle = '#06b6d4';
     }
     ctx.stroke();
   }
@@ -225,7 +230,11 @@ export function drawChart(canvas, state, currentRes) {
   ctx.strokeStyle = currentRes.isLiquidated ? '#f43f5e' : '#06b6d4';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.roundRect(badgeX - badgeW / 2, badgeY, badgeW, badgeH, 6);
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(badgeX - badgeW / 2, badgeY, badgeW, badgeH, 6);
+  } else {
+    ctx.rect(badgeX - badgeW / 2, badgeY, badgeW, badgeH);
+  }
   ctx.fill();
   ctx.stroke();
 
@@ -235,16 +244,14 @@ export function drawChart(canvas, state, currentRes) {
   ctx.fillText(badgeText, badgeX, badgeY + badgeH / 2);
 }
 
-/**
- * Attaches interactive tooltip events to the canvas.
- * @param {HTMLCanvasElement} canvas
- * @param {object} tooltipEls
- * @param {() => object} getState
- */
-export function setupChartInteractions(canvas, tooltipEls, getState) {
+export function setupChartInteractions(
+  canvas: HTMLCanvasElement | null,
+  tooltipEls: TooltipElements,
+  getState: () => HedgingState
+): void {
   if (!canvas || !tooltipEls.tooltip) return;
 
-  canvas.addEventListener('mousemove', (e) => {
+  canvas.addEventListener('mousemove', (e: MouseEvent) => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -253,7 +260,7 @@ export function setupChartInteractions(canvas, tooltipEls, getState) {
     const plotW = rect.width - pad.left - pad.right;
 
     if (mouseX < pad.left || mouseX > pad.left + plotW || mouseY < pad.top || mouseY > rect.height - pad.bottom) {
-      tooltipEls.tooltip.classList.add('hidden');
+      tooltipEls.tooltip?.classList.add('hidden');
       return;
     }
 
@@ -261,21 +268,24 @@ export function setupChartInteractions(canvas, tooltipEls, getState) {
     const currentState = getState();
     const res = calculateOutcome(hoverPriceMove, currentState);
 
-    tooltipEls.tooltip.classList.remove('hidden');
-    tooltipEls.tooltip.style.left = `${Math.min(mouseX + 15, rect.width - 180)}px`;
-    tooltipEls.tooltip.style.top = `${Math.max(mouseY - 75, 10)}px`;
+    if (tooltipEls.tooltip) {
+      tooltipEls.tooltip.classList.remove('hidden');
+      tooltipEls.tooltip.style.left = `${Math.min(mouseX + 15, rect.width - 180)}px`;
+      tooltipEls.tooltip.style.top = `${Math.max(mouseY - 75, 10)}px`;
+    }
 
-    tooltipEls.ttPrice.textContent = `Price Move: ${fmtPct(hoverPriceMove)}`;
-    tooltipEls.ttVal.textContent = `Portfolio: ${fmtUSD(res.totalPortfolioVal)}`;
-    tooltipEls.ttRoi.textContent = `ROI: ${fmtPct(res.roiPct)}`;
-    tooltipEls.ttStatus.textContent = res.isLiquidated
-      ? 'Status: 100% Unhedged Long'
-      : (currentState.mode === 'unified' ? 'Status: Cross-Margin Protected' : 'Status: Isolated Hedged');
-    tooltipEls.ttStatus.className = res.isLiquidated ? 'text-[10px] text-rose-400 font-bold' : 'text-[10px] text-cyan-400';
+    if (tooltipEls.ttPrice) tooltipEls.ttPrice.textContent = `Price Move: ${fmtPct(hoverPriceMove)}`;
+    if (tooltipEls.ttVal) tooltipEls.ttVal.textContent = `Portfolio: ${fmtUSD(res.totalPortfolioVal)}`;
+    if (tooltipEls.ttRoi) tooltipEls.ttRoi.textContent = `ROI: ${fmtPct(res.roiPct)}`;
+    if (tooltipEls.ttStatus) {
+      tooltipEls.ttStatus.textContent = res.isLiquidated
+        ? 'Status: 100% Unhedged Long'
+        : (currentState.mode === 'unified' ? 'Status: Cross-Margin Protected' : 'Status: Isolated Hedged');
+      tooltipEls.ttStatus.className = res.isLiquidated ? 'text-[10px] text-rose-400 font-bold' : 'text-[10px] text-cyan-400';
+    }
   });
 
   canvas.addEventListener('mouseleave', () => {
-    tooltipEls.tooltip.classList.add('hidden');
+    tooltipEls.tooltip?.classList.add('hidden');
   });
 }
-

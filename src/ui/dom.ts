@@ -1,16 +1,107 @@
 /**
- * @file dom.js
+ * @file dom.ts
  * @description DOM element caching, UI event listeners, and reactive component renderers.
  */
 
-import { fmtUSD, fmtPct } from '../math/hedging.js';
+import { fmtUSD, fmtPct, type HedgingState, type HedgingOutcome } from '../math/hedging.js';
 import { getInstrumentDetails } from '../config/presets.js';
 
-/**
- * Maps all interactive DOM elements in the document.
- * @returns {object}
- */
-export function getUIElements() {
+export interface UIElements {
+  modeUnifiedBtn: HTMLElement | null;
+  modeIsolatedBtn: HTMLElement | null;
+  panelUnifiedPresets: HTMLElement | null;
+  panelIsolatedSplit: HTMLElement | null;
+  valCollateralRatio: HTMLElement | null;
+  collateralRatioExplainer: HTMLElement | null;
+  jitosolToggleBox: HTMLElement | null;
+  labelSolYieldMode: HTMLElement | null;
+  btnSolNominal: HTMLElement | null;
+  btnSolReal: HTMLElement | null;
+  boxIsolatedBtcLst: HTMLElement | null;
+  labelBtcLstMode: HTMLElement | null;
+  btnBtcNative: HTMLElement | null;
+  btnBtcLbtc: HTMLElement | null;
+  btnBtcSolvbtc: HTMLElement | null;
+  isoBtnEth: HTMLElement | null;
+  isoBtnBtc: HTMLElement | null;
+  isoBtnSol: HTMLElement | null;
+  instCollateralNoteText: HTMLElement | null;
+  inputPriceMove: HTMLInputElement | null;
+  valPriceMove: HTMLElement | null;
+  inputCapital: HTMLInputElement | null;
+  valCapital: HTMLElement | null;
+  inputDays: HTMLInputElement | null;
+  valDays: HTMLElement | null;
+  inputFunding: HTMLInputElement | null;
+  valFunding: HTMLElement | null;
+  inputStaking: HTMLInputElement | null;
+  valStaking: HTMLElement | null;
+  inputDepeg: HTMLInputElement | null;
+  valDepeg: HTMLElement | null;
+  inputSplit: HTMLInputElement | null;
+  valSplit: HTMLElement | null;
+  splitHelperText: HTMLElement | null;
+  instPairBadge: HTMLElement | null;
+  chartInstrumentsBadge: HTMLElement | null;
+  assetBtnEth: HTMLElement | null;
+  assetBtnBtc: HTMLElement | null;
+  assetBtnSol: HTMLElement | null;
+  instSpotSymbol: HTMLElement | null;
+  instSpotDesc: HTMLElement | null;
+  instSpotTag: HTMLElement | null;
+  instSpotYield: HTMLElement | null;
+  instSpotAmount: HTMLElement | null;
+  instPerpSymbol: HTMLElement | null;
+  instPerpDesc: HTMLElement | null;
+  instPerpTag: HTMLElement | null;
+  instPerpRate: HTMLElement | null;
+  instPerpAmount: HTMLElement | null;
+  instMarginDesc: HTMLElement | null;
+  labelSpotCollat: HTMLElement | null;
+  kpiDeltaSub: HTMLElement | null;
+  kpiNetValue: HTMLElement | null;
+  kpiRoi: HTMLElement | null;
+  kpiStartingCap: HTMLElement | null;
+  kpiTotalApy: HTMLElement | null;
+  kpiApyMode: HTMLElement | null;
+  kpiSpotApyContrib: HTMLElement | null;
+  kpiPerpApyContrib: HTMLElement | null;
+  kpiLiqDistance: HTMLElement | null;
+  kpiLiqStatus: HTMLElement | null;
+  kpiLiqThresholdLabel: HTMLElement | null;
+  kpiAccruedYield: HTMLElement | null;
+  kpiHorizonTag: HTMLElement | null;
+  kpiFundingCash: HTMLElement | null;
+  kpiStakingCash: HTMLElement | null;
+  kpiDelta: HTMLElement | null;
+  kpiDeltaTag: HTMLElement | null;
+  breakdownSpotVal: HTMLElement | null;
+  breakdownSpotPnl: HTMLElement | null;
+  labelShortCollat: HTMLElement | null;
+  breakdownShortVal: HTMLElement | null;
+  breakdownShortPnl: HTMLElement | null;
+  breakdownFunding: HTMLElement | null;
+  breakdownFundingRate: HTMLElement | null;
+  breakdownStaking: HTMLElement | null;
+  breakdownStakingRate: HTMLElement | null;
+  breakdownDepeg: HTMLElement | null;
+  breakdownDepegPct: HTMLElement | null;
+  breakdownNetPnl: HTMLElement | null;
+  breakdownNetRoi: HTMLElement | null;
+  stateBadge: HTMLElement | null;
+  liqBanner: HTMLElement | null;
+  alertLiqTrigger: HTMLElement | null;
+  canvas: HTMLCanvasElement | null;
+  chartSubCaption: HTMLElement | null;
+  tooltip: HTMLElement | null;
+  ttPrice: HTMLElement | null;
+  ttVal: HTMLElement | null;
+  ttRoi: HTMLElement | null;
+  ttStatus: HTMLElement | null;
+  [key: string]: HTMLElement | HTMLInputElement | HTMLCanvasElement | null;
+}
+
+export function getUIElements(): UIElements {
   return {
     modeUnifiedBtn: document.getElementById('mode-btn-unified'),
     modeIsolatedBtn: document.getElementById('mode-btn-isolated'),
@@ -23,7 +114,6 @@ export function getUIElements() {
     btnSolNominal: document.getElementById('btn-sol-nominal'),
     btnSolReal: document.getElementById('btn-sol-real'),
 
-    // Isolated BTC LST Controls
     boxIsolatedBtcLst: document.getElementById('box-isolated-btclst'),
     labelBtcLstMode: document.getElementById('label-btclst-mode'),
     btnBtcNative: document.getElementById('btn-btc-native'),
@@ -34,24 +124,22 @@ export function getUIElements() {
     isoBtnSol: document.getElementById('iso-btn-sol'),
     instCollateralNoteText: document.getElementById('inst-collateral-note-text'),
 
-    // Sliders & Inputs
-    inputPriceMove: document.getElementById('input-price-move'),
+    inputPriceMove: document.getElementById('input-price-move') as HTMLInputElement | null,
     valPriceMove: document.getElementById('val-price-move'),
-    inputCapital: document.getElementById('input-capital'),
+    inputCapital: document.getElementById('input-capital') as HTMLInputElement | null,
     valCapital: document.getElementById('val-capital'),
-    inputDays: document.getElementById('input-days'),
+    inputDays: document.getElementById('input-days') as HTMLInputElement | null,
     valDays: document.getElementById('val-days'),
-    inputFunding: document.getElementById('input-funding'),
+    inputFunding: document.getElementById('input-funding') as HTMLInputElement | null,
     valFunding: document.getElementById('val-funding'),
-    inputStaking: document.getElementById('input-staking'),
+    inputStaking: document.getElementById('input-staking') as HTMLInputElement | null,
     valStaking: document.getElementById('val-staking'),
-    inputDepeg: document.getElementById('input-depeg'),
+    inputDepeg: document.getElementById('input-depeg') as HTMLInputElement | null,
     valDepeg: document.getElementById('val-depeg'),
-    inputSplit: document.getElementById('input-split'),
+    inputSplit: document.getElementById('input-split') as HTMLInputElement | null,
     valSplit: document.getElementById('val-split'),
     splitHelperText: document.getElementById('split-helper-text'),
 
-    // Traded Instruments Elements
     instPairBadge: document.getElementById('inst-pair-badge'),
     chartInstrumentsBadge: document.getElementById('chart-instruments-badge'),
     assetBtnEth: document.getElementById('asset-btn-eth'),
@@ -71,7 +159,6 @@ export function getUIElements() {
     labelSpotCollat: document.getElementById('label-spot-collat'),
     kpiDeltaSub: document.getElementById('kpi-delta-sub'),
 
-    // Ribbon KPIs
     kpiNetValue: document.getElementById('kpi-net-value'),
     kpiRoi: document.getElementById('kpi-roi'),
     kpiStartingCap: document.getElementById('kpi-starting-cap'),
@@ -89,7 +176,6 @@ export function getUIElements() {
     kpiDelta: document.getElementById('kpi-delta'),
     kpiDeltaTag: document.getElementById('kpi-delta-tag'),
 
-    // Balance sheet decomposition
     breakdownSpotVal: document.getElementById('breakdown-spot-val'),
     breakdownSpotPnl: document.getElementById('breakdown-spot-pnl'),
     labelShortCollat: document.getElementById('label-short-collat'),
@@ -105,10 +191,9 @@ export function getUIElements() {
     breakdownNetRoi: document.getElementById('breakdown-net-roi'),
     stateBadge: document.getElementById('state-badge'),
 
-    // Alert & Canvas
     liqBanner: document.getElementById('liquidation-banner'),
     alertLiqTrigger: document.getElementById('alert-liq-trigger'),
-    canvas: document.getElementById('pnlCanvas'),
+    canvas: document.getElementById('pnlCanvas') as HTMLCanvasElement | null,
     chartSubCaption: document.getElementById('chart-sub-caption'),
     tooltip: document.getElementById('canvas-tooltip'),
     ttPrice: document.getElementById('tt-price'),
@@ -118,14 +203,7 @@ export function getUIElements() {
   };
 }
 
-/**
- * Updates DOM elements with the calculated outcome and state.
- * @param {object} UI
- * @param {object} state
- * @param {object} res
- */
-export function renderUI(UI, state, res) {
-  // Top KPIs
+export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcome): void {
   if (UI.kpiNetValue) UI.kpiNetValue.textContent = fmtUSD(res.totalPortfolioVal);
   if (UI.kpiStartingCap) UI.kpiStartingCap.textContent = fmtUSD(res.C);
   if (UI.kpiRoi) {
@@ -138,7 +216,6 @@ export function renderUI(UI, state, res) {
   if (UI.kpiPerpApyContrib) UI.kpiPerpApyContrib.textContent = fmtPct(res.perpAPYContrib);
   if (UI.kpiApyMode) UI.kpiApyMode.textContent = state.mode === 'unified' ? 'UNIFIED 100%' : `${state.splitSpot}% SPOT`;
 
-  // Liquidation runway
   if (UI.kpiLiqDistance && UI.kpiLiqStatus && UI.kpiLiqThresholdLabel) {
     if (res.rLiq === Infinity) {
       UI.kpiLiqDistance.textContent = 'IMMUNE\u00A0(∞)';
@@ -166,7 +243,6 @@ export function renderUI(UI, state, res) {
     }
   }
 
-  // Cash Harvest
   const totalCash = res.fundingYieldTotal + res.stakingYieldTotal;
   if (UI.kpiAccruedYield) {
     UI.kpiAccruedYield.textContent = (totalCash >= 0 ? '+' : '') + fmtUSD(totalCash);
@@ -176,7 +252,6 @@ export function renderUI(UI, state, res) {
   if (UI.kpiStakingCash) UI.kpiStakingCash.textContent = fmtUSD(res.stakingYieldTotal);
   if (UI.kpiHorizonTag) UI.kpiHorizonTag.textContent = `${state.days}d`;
 
-  // Delta Exposure
   if (UI.kpiDelta && UI.kpiDeltaTag) {
     UI.kpiDelta.textContent = fmtUSD(res.netDelta);
     if (res.isLiquidated) {
@@ -190,7 +265,6 @@ export function renderUI(UI, state, res) {
     }
   }
 
-  // Liquidation Alert Banner
   if (UI.liqBanner && UI.alertLiqTrigger) {
     if (res.isLiquidated) {
       UI.liqBanner.classList.remove('hidden');
@@ -200,7 +274,6 @@ export function renderUI(UI, state, res) {
     }
   }
 
-  // Decomposition Table
   if (UI.breakdownSpotVal) UI.breakdownSpotVal.textContent = fmtUSD(res.spotVal);
   if (UI.breakdownSpotPnl) UI.breakdownSpotPnl.textContent = `PnL: ${res.spotPnL >= 0 ? '+' : ''}${fmtUSD(res.spotPnL)}`;
 
@@ -242,7 +315,6 @@ export function renderUI(UI, state, res) {
     }
   }
 
-  // Update Traded Instruments Display
   const inst = getInstrumentDetails(state);
   if (UI.instPairBadge) UI.instPairBadge.textContent = inst.pairBadge;
   if (UI.chartInstrumentsBadge) UI.chartInstrumentsBadge.textContent = 'PAIR: ' + inst.pairBadge;
@@ -269,19 +341,18 @@ export function renderUI(UI, state, res) {
     }
   }
 
-  // Update asset selector active styles
   const activeAsset = state.tradedAsset || 'ETH';
   ['assetBtnEth', 'assetBtnBtc', 'assetBtnSol'].forEach(btnKey => {
-    if (!UI[btnKey]) return;
+    const btn = UI[btnKey];
+    if (!btn) return;
     const assetName = btnKey.replace('assetBtn', '').toUpperCase();
     if (assetName === activeAsset) {
-      UI[btnKey].className = 'px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition';
+      btn.className = 'px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition';
     } else {
-      UI[btnKey].className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition';
+      btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition';
     }
   });
 
-  // Update Balance Sheet labels
   if (UI.labelSpotCollat) {
     UI.labelSpotCollat.innerHTML = `Spot Long (${inst.spotSymbol}) <span class="text-[9px] px-1 rounded bg-slate-800 text-cyan-300 font-semibold">SPOT</span>`;
   }
@@ -297,7 +368,6 @@ export function renderUI(UI, state, res) {
     UI.kpiDeltaSub.textContent = `Long ${inst.spotSymbol} Δ minus Short ${inst.perpSymbol} Δ`;
   }
 
-  // Update Isolated BTC LST Box & Buttons
   if (UI.boxIsolatedBtcLst) {
     if (state.mode === 'isolated' && state.tradedAsset === 'BTC') {
       UI.boxIsolatedBtcLst.classList.remove('hidden');
@@ -326,33 +396,30 @@ export function renderUI(UI, state, res) {
     }
   }
 
-  // Sync Isolated Asset Selector Buttons
   ['isoBtnEth', 'isoBtnBtc', 'isoBtnSol'].forEach(btnKey => {
-    if (!UI[btnKey]) return;
+    const btn = UI[btnKey];
+    if (!btn) return;
     const a = btnKey.replace('isoBtn', '').toUpperCase();
     if (a === state.tradedAsset) {
-      UI[btnKey].className = 'px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition';
+      btn.className = 'px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition';
     } else {
-      UI[btnKey].className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition';
+      btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition';
     }
   });
 
-  // Update Dynamic Institutional Collateral Notice
   if (UI.instCollateralNoteText && inst.note) {
     UI.instCollateralNoteText.textContent = inst.note;
   }
 }
 
-/**
- * Binds slider and input change listeners to the UI controls.
- * @param {object} UI
- * @param {object} state
- * @param {() => void} onUpdate
- */
-export function bindInputListeners(UI, state, onUpdate) {
+export function bindInputListeners(
+  UI: UIElements,
+  state: HedgingState,
+  onUpdate: () => void
+): void {
   if (UI.inputPriceMove) {
     UI.inputPriceMove.addEventListener('input', (e) => {
-      state.priceMove = parseFloat(e.target.value);
+      state.priceMove = parseFloat((e.target as HTMLInputElement).value);
       if (UI.valPriceMove) UI.valPriceMove.textContent = fmtPct(state.priceMove);
       onUpdate();
     });
@@ -360,7 +427,7 @@ export function bindInputListeners(UI, state, onUpdate) {
 
   if (UI.inputCapital) {
     UI.inputCapital.addEventListener('input', (e) => {
-      const val = Math.max(100, parseFloat(e.target.value) || 1000);
+      const val = Math.max(100, parseFloat((e.target as HTMLInputElement).value) || 1000);
       state.capital = val;
       if (UI.valCapital) UI.valCapital.textContent = fmtUSD(val);
       onUpdate();
@@ -369,7 +436,7 @@ export function bindInputListeners(UI, state, onUpdate) {
 
   if (UI.inputDays) {
     UI.inputDays.addEventListener('input', (e) => {
-      state.days = parseInt(e.target.value);
+      state.days = parseInt((e.target as HTMLInputElement).value);
       if (UI.valDays) UI.valDays.textContent = `${state.days} Day${state.days === 1 ? '' : 's'}`;
       onUpdate();
     });
@@ -377,7 +444,7 @@ export function bindInputListeners(UI, state, onUpdate) {
 
   if (UI.inputFunding) {
     UI.inputFunding.addEventListener('input', (e) => {
-      state.fundingAPR = parseFloat(e.target.value);
+      state.fundingAPR = parseFloat((e.target as HTMLInputElement).value);
       if (UI.valFunding) {
         UI.valFunding.textContent = fmtPct(state.fundingAPR) + ' APR';
         UI.valFunding.className = `font-mono font-bold ${state.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
@@ -388,7 +455,7 @@ export function bindInputListeners(UI, state, onUpdate) {
 
   if (UI.inputStaking) {
     UI.inputStaking.addEventListener('input', (e) => {
-      state.stakingAPY = parseFloat(e.target.value);
+      state.stakingAPY = parseFloat((e.target as HTMLInputElement).value);
       if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
       onUpdate();
     });
@@ -396,7 +463,7 @@ export function bindInputListeners(UI, state, onUpdate) {
 
   if (UI.inputDepeg) {
     UI.inputDepeg.addEventListener('input', (e) => {
-      state.depegPct = parseFloat(e.target.value);
+      state.depegPct = parseFloat((e.target as HTMLInputElement).value);
       if (UI.valDepeg) UI.valDepeg.textContent = state.depegPct.toFixed(1) + '% Discount';
       onUpdate();
     });
@@ -404,7 +471,7 @@ export function bindInputListeners(UI, state, onUpdate) {
 
   if (UI.inputSplit) {
     UI.inputSplit.addEventListener('input', (e) => {
-      const spotPct = parseInt(e.target.value);
+      const spotPct = parseInt((e.target as HTMLInputElement).value);
       state.splitSpot = spotPct;
       const marginPct = 100 - spotPct;
       if (UI.valSplit) UI.valSplit.textContent = `${spotPct}% Spot / ${marginPct}% Margin`;
@@ -418,4 +485,3 @@ export function bindInputListeners(UI, state, onUpdate) {
     });
   }
 }
-

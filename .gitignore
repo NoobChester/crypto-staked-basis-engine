@@ -4,8 +4,7 @@ node_modules/
 .pnp.js
 
 # Production & Build outputs
-dist/*
-!dist/bundle.js
+dist/
 build/
 out/
 .cache/

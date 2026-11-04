@@ -1,8 +1,8 @@
 # Crypto Staked Basis (DELTA-Q Quant Engine)
 
-[![Tests](https://img.shields.io/badge/tests-14%2F14%20passing-emerald?style=flat-square&logo=node.js)](tests/hedging.test.js)
-[![Runtime](https://img.shields.io/badge/runtime-native%20ES%20modules-cyan?style=flat-square)](src/app.js)
-[![Dependencies](https://img.shields.io/badge/dependencies-zero%20npm-purple?style=flat-square)](package.json)
+[![Tests](https://img.shields.io/badge/tests-14%2F14%20passing-emerald?style=flat-square&logo=vitest)](tests/hedging.test.ts)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x%20strict-blue?style=flat-square&logo=typescript)](tsconfig.json)
+[![Vite](https://img.shields.io/badge/Vite-HMR%20active-646CFF?style=flat-square&logo=vite)](vite.config.ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg?style=flat-square)](LICENSE)
 
 An institutional quantitative modeling, simulation, and risk engine designed for **Crypto Staked Basis Trading** (cash-and-carry carry arbitrage, popularized by protocols like Ethena).
@@ -83,29 +83,28 @@ crypto-staked-basis/
 
 ## Quickstart
 
-### Running the Terminal Locally
+### 1. Launching the Development Server (with Instant HMR)
 
-No build step required. Run with any static server or Node:
+Start Vite to launch the interactive terminal with real-time Hot Module Replacement:
 
 ```bash
-# Option 1: Using npx serve
-npx serve .
-
-# Option 2: Using Python 3
-python -m http.server 8080
-
-# Option 3: Simply open index.html in any modern browser
+npm run dev
 ```
 
-### Running Automated Quantitative Tests
+*Opens at `http://localhost:3000`. Any edits to calculations or canvas curves update the browser instantly in milliseconds without refreshing.*
 
-The repository includes a comprehensive verification suite testing MMR invariants, liquidation formulas, depeg losses, and boundary edge cases:
+### 2. Running Automated Tests & Type Checking
 
 ```bash
+# Run Vitest test suite
 npm test
-```
 
-*Runs 14 test suites in $<500\text{ms}$ via Node's native `node:test` runner.*
+# Run strict TypeScript compiler verification
+npm run typecheck
+
+# Build optimized production bundle
+npm run build
+```
 
 ---
 

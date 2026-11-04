@@ -1,55 +1,59 @@
 /**
- * @file hedging.js
+ * @file hedging.ts
  * @description Pure quantitative calculation engine for delta-neutral hedging,
  * cross-margin liquidation thresholds, isolated cash margin buffers, and yield accrual.
  */
 
-/**
- * @typedef {Object} HedgingState
- * @property {number} capital Starting portfolio equity in USD
- * @property {'unified' | 'isolated'} mode Margin architecture mode
- * @property {number} priceMove Underlying spot price move in percentage (-100 to +100+)
- * @property {number} days Duration horizon in days
- * @property {number} fundingAPR Perpetual short funding rate in APR %
- * @property {number} stakingAPY Spot asset staking yield in APY %
- * @property {number} depegPct LST depeg discount in %
- * @property {number} mmr Maintenance margin requirement (default 0.005 = 0.5%)
- * @property {number} collateralRatio Collateral haircut valuation (e.g., 0.90 for 10% haircut)
- * @property {number} splitSpot Percentage allocated to spot in isolated mode (e.g., 50 for 50/50 split)
- */
+import type { MarginMode, TradedAsset, BtcVariant, CollateralPresetKey, SolYieldType } from '../config/presets.js';
 
-/**
- * @typedef {Object} HedgingOutcome
- * @property {number} C Starting capital
- * @property {number} S0 Initial spot notional
- * @property {number} M0 Initial margin notional
- * @property {number} N0 Short perpetual notional size
- * @property {number} rLiq Mathematical liquidation price surge threshold (decimal)
- * @property {boolean} isLiquidated Whether current price shock breaches liquidation
- * @property {number} spotVal Ending spot asset dollar value
- * @property {number} spotPnL Unrealized PnL on spot
- * @property {number} perpMarginVal Ending margin equity on perpetual
- * @property {number} perpPnL Unrealized PnL on perpetual short
- * @property {number} fundingYieldTotal Cash earned from short funding payments
- * @property {number} stakingYieldTotal Cash earned from spot staking rewards
- * @property {number} depegLoss Dollar loss attributed to LST depeg
- * @property {number} totalPortfolioVal Final net strategy value
- * @property {number} netPnL Strategy net dollar gain or loss
- * @property {number} roiPct Net strategy ROI %
- * @property {number} netDelta Residual portfolio delta exposure in USD
- * @property {number} spotAPYContrib Spot APY contribution weighted by capital allocation
- * @property {number} perpAPYContrib Perp funding APY contribution weighted by capital allocation
- * @property {number} totalStrategyAPY Combined net annualized strategy APY %
- * @property {number} distanceToLiqPct Distance remaining to liquidation price in percentage points
- */
+export interface HedgingState {
+  capital: number;
+  mode: MarginMode;
+  priceMove: number;
+  days: number;
+  fundingAPR: number;
+  stakingAPY: number;
+  depegPct: number;
+  mmr: number;
+  collateralRatio: number;
+  splitSpot: number;
+  tradedAsset?: TradedAsset;
+  btcVariant?: BtcVariant;
+  activePreset?: CollateralPresetKey;
+  solYieldType?: SolYieldType;
+}
+
+export interface HedgingOutcome {
+  C: number;
+  S0: number;
+  M0: number;
+  N0: number;
+  rLiq: number;
+  isLiquidated: boolean;
+  spotVal: number;
+  spotPnL: number;
+  perpMarginVal: number;
+  perpPnL: number;
+  fundingYieldTotal: number;
+  stakingYieldTotal: number;
+  depegLoss: number;
+  totalPortfolioVal: number;
+  netPnL: number;
+  roiPct: number;
+  netDelta: number;
+  spotAPYContrib: number;
+  perpAPYContrib: number;
+  totalStrategyAPY: number;
+  distanceToLiqPct: number;
+}
 
 /**
  * Calculates the exact quantitative outcome of the delta-neutral hedging position.
- * @param {number} priceChangePct Price move in percentage (-100 to +100+)
- * @param {Partial<HedgingState>} customState Custom or current state overrides
- * @returns {HedgingOutcome}
  */
-export function calculateOutcome(priceChangePct, customState = {}) {
+export function calculateOutcome(
+  priceChangePct: number,
+  customState: Partial<HedgingState> = {}
+): HedgingOutcome {
   const C = Math.max(0, customState.capital ?? 10000);
   const r = priceChangePct / 100;
   const depeg = Math.max(0, Math.min(1, (customState.depegPct ?? 0) / 100));
@@ -59,7 +63,7 @@ export function calculateOutcome(priceChangePct, customState = {}) {
   const fundingAPR = customState.fundingAPR ?? 10.0;
   const stakingAPY = customState.stakingAPY ?? 3.2;
 
-  let S0, M0, N0, rLiq, isLiquidated;
+  let S0: number, M0: number, N0: number, rLiq: number, isLiquidated: boolean;
   let spotVal = 0, spotPnL = 0;
   let perpMarginVal = 0, perpPnL = 0;
   let totalPortfolioVal = 0;
@@ -70,13 +74,12 @@ export function calculateOutcome(priceChangePct, customState = {}) {
     // UNIFIED MARGIN MODE:
     // 100% of capital deployed in spot. Spot acts as cross-margin for 1x short perp.
     S0 = C;
-    N0 = C; // 1x delta-neutral short size
-    M0 = C; // Notional margin base is spot itself
-    const V = customState.collateralRatio ?? 0.90; // e.g. 0.90 (10% haircut)
+    N0 = C;
+    M0 = C;
+    const V = customState.collateralRatio ?? 0.90;
 
-    // Exact Unified Account liquidation threshold:
+    // Unified Account liquidation threshold:
     // S0*(1+r)*(1-depeg)*V - N0*r = N0*(1+r)*MMR
-    // Solving for r:
     if (V >= 0.999 && depeg === 0) {
       rLiq = Infinity;
     } else {
@@ -100,11 +103,10 @@ export function calculateOutcome(priceChangePct, customState = {}) {
       netDelta = spotVal - (N0 * (1 + r));
       perpMarginVal = spotVal * V + perpPnL;
     } else {
-      // Liquidated in unified account (extreme price rally)
       spotVal = S0 * (1 + r) * (1 - depeg);
       spotPnL = spotVal - S0;
       depegLoss = S0 * (1 + r) * depeg;
-      perpPnL = -S0 * V; // entire recognized collateral consumed
+      perpPnL = -S0 * V;
       totalPortfolioVal = spotVal + fundingYieldTotal + stakingYieldTotal;
       netDelta = spotVal;
       perpMarginVal = 0;
@@ -136,9 +138,8 @@ export function calculateOutcome(priceChangePct, customState = {}) {
     const mFrac = 1 - sFrac;
     S0 = C * sFrac;
     M0 = C * mFrac;
-    N0 = S0; // Delta-neutral short matches spot notional
+    N0 = S0;
 
-    // Isolated short liquidation threshold:
     rLiq = ((M0 / N0) - mmr) / (1 + mmr);
     isLiquidated = (r >= rLiq);
 
@@ -155,12 +156,11 @@ export function calculateOutcome(priceChangePct, customState = {}) {
       totalPortfolioVal = spotVal + perpMarginVal + fundingYieldTotal + stakingYieldTotal;
       netDelta = spotVal - (N0 * (1 + r));
     } else {
-      // Liquidated in isolated mode
       spotVal = S0 * (1 + r) * (1 - depeg);
       depegLoss = S0 * (1 + r) * depeg;
       spotPnL = spotVal - S0;
       perpMarginVal = 0;
-      perpPnL = -M0; // 100% of cash margin forfeited
+      perpPnL = -M0;
       totalPortfolioVal = spotVal + fundingYieldTotal + stakingYieldTotal;
       netDelta = spotVal;
     }
@@ -186,28 +186,16 @@ export function calculateOutcome(priceChangePct, customState = {}) {
   }
 }
 
-/**
- * Format currency with commas and 2 decimals.
- * @param {number} val
- * @returns {string}
- */
-export function fmtUSD(val) {
+export function fmtUSD(val: number): string {
   if (isNaN(val)) return '$0.00';
   const absVal = Math.abs(val);
   const str = absVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return (val < 0 ? '-' : '') + '$' + str;
 }
 
-/**
- * Format percentage with optional plus sign and infinite handling.
- * @param {number} val
- * @param {boolean} [plus=true]
- * @returns {string}
- */
-export function fmtPct(val, plus = true) {
+export function fmtPct(val: number, plus = true): string {
   if (val === Infinity) return 'INFINITE\u00A0(∞)';
   if (isNaN(val)) return '0.00%';
   const sign = (plus && val > 0) ? '+' : '';
   return sign + val.toFixed(2) + '%';
 }
-

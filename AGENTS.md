@@ -94,45 +94,48 @@ crypto portfolio/
 │       └── git-workflow.md     # Standing orders: git branching, tests, commits
 ├── .gitignore                  # Standard ignores for web & testing
 ├── AGENTS.md                   # This specification file
-├── package.json                # "type": "module", "scripts": { "test": "node --test" }
+├── tsconfig.json               # TypeScript strict configuration
+├── vite.config.ts              # Vite & Vitest configuration (port 3000, HMR)
+├── package.json                # Scripts: dev, build, test, typecheck
 ├── index.html                  # Semantic UI (Tailwind CSS, Plus Jakarta Sans, JetBrains Mono)
 ├── styles.css                  # Custom scrollbars, glow effects, slider aesthetics
 ├── tests/
-│   └── hedging.test.js         # Built-in Node test suite (14+ invariant tests)
+│   └── hedging.test.ts         # Vitest suite (14+ invariant tests)
 └── src/
     ├── config/
-    │   └── presets.js          # Whitelist presets, haircut ratios, metadata
+    │   └── presets.ts          # Whitelist presets, haircut ratios, metadata
     ├── math/
-    │   └── hedging.js          # Pure quant calculations & liquidation math
+    │   └── hedging.ts          # Pure quant calculations & liquidation math
     ├── ui/
-    │   ├── chart.js            # HTML5 Canvas 2D engine, curves, bands, tooltips
-    │   └── dom.js              # DOM element bindings, sliders, badges, KPI renderers
-    └── app.js                  # State store & reactive orchestration entrypoint
+    │   ├── chart.ts            # HTML5 Canvas 2D engine, curves, bands, tooltips
+    │   └── dom.ts              # DOM element bindings, sliders, badges, KPI renderers
+    └── app.ts                  # State store & reactive orchestration entrypoint
 ```
 
 ---
 
 ## 5. Agent Runbooks & Operating Rules
 
-### Runbook 1: Running Tests
-Before committing or completing any task touching math or config:
+### Runbook 1: Running Tests & Type Checks
+Before committing or completing any task:
 ```bash
-npm test
+npm test              # Vitest test suite
+npm run typecheck     # Strict TypeScript compiler verification
 ```
-*Tests must pass 100% with zero regressions.*
+*Both must pass 100% with zero errors or regressions.*
 
 ### Runbook 2: Adding a New Collateral Preset
-1. Open [`src/config/presets.js`](file:///c:/Users/User/crypto%20portfolio/src/config/presets.js).
+1. Open [`src/config/presets.ts`](file:///c:/Users/User/crypto%20portfolio/src/config/presets.ts).
 2. Add the entry to `COLLATERAL_PRESETS` with `collateralRatio`, `stakingAPY`, `defaultAsset`, `badgeLabel`, and `explainer`.
-3. Update [`src/config/presets.js`](file:///c:/Users/User/crypto%20portfolio/src/config/presets.js) `getInstrumentDetails()`.
-4. Add corresponding test in [`tests/hedging.test.js`](file:///c:/Users/User/crypto%20portfolio/tests/hedging.test.js) asserting expected $r_{\text{liq}}$.
-5. Run `npm test`.
+3. Update [`src/config/presets.ts`](file:///c:/Users/User/crypto%20portfolio/src/config/presets.ts) `getInstrumentDetails()`.
+4. Add corresponding test in [`tests/hedging.test.ts`](file:///c:/Users/User/crypto%20portfolio/tests/hedging.test.ts) asserting expected $r_{\text{liq}}$.
+5. Run `npm test && npm run typecheck`.
 
 ### Runbook 3: Modifying Quant Math
-1. Edit [`src/math/hedging.js`](file:///c:/Users/User/crypto%20portfolio/src/math/hedging.js). Keep functions pure.
-2. Update/add tests in [`tests/hedging.test.js`](file:///c:/Users/User/crypto%20portfolio/tests/hedging.test.js).
-3. Verify with `npm test`.
-4. Check for floating-point precision comparisons (use delta checks `Math.abs(a - b) < 1e-6`).
+1. Edit [`src/math/hedging.ts`](file:///c:/Users/User/crypto%20portfolio/src/math/hedging.ts). Keep functions pure and strictly typed.
+2. Update/add tests in [`tests/hedging.test.ts`](file:///c:/Users/User/crypto%20portfolio/tests/hedging.test.ts).
+3. Verify with `npm test && npm run typecheck`.
+4. Check for floating-point precision comparisons (use delta checks `Math.abs(a - b) < 1e-6` or `toBeCloseTo`).
 
 ### Runbook 4: Git Workflow Protocol
 Follow [`.gemini/rules/git-workflow.md`](file:///c:/Users/User/crypto%20portfolio/.gemini/rules/git-workflow.md):

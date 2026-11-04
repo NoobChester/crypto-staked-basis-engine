@@ -1,25 +1,56 @@
 /**
- * @file presets.js
+ * @file presets.ts
  * @description Collateral presets, asset definitions, and institutional margin metadata.
  */
 
-/**
- * @typedef {'ETH' | 'BTC' | 'SOL'} TradedAsset
- * @typedef {'unified' | 'isolated'} MarginMode
- * @typedef {'nominal' | 'real'} SolYieldType
- * @typedef {'native' | 'lbtc' | 'solvbtc'} BtcVariant
- * @typedef {'inverse_100' | 'btc_eth_95' | 'wsteth_90' | 'sol_lrt_85'} CollateralPresetKey
- */
+export type TradedAsset = 'ETH' | 'BTC' | 'SOL';
+export type MarginMode = 'unified' | 'isolated';
+export type SolYieldType = 'nominal' | 'real';
+export type BtcVariant = 'native' | 'lbtc' | 'solvbtc';
+export type CollateralPresetKey = 'inverse_100' | 'btc_eth_95' | 'wsteth_90' | 'sol_lrt_85';
 
-/**
- * Maintenance Margin Requirement (MMR) default: 0.5%
- */
+export interface CollateralPreset {
+  collateralRatio: number;
+  stakingAPY: number;
+  defaultAsset: TradedAsset;
+  badgeLabel: string;
+  explainer?: string;
+  nominalAPY?: number;
+  realAPY?: number;
+  getExplainer?: (type: SolYieldType) => string;
+}
+
+export interface BtcLstVariant {
+  symbol: string;
+  name: string;
+  stakingAPY: number;
+  tag: string;
+  note: string;
+}
+
+export interface InstrumentDetails {
+  pairBadge: string;
+  spotSymbol: string;
+  spotName: string;
+  spotTag: string;
+  perpSymbol: string;
+  perpName: string;
+  perpTag: string;
+  marginDesc: string;
+  note?: string;
+}
+
+export interface StrategyStateLike {
+  mode: MarginMode;
+  tradedAsset?: TradedAsset;
+  btcVariant?: BtcVariant;
+  activePreset?: CollateralPresetKey;
+  solYieldType?: SolYieldType;
+}
+
 export const DEFAULT_MMR = 0.005;
 
-/**
- * Unified Margin Collateral Presets
- */
-export const COLLATERAL_PRESETS = {
+export const COLLATERAL_PRESETS: Record<CollateralPresetKey, CollateralPreset> = {
   inverse_100: {
     collateralRatio: 1.00,
     stakingAPY: 0.0,
@@ -43,12 +74,12 @@ export const COLLATERAL_PRESETS = {
   },
   sol_lrt_85: {
     collateralRatio: 0.85,
-    stakingAPY: 1.8, // Default to real yield
+    stakingAPY: 1.8,
     defaultAsset: 'SOL',
     badgeLabel: '85.0% (15% Haircut)',
     nominalAPY: 7.2,
     realAPY: 1.8,
-    getExplainer(yieldType) {
+    getExplainer(yieldType: SolYieldType) {
       return yieldType === 'nominal'
         ? 'Solana / Liquid Restaking (Nominal 7.2%). Stacks high base yield with a +545% price surge liquidation buffer.'
         : 'Solana / Liquid Restaking (Real Yield 1.8%). Stacks inflation-adjusted real yield with a +545% price surge liquidation buffer.';
@@ -56,10 +87,7 @@ export const COLLATERAL_PRESETS = {
   }
 };
 
-/**
- * Isolated BTC LST Variants (Babylon staking ecosystem)
- */
-export const BTC_LST_VARIANTS = {
+export const BTC_LST_VARIANTS: Record<BtcVariant, BtcLstVariant> = {
   lbtc: {
     symbol: 'LBTC',
     name: 'Lombard Staked Bitcoin (Babylon LST)',
@@ -83,15 +111,10 @@ export const BTC_LST_VARIANTS = {
   }
 };
 
-/**
- * Resolves instrument details and metadata based on current state.
- * @param {object} s Current strategy state
- * @returns {object} Instrument metadata
- */
-export function getInstrumentDetails(s) {
-  const asset = s.tradedAsset || 'ETH';
+export function getInstrumentDetails(s: StrategyStateLike): InstrumentDetails {
+  const asset: TradedAsset = s.tradedAsset || 'ETH';
   const mode = s.mode;
-  const preset = s.activePreset;
+  const preset = s.activePreset || 'wsteth_90';
 
   if (mode === 'isolated') {
     if (asset === 'BTC') {
@@ -193,4 +216,3 @@ export function getInstrumentDetails(s) {
     };
   }
 }
-
