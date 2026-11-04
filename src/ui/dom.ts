@@ -183,11 +183,17 @@ export interface UIElements {
   histTtDivergence: HTMLElement | null;
 
   histStatBinanceAvg: HTMLElement | null;
+  histStatBinanceSub: HTMLElement | null;
   histStatHlAvg: HTMLElement | null;
+  histStatHlSub: HTMLElement | null;
   histStatConsensusAvg: HTMLElement | null;
+  histStatConsensusSub: HTMLElement | null;
   histStatDivergence: HTMLElement | null;
+  histStatDivergenceSub: HTMLElement | null;
   histStatStakingAvg: HTMLElement | null;
+  histStatStakingSub: HTMLElement | null;
   histStatNetcarryAvg: HTMLElement | null;
+  histStatNetcarrySub: HTMLElement | null;
   histStatNegIntervals: HTMLElement | null;
   histStatVol: HTMLElement | null;
 
@@ -370,11 +376,17 @@ export function getUIElements(): UIElements {
     histTtDivergence: document.getElementById('hist-tt-divergence'),
 
     histStatBinanceAvg: document.getElementById('hist-stat-binance-avg'),
+    histStatBinanceSub: document.getElementById('hist-stat-binance-sub'),
     histStatHlAvg: document.getElementById('hist-stat-hl-avg'),
+    histStatHlSub: document.getElementById('hist-stat-hl-sub'),
     histStatConsensusAvg: document.getElementById('hist-stat-consensus-avg'),
+    histStatConsensusSub: document.getElementById('hist-stat-consensus-sub'),
     histStatDivergence: document.getElementById('hist-stat-divergence'),
+    histStatDivergenceSub: document.getElementById('hist-stat-divergence-sub'),
     histStatStakingAvg: document.getElementById('hist-stat-staking-avg'),
+    histStatStakingSub: document.getElementById('hist-stat-staking-sub'),
     histStatNetcarryAvg: document.getElementById('hist-stat-netcarry-avg'),
+    histStatNetcarrySub: document.getElementById('hist-stat-netcarry-sub'),
     histStatNegIntervals: document.getElementById('hist-stat-neg-intervals'),
     histStatVol: document.getElementById('hist-stat-vol')
   };
@@ -875,20 +887,38 @@ export function renderHistoricalModal(
   if (UI.histStatBinanceAvg) {
     UI.histStatBinanceAvg.textContent = fmtPct(analytics.binanceAvg);
   }
+  if (UI.histStatBinanceSub) {
+    UI.histStatBinanceSub.textContent = `${analytics.rangeDays}d avg (8h)`;
+  }
   if (UI.histStatHlAvg) {
     UI.histStatHlAvg.textContent = fmtPct(analytics.hyperliquidAvg);
+  }
+  if (UI.histStatHlSub) {
+    UI.histStatHlSub.textContent = `${analytics.rangeDays}d avg (1h)`;
   }
   if (UI.histStatConsensusAvg) {
     UI.histStatConsensusAvg.textContent = fmtPct(analytics.consensusAvg);
   }
+  if (UI.histStatConsensusSub) {
+    UI.histStatConsensusSub.textContent = `${analytics.rangeDays}d blend`;
+  }
   if (UI.histStatDivergence) {
     UI.histStatDivergence.textContent = `${analytics.fundingDivergence.toFixed(2)}%`;
+  }
+  if (UI.histStatDivergenceSub) {
+    UI.histStatDivergenceSub.textContent = '|Binance - HL|';
   }
   if (UI.histStatStakingAvg) {
     UI.histStatStakingAvg.textContent = `${analytics.stakingAvg.toFixed(2)}% APY`;
   }
+  if (UI.histStatStakingSub) {
+    UI.histStatStakingSub.textContent = `${analytics.rangeDays}d protocol avg`;
+  }
   if (UI.histStatNetcarryAvg) {
     UI.histStatNetcarryAvg.textContent = fmtPct(analytics.netCarryAvg) + ' APY';
+  }
+  if (UI.histStatNetcarrySub) {
+    UI.histStatNetcarrySub.textContent = `${analytics.rangeDays}d net carry`;
   }
 
   // Regime frequency stats

@@ -302,5 +302,32 @@ describe('Market Data Service & Quantitative Parsers', () => {
         expect(res.stakingAvg).toBeGreaterThanOrEqual(0);
       }
     });
+
+    it('ensures overlapping dates across 30D and 90D horizons yield identical daily rates', async () => {
+      const { fetchAssetHistoricalAnalytics } = await import('../src/services/marketData.js');
+
+      const [a30, a90] = await Promise.all([
+        fetchAssetHistoricalAnalytics('ETH', 30, 'real'),
+        fetchAssetHistoricalAnalytics('ETH', 90, 'real')
+      ]);
+
+      expect(a30.series.length).toBe(30);
+      expect(a90.series.length).toBe(90);
+
+      // Compare the trailing 30 days of 90d series against 30d series
+      const a90Trailing30 = a90.series.slice(-30);
+
+      for (let i = 0; i < 30; i++) {
+        const pt30 = a30.series[i];
+        const pt90 = a90Trailing30[i];
+
+        expect(pt30.date).toBe(pt90.date);
+        expect(pt30.binanceApr).toBe(pt90.binanceApr);
+        expect(pt30.hyperliquidApr).toBe(pt90.hyperliquidApr);
+        expect(pt30.consensusApr).toBe(pt90.consensusApr);
+        expect(pt30.stakingApy).toBe(pt90.stakingApy);
+        expect(pt30.netCarryApy).toBe(pt90.netCarryApy);
+      }
+    });
   });
 });

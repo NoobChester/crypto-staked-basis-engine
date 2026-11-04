@@ -495,35 +495,60 @@ export async function fetchAssetHistoricalAnalytics(
     return cached;
   }
 
-  const limitBinance = Math.min(1000, rangeDays * 3 + 10);
-  const startTimeHl = Date.now() - (rangeDays + 2) * 86400000;
+  const now = Date.now();
+  const dayMs = 86400000;
+  const hourMs = 3600000;
 
-  // 1. Fetch Binance Funding History
+  // 1. Fetch Binance Funding History with complete horizon coverage
   let binanceData: any[] = [];
   try {
-    const res = await fetchWithTimeout(
-      `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=${limitBinance}`,
-      undefined,
-      6000
-    );
-    if (res.ok) binanceData = await res.json();
+    if (rangeDays <= 90) {
+      const limit = Math.min(500, rangeDays * 3 + 20);
+      const res = await fetchWithTimeout(
+        `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=${limit}`,
+        undefined,
+        6000
+      );
+      if (res.ok) binanceData = await res.json();
+    } else {
+      // For 180D, fetch both the latest 166 days (500 records) and the preceding chunk
+      const [r1, r2] = await Promise.all([
+        fetchWithTimeout(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=500`, undefined, 6000),
+        fetchWithTimeout(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&startTime=${now - (rangeDays + 5) * dayMs}&limit=500`, undefined, 6000)
+      ]);
+      const data1 = r1.ok ? await r1.json() : [];
+      const data2 = r2.ok ? await r2.json() : [];
+      const map = new Map<number, any>();
+      [...data2, ...data1].forEach((item: any) => map.set(item.fundingTime, item));
+      binanceData = Array.from(map.values()).sort((a, b) => a.fundingTime - b.fundingTime);
+    }
   } catch {
     // Binance historical fallback
   }
 
-  // 2. Fetch Hyperliquid Funding History
+  // 2. Fetch Hyperliquid Funding History with chunked pagination covering all hours up to now
   let hlData: any[] = [];
   try {
-    const res = await fetchWithTimeout(
-      'https://api.hyperliquid.xyz/info',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'fundingHistory', coin: symbol, startTime: startTimeHl })
-      },
-      6000
-    );
-    if (res.ok) hlData = await res.json();
+    // Hyperliquid returns max 500 hourly records forward from startTime
+    const chunkCount = Math.ceil((rangeDays * 24 + 24) / 500);
+    const hlPromises = [];
+    for (let i = 0; i < chunkCount; i++) {
+      const start = now - (i + 1) * 500 * hourMs;
+      const end = now - i * 500 * hourMs;
+      hlPromises.push(
+        fetchWithTimeout(
+          'https://api.hyperliquid.xyz/info',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'fundingHistory', coin: symbol, startTime: start, endTime: end })
+          },
+          6000
+        ).then(r => r.ok ? r.json() : []).catch(() => [])
+      );
+    }
+    const hlResults = await Promise.all(hlPromises);
+    hlData = hlResults.reverse().flat();
   } catch {
     // Hyperliquid historical fallback
   }
@@ -575,34 +600,53 @@ export async function fetchAssetHistoricalAnalytics(
   });
 
   // Build contiguous daily series for the requested rangeDays
+  // Anchor to UTC midnight so all lookback horizons align identically on YYYY-MM-DD
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const todayMs = today.getTime();
+
   const series: HistoricalRatePoint[] = [];
-  const now = Date.now();
-  const dayMs = 86400000;
 
   for (let i = rangeDays - 1; i >= 0; i--) {
-    const dateObj = new Date(now - i * dayMs);
+    const dateObj = new Date(todayMs - i * dayMs);
     const dStr = dateObj.toISOString().slice(0, 10);
 
     // Binance Daily Avg
     const bArr = binanceByDate[dStr];
-    const bApr = (bArr && bArr.length > 0)
-      ? parseFloat((bArr.reduce((a, b) => a + b, 0) / bArr.length).toFixed(2))
-      : (series.length > 0 ? series[series.length - 1].binanceApr : 10.0);
+    let bApr: number;
+    if (bArr && bArr.length > 0) {
+      bApr = parseFloat((bArr.reduce((a, b) => a + b, 0) / bArr.length).toFixed(2));
+    } else if (series.length > 0) {
+      bApr = series[series.length - 1].binanceApr;
+    } else {
+      bApr = 10.0;
+    }
 
     // Hyperliquid Daily Avg
     const hlArr = hlByDate[dStr];
-    const hlApr = (hlArr && hlArr.length > 0)
-      ? parseFloat((hlArr.reduce((a, b) => a + b, 0) / hlArr.length).toFixed(2))
-      : (series.length > 0 ? series[series.length - 1].hyperliquidApr : bApr);
+    let hlApr: number;
+    if (hlArr && hlArr.length > 0) {
+      hlApr = parseFloat((hlArr.reduce((a, b) => a + b, 0) / hlArr.length).toFixed(2));
+    } else if (bArr && bArr.length > 0) {
+      hlApr = bApr;
+    } else if (series.length > 0) {
+      hlApr = series[series.length - 1].hyperliquidApr;
+    } else {
+      hlApr = bApr;
+    }
 
     const consensusApr = parseFloat(((bApr + hlApr) / 2).toFixed(2));
 
     // Staking APY for day
     let sApy = stakingByDate[dStr];
     if (sApy === undefined) {
-      if (symbol === 'BTC') sApy = 0.0;
-      else if (series.length > 0) sApy = series[series.length - 1].stakingApy;
-      else sApy = symbol === 'ETH' ? 2.3 : 1.8;
+      if (symbol === 'BTC') {
+        sApy = 0.0;
+      } else if (series.length > 0) {
+        sApy = series[series.length - 1].stakingApy;
+      } else {
+        sApy = symbol === 'ETH' ? 2.3 : 1.8;
+      }
     }
 
     const netCarryApy = parseFloat((sApy + consensusApr).toFixed(2));
