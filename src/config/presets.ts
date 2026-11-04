@@ -81,8 +81,8 @@ export const COLLATERAL_PRESETS: Record<CollateralPresetKey, CollateralPreset> =
     realAPY: 1.8,
     getExplainer(yieldType: SolYieldType) {
       return yieldType === 'nominal'
-        ? 'Solana / Liquid Restaking (Nominal 7.2%). Stacks high base yield with a +545% price surge liquidation buffer.'
-        : 'Solana / Liquid Restaking (Real Yield 1.8%). Stacks inflation-adjusted real yield with a +545% price surge liquidation buffer.';
+        ? 'Solana LRT (Nominal 7.2% APR): Gross staking emissions; unadjusted for ~5.4% annual network inflation dilution. +545% runway.'
+        : 'Solana LRT (Real 1.8% APY): Net economic yield after stripping ~5.4% annual network dilution drag on USD purchasing power. +545% runway.';
     }
   }
 };

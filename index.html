@@ -393,55 +393,43 @@
 
             <!-- The 4 Core Institutional Presets -->
             <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
-              <button onclick="applyCollateralPreset('inverse_100')" id="btn-preset-100"
-                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition">
+              <div onclick="applyCollateralPreset('inverse_100')" id="btn-preset-100" role="button" tabindex="0"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
                 <div class="font-bold text-white">100% (Inverse)</div>
                 <div class="text-[10px] text-slate-400">0% Haircut | 0.0% Stake</div>
                 <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: Infinite (∞)</div>
-              </button>
+              </div>
 
-              <button onclick="applyCollateralPreset('btc_eth_95')" id="btn-preset-95"
-                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition">
+              <div onclick="applyCollateralPreset('btc_eth_95')" id="btn-preset-95" role="button" tabindex="0"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
                 <div class="font-bold text-white">95% (BTC / ETH)</div>
                 <div class="text-[10px] text-slate-400">5% Haircut | 0.0% Stake</div>
                 <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +1,718% move</div>
-              </button>
+              </div>
 
-              <button onclick="applyCollateralPreset('wsteth_90')" id="btn-preset-90"
-                class="preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition">
+              <div onclick="applyCollateralPreset('wsteth_90')" id="btn-preset-90" role="button" tabindex="0"
+                class="preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition cursor-pointer select-none">
                 <div class="font-bold text-cyan-300">90% (wstETH)</div>
                 <div class="text-[10px] text-slate-300">10% Haircut | 3.2% Stake</div>
                 <div class="text-[9px] text-emerald-300 mt-0.5">Buffer: +852% move</div>
-              </button>
+              </div>
 
-              <button onclick="applyCollateralPreset('sol_lrt_85')" id="btn-preset-85"
-                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition">
-                <div class="font-bold text-white">85% (SOL / LRTs)</div>
+              <!-- 85% SOL LRT Preset with Inline Segmented Yield Sub-Pill -->
+              <div onclick="applyCollateralPreset('sol_lrt_85')" id="btn-preset-85" role="button" tabindex="0"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                  <div class="font-bold text-white truncate">85% (SOL)</div>
+                  <!-- Inline Yield Mode Sub-Pill -->
+                  <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[9px] font-mono shrink-0" title="Solana Token Inflation: Toggle Real (net of ~5.4% dilution) vs Nominal yield">
+                    <button type="button" onclick="event.stopPropagation(); setSolYieldType('real')" id="btn-sol-real"
+                      class="px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm">Real</button>
+                    <button type="button" onclick="event.stopPropagation(); setSolYieldType('nominal')" id="btn-sol-nominal"
+                      class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white">Nom</button>
+                  </div>
+                </div>
                 <div id="subtext-preset-85" class="text-[10px] text-slate-400">15% Haircut | 1.8% Real Stake</div>
                 <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +545% move</div>
-              </button>
-            </div>
-
-            <!-- JitoSOL Dynamic Real vs Nominal Staking Toggle (Conditional) -->
-            <div id="jitosol-yield-toggle-box" class="hidden mt-2 p-2.5 rounded-lg bg-brand-dark border border-amber-600/50 space-y-1.5">
-              <div class="flex items-center justify-between text-[11px] font-mono">
-                <span class="text-amber-300 font-bold flex items-center gap-1">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                  Solana Staking Mode:
-                </span>
-                <span id="label-sol-yield-mode" class="text-xs font-bold text-white">Real (+1.8%)</span>
               </div>
-              <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
-                <button onclick="setSolYieldType('nominal')" id="btn-sol-nominal" class="py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">
-                  Nominal (7.2% APR)
-                </button>
-                <button onclick="setSolYieldType('real')" id="btn-sol-real" class="py-1 px-2 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold">
-                  Real Yield (1.8% APR)
-                </button>
-              </div>
-              <p class="text-[10px] text-slate-400 font-mono leading-tight">
-                *Solana expands supply by ~5.4% annually. Real yield strips out network dilution drag on USD purchasing power.
-              </p>
             </div>
 
             <p id="collateral-ratio-explainer" class="text-[10px] text-slate-400 font-mono pt-1">

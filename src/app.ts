@@ -131,7 +131,7 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
   ['btn-preset-100', 'btn-preset-95', 'btn-preset-90', 'btn-preset-85'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.className = 'preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition';
+    el.className = 'preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none';
     const title = el.querySelector('.font-bold');
     if (title) title.className = 'font-bold text-white';
   });
@@ -147,17 +147,9 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
   if (btnId) {
     const btn = document.getElementById(btnId);
     if (btn) {
-      btn.className = 'preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition';
+      btn.className = 'preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition cursor-pointer select-none';
       const title = btn.querySelector('.font-bold');
       if (title) title.className = 'font-bold text-cyan-300';
-    }
-  }
-
-  if (UI.jitosolToggleBox) {
-    if (presetKey === 'sol_lrt_85') {
-      UI.jitosolToggleBox.classList.remove('hidden');
-    } else {
-      UI.jitosolToggleBox.classList.add('hidden');
     }
   }
 
@@ -170,6 +162,19 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
       if (UI.valCollateralRatio) UI.valCollateralRatio.textContent = presetConfig.badgeLabel;
       if (UI.collateralRatioExplainer && presetConfig.getExplainer) {
         UI.collateralRatioExplainer.textContent = presetConfig.getExplainer(state.solYieldType);
+      }
+      if (UI.btnSolNominal && UI.btnSolReal) {
+        if (state.solYieldType === 'nominal') {
+          UI.btnSolNominal.className = 'px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm';
+          UI.btnSolReal.className = 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white';
+        } else {
+          UI.btnSolReal.className = 'px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm';
+          UI.btnSolNominal.className = 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white';
+        }
+      }
+      const subtext85 = document.getElementById('subtext-preset-85');
+      if (subtext85) {
+        subtext85.textContent = (state.solYieldType === 'nominal') ? '15% Haircut | 7.2% Nom Stake' : '15% Haircut | 1.8% Real Stake';
       }
     } else if (presetKey === 'wsteth_90') {
       state.stakingAPY = presetConfig.stakingAPY;
@@ -196,27 +201,32 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
 
 export function setSolYieldType(type: SolYieldType): void {
   state.solYieldType = type;
+  
   if (type === 'nominal') {
     state.stakingAPY = 7.2;
-    if (UI.labelSolYieldMode) UI.labelSolYieldMode.textContent = 'Nominal (+7.2%)';
-    if (UI.btnSolNominal) UI.btnSolNominal.className = 'py-1 px-2 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold';
-    if (UI.btnSolReal) UI.btnSolReal.className = 'py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300';
+    if (UI.btnSolNominal) UI.btnSolNominal.className = 'px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm';
+    if (UI.btnSolReal) UI.btnSolReal.className = 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white';
   } else {
     state.stakingAPY = 1.8;
-    if (UI.labelSolYieldMode) UI.labelSolYieldMode.textContent = 'Real (+1.8%)';
-    if (UI.btnSolReal) UI.btnSolReal.className = 'py-1 px-2 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold';
-    if (UI.btnSolNominal) UI.btnSolNominal.className = 'py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300';
+    if (UI.btnSolReal) UI.btnSolReal.className = 'px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm';
+    if (UI.btnSolNominal) UI.btnSolNominal.className = 'px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white';
   }
 
   const subtext85 = document.getElementById('subtext-preset-85');
   if (subtext85) {
-    subtext85.textContent = (type === 'nominal') ? '15% Haircut | 7.2% Stake' : '15% Haircut | 1.8% Real Stake';
+    subtext85.textContent = (type === 'nominal') ? '15% Haircut | 7.2% Nom Stake' : '15% Haircut | 1.8% Real Stake';
   }
 
-  if (state.activePreset === 'sol_lrt_85' && UI.collateralRatioExplainer) {
-    UI.collateralRatioExplainer.textContent = (type === 'nominal')
-      ? 'Solana / Liquid Restaking (Nominal 7.2%). Stacks high base yield with a +545% price surge liquidation buffer.'
-      : 'Solana / Liquid Restaking (Real Yield 1.8%). Stacks inflation-adjusted real yield with a +545% price surge liquidation buffer.';
+  if (state.activePreset !== 'sol_lrt_85') {
+    applyCollateralPreset('sol_lrt_85');
+    return;
+  }
+
+  if (UI.collateralRatioExplainer) {
+    const presetConfig = COLLATERAL_PRESETS.sol_lrt_85;
+    if (presetConfig && presetConfig.getExplainer) {
+      UI.collateralRatioExplainer.textContent = presetConfig.getExplainer(type);
+    }
   }
 
   if (UI.inputStaking) UI.inputStaking.value = state.stakingAPY.toString();
