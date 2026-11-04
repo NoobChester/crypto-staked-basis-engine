@@ -1,7 +1,7 @@
 {
-  "name": "delta-q-simulator",
+  "name": "crypto-staked-basis",
   "version": "1.0.0",
-  "description": "Institutional Delta-Neutral Cross-Margin vs Isolated Cash Hedging Engine",
+  "description": "Institutional Quantitative Simulation, Risk Modeling & Backtesting Engine for Crypto Staked Basis Trades",
   "type": "module",
   "scripts": {
     "test": "node --test tests/**/*.test.js",
