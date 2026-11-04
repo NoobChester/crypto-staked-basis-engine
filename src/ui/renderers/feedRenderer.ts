@@ -5,6 +5,7 @@
 
 import { fmtUSD, fmtPct, type HedgingState } from '../../math/hedging.js';
 import { getLatestMarketData, type MarketDataSnapshot } from '../../services/marketData.js';
+import { COLLATERAL_PRESETS } from '../../config/presets.js';
 import type { UIElements } from '../dom.js';
 
 export function renderMarketData(UI: UIElements, state: HedgingState): void {
@@ -53,16 +54,26 @@ export function renderMarketData(UI: UIElements, state: HedgingState): void {
         liveStakingSource = 'Native Cold Custody (0%)';
       }
     } else {
-      liveStakingVal = 0.0;
-      liveStakingSource = 'Unified CEX Whitelist (0%)';
+      if (state.activePreset === 'fbtc_90') {
+        liveStakingVal = COLLATERAL_PRESETS.fbtc_90.stakingAPY;
+        liveStakingSource = 'Cobo FBTC Bybit Whitelist (~3.0%)';
+      } else {
+        liveStakingVal = 0.0;
+        liveStakingSource = 'Vanilla Spot Collateral (0%)';
+      }
     }
   } else if (asset === 'SOL') {
-    if (state.solYieldType === 'nominal') {
-      liveStakingVal = data.SOL.nominalStakingAPY ?? 7.2;
-      liveStakingSource = `${data.SOL.stakingSource} (Nominal)`;
+    if (state.activePreset === 'sanctum_inf_85') {
+      liveStakingVal = state.solYieldType === 'nominal' ? 8.5 : 3.1;
+      liveStakingSource = `Sanctum Infinity Pool (${state.solYieldType === 'nominal' ? 'Nominal' : 'Real'})`;
     } else {
-      liveStakingVal = data.SOL.realStakingAPY ?? 1.8;
-      liveStakingSource = `${data.SOL.stakingSource} (Real net of inflation)`;
+      if (state.solYieldType === 'nominal') {
+        liveStakingVal = data.SOL.nominalStakingAPY ?? 7.2;
+        liveStakingSource = `${data.SOL.stakingSource} (Nominal)`;
+      } else {
+        liveStakingVal = data.SOL.realStakingAPY ?? 1.8;
+        liveStakingSource = `${data.SOL.stakingSource} (Real net of inflation)`;
+      }
     }
   }
 

@@ -181,10 +181,16 @@ export function applyHistoricalStaking(window: 'live' | '7d' | '30d' | '90d'): v
     if (state.mode === 'unified') {
       if (state.activePreset === 'wsteth_90') {
         chosenStaking = data.ETH.stakingAPY;
-      } else if (state.activePreset === 'sol_lrt_85') {
+      } else if (state.activePreset === 'fbtc_90') {
+        chosenStaking = COLLATERAL_PRESETS.fbtc_90.stakingAPY;
+      } else if (state.activePreset === 'jitosol_85' || state.activePreset === 'sol_lrt_85') {
         chosenStaking = (state.solYieldType === 'nominal')
           ? (data.SOL.nominalStakingAPY ?? 7.2)
           : (data.SOL.realStakingAPY ?? 1.8);
+      } else if (state.activePreset === 'sanctum_inf_85') {
+        chosenStaking = (state.solYieldType === 'nominal')
+          ? (COLLATERAL_PRESETS.sanctum_inf_85.nominalAPY ?? 8.5)
+          : (COLLATERAL_PRESETS.sanctum_inf_85.realAPY ?? 3.1);
       } else {
         chosenStaking = 0.0;
       }
@@ -210,10 +216,14 @@ export function applyHistoricalStaking(window: 'live' | '7d' | '30d' | '90d'): v
     else if (window === '90d') base = assetRates?.trailingAverages?.staking90d ?? (assetRates?.stakingAPY ?? 0.0);
 
     if (state.mode === 'unified') {
-      if (state.activePreset === 'btc_eth_95') {
+      if (state.activePreset === 'btc_eth_95' || state.activePreset === 'inverse_100') {
         chosenStaking = 0.0;
-      } else if (state.activePreset === 'sol_lrt_85') {
+      } else if (state.activePreset === 'fbtc_90') {
+        chosenStaking = COLLATERAL_PRESETS.fbtc_90.stakingAPY;
+      } else if (state.activePreset === 'jitosol_85' || state.activePreset === 'sol_lrt_85') {
         chosenStaking = state.solYieldType === 'nominal' ? parseFloat((base + 5.4).toFixed(2)) : base;
+      } else if (state.activePreset === 'sanctum_inf_85') {
+        chosenStaking = state.solYieldType === 'nominal' ? 8.5 : 3.1;
       } else {
         chosenStaking = base;
       }
@@ -415,13 +425,10 @@ export function setTradedAsset(asset: TradedAsset): void {
 
   if (state.mode === 'unified') {
     if (asset === 'SOL') {
-      applyCollateralPreset('sol_lrt_85');
+      applyCollateralPreset('jitosol_85');
       return;
     } else if (asset === 'BTC') {
-      state.stakingAPY = 0.0;
-      if (UI.inputStaking) UI.inputStaking.value = '0.0';
-      if (UI.valStaking) UI.valStaking.textContent = '0.0% APY';
-      applyCollateralPreset('btc_eth_95');
+      applyCollateralPreset('fbtc_90');
       return;
     } else {
       applyCollateralPreset('wsteth_90');
@@ -571,7 +578,7 @@ export function setSolYieldType(yieldType: SolYieldType): void {
     }
   }
 
-  if (state.tradedAsset === 'SOL' || state.activePreset === 'sol_lrt_85') {
+  if (state.tradedAsset === 'SOL' || state.activePreset === 'jitosol_85' || state.activePreset === 'sol_lrt_85' || state.activePreset === 'sanctum_inf_85') {
     if (state.isLiveStaking) {
       applyLiveStaking();
     } else {
