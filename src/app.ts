@@ -72,6 +72,7 @@ export const state: HedgingState & {
 let UI: UIElements;
 let currentHistoricalAnalytics: AssetHistoricalAnalytics | null = null;
 let currentHistoricalTimeframe: 30 | 90 | 180 = 90;
+let currentHistoricalAsset: TradedAsset = 'ETH';
 let isHistoricalModalOpen = false;
 
 export function updateApp(): void {
@@ -190,6 +191,9 @@ export function applyLiveStaking(): void {
 }
 
 export function applyHistoricalWindowToAll(window: '30d' | '90d'): void {
+  if (currentHistoricalAsset && currentHistoricalAsset !== state.tradedAsset) {
+    setTradedAsset(currentHistoricalAsset);
+  }
   applyHistoricalFunding(window);
   applyHistoricalStaking(window);
   closeHistoricalModal();
@@ -197,6 +201,7 @@ export function applyHistoricalWindowToAll(window: '30d' | '90d'): void {
 
 export async function openHistoricalModal(): Promise<void> {
   if (!UI?.historicalModal) return;
+  currentHistoricalAsset = state.tradedAsset || 'ETH';
   UI.historicalModal.classList.remove('hidden');
   isHistoricalModalOpen = true;
   await loadAndRenderHistoricalData();
@@ -207,6 +212,11 @@ export function closeHistoricalModal(): void {
   UI.historicalModal.classList.add('hidden');
   isHistoricalModalOpen = false;
   if (UI.historicalTooltip) UI.historicalTooltip.classList.add('hidden');
+}
+
+export async function setHistoricalAsset(asset: TradedAsset): Promise<void> {
+  currentHistoricalAsset = asset;
+  await loadAndRenderHistoricalData();
 }
 
 export async function setHistoricalTimeframe(tf: 30 | 90 | 180): Promise<void> {
@@ -228,7 +238,7 @@ export async function setHistoricalTimeframe(tf: 30 | 90 | 180): Promise<void> {
 export async function loadAndRenderHistoricalData(): Promise<void> {
   if (!UI?.historicalModal) return;
   try {
-    const asset = state.tradedAsset || 'ETH';
+    const asset = currentHistoricalAsset || state.tradedAsset || 'ETH';
     const venue = getLatestMarketData().selectedVenue;
     const analytics = await fetchAssetHistoricalAnalytics(asset, currentHistoricalTimeframe, state.solYieldType);
     currentHistoricalAnalytics = analytics;
@@ -315,6 +325,7 @@ export function setAccountMode(mode: MarginMode): void {
 
 export function setTradedAsset(asset: TradedAsset): void {
   state.tradedAsset = asset;
+  currentHistoricalAsset = asset;
   const data = getLatestMarketData();
 
   if (state.isLiveFunding) {
@@ -585,6 +596,7 @@ declare global {
     applyHistoricalWindowToAll: typeof applyHistoricalWindowToAll;
     openHistoricalModal: typeof openHistoricalModal;
     closeHistoricalModal: typeof closeHistoricalModal;
+    setHistoricalAsset: typeof setHistoricalAsset;
     setHistoricalTimeframe: typeof setHistoricalTimeframe;
     setFundingVenue: typeof setFundingVenue;
     refreshLiveRates: typeof refreshLiveRates;
@@ -609,6 +621,7 @@ window.applyHistoricalStaking = applyHistoricalStaking;
 window.applyHistoricalWindowToAll = applyHistoricalWindowToAll;
 window.openHistoricalModal = openHistoricalModal;
 window.closeHistoricalModal = closeHistoricalModal;
+window.setHistoricalAsset = setHistoricalAsset;
 window.setHistoricalTimeframe = setHistoricalTimeframe;
 window.setFundingVenue = setFundingVenue;
 window.refreshLiveRates = refreshLiveRates;

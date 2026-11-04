@@ -289,5 +289,18 @@ describe('Market Data Service & Quantitative Parsers', () => {
       expect(btcAnalytics.series.length).toBe(30);
       expect(btcAnalytics.binanceAvg).toBeDefined();
     });
+
+    it('allows dynamic switching across all three Triad assets (ETH, BTC, SOL)', async () => {
+      const { fetchAssetHistoricalAnalytics } = await import('../src/services/marketData.js');
+
+      const assets = ['ETH', 'BTC', 'SOL'] as const;
+      for (const asset of assets) {
+        const res = await fetchAssetHistoricalAnalytics(asset, 30, 'real');
+        expect(res.symbol).toBe(asset);
+        expect(res.series.length).toBe(30);
+        expect(res.consensusAvg).toBeDefined();
+        expect(res.stakingAvg).toBeGreaterThanOrEqual(0);
+      }
+    });
   });
 });

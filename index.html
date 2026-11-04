@@ -988,7 +988,18 @@
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <!-- Asset Selector (ETH / BTC / SOL) -->
+          <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700 text-xs font-mono">
+            <span class="text-slate-500 text-[10px] px-1.5 hidden sm:inline">ASSET:</span>
+            <button type="button" id="hist-btn-asset-eth" onclick="setHistoricalAsset('ETH')" 
+              class="px-2.5 py-1 rounded-md font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm transition cursor-pointer">ETH</button>
+            <button type="button" id="hist-btn-asset-btc" onclick="setHistoricalAsset('BTC')" 
+              class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">BTC</button>
+            <button type="button" id="hist-btn-asset-sol" onclick="setHistoricalAsset('SOL')" 
+              class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">SOL</button>
+          </div>
+
           <!-- Timeframe Range Switcher -->
           <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700 text-xs font-mono">
             <button type="button" id="hist-btn-range-30" onclick="setHistoricalTimeframe(30)" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">30D</button>
@@ -1103,7 +1114,7 @@
       <!-- Modal Footer -->
       <div class="px-5 py-3 border-t border-brand-border bg-brand-card/90 flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div class="flex items-center gap-2">
-          <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider hidden sm:inline">Apply to Model:</span>
+          <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider hidden sm:inline">Apply to Model (<span id="hist-footer-asset-label" class="text-cyan-300 font-bold">ETH</span>):</span>
           <button onclick="applyHistoricalWindowToAll('30d')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs border border-slate-700 transition cursor-pointer">
             Apply 30d Avg to Model
           </button>

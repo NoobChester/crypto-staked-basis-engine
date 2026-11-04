@@ -166,6 +166,10 @@ export interface UIElements {
   btnHistoricalClose: HTMLElement | null;
   btnHistoricalCloseFooter: HTMLElement | null;
   histModalSymbolBadge: HTMLElement | null;
+  histBtnAssetEth: HTMLElement | null;
+  histBtnAssetBtc: HTMLElement | null;
+  histBtnAssetSol: HTMLElement | null;
+  histFooterAssetLabel: HTMLElement | null;
   histBtnRange30: HTMLElement | null;
   histBtnRange90: HTMLElement | null;
   histBtnRange180: HTMLElement | null;
@@ -349,6 +353,10 @@ export function getUIElements(): UIElements {
     btnHistoricalClose: document.getElementById('btn-historical-close'),
     btnHistoricalCloseFooter: document.getElementById('btn-historical-close-footer'),
     histModalSymbolBadge: document.getElementById('hist-modal-symbol-badge'),
+    histBtnAssetEth: document.getElementById('hist-btn-asset-eth'),
+    histBtnAssetBtc: document.getElementById('hist-btn-asset-btc'),
+    histBtnAssetSol: document.getElementById('hist-btn-asset-sol'),
+    histFooterAssetLabel: document.getElementById('hist-footer-asset-label'),
     histBtnRange30: document.getElementById('hist-btn-range-30'),
     histBtnRange90: document.getElementById('hist-btn-range-90'),
     histBtnRange180: document.getElementById('hist-btn-range-180'),
@@ -846,6 +854,24 @@ export function renderHistoricalModal(
   if (UI.histModalSymbolBadge) {
     UI.histModalSymbolBadge.textContent = analytics.symbol;
   }
+  if (UI.histFooterAssetLabel) {
+    UI.histFooterAssetLabel.textContent = analytics.symbol;
+  }
+
+  // Update Asset Selector Button Highlights
+  const assetBtns = {
+    ETH: UI.histBtnAssetEth,
+    BTC: UI.histBtnAssetBtc,
+    SOL: UI.histBtnAssetSol
+  };
+  (['ETH', 'BTC', 'SOL'] as const).forEach(sym => {
+    const btn = assetBtns[sym];
+    if (btn) {
+      btn.className = sym === analytics.symbol
+        ? 'px-2.5 py-1 rounded-md font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm transition cursor-pointer'
+        : 'px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer';
+    }
+  });
   if (UI.histStatBinanceAvg) {
     UI.histStatBinanceAvg.textContent = fmtPct(analytics.binanceAvg);
   }
