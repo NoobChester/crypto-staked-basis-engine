@@ -7,7 +7,8 @@ import {
   parseDeFiLlamaChartApy,
   FALLBACK_MARKET_DATA,
   setFundingVenue,
-  getLatestMarketData
+  getLatestMarketData,
+  computeWindowStats
 } from '../src/services/marketData.js';
 
 describe('Market Data Service & Quantitative Parsers', () => {
@@ -215,6 +216,78 @@ describe('Market Data Service & Quantitative Parsers', () => {
       expect(COLLATERAL_PRESETS.sol_lrt_85.realAPY).toBe(1.95);
       expect(BTC_LST_VARIANTS.lbtc.stakingAPY).toBe(1.15);
       expect(BTC_LST_VARIANTS.solvbtc.stakingAPY).toBe(3.65);
+    });
+  });
+
+  describe('Rolling Window Statistics & Mathematical Properties', () => {
+    it('computes exact mean, min, max, standard deviation and negative flip frequency', () => {
+      // 10 intervals: 6 positive, 4 negative
+      const mockValues = [10.0, 12.0, 8.0, -5.0, -2.0, 15.0, 20.0, -10.0, 0.0, -4.0];
+      const stats = computeWindowStats(mockValues);
+
+      // Sum = 44, Mean = 4.4
+      expect(stats.avg).toBe(4.4);
+      expect(stats.min).toBe(-10.0);
+      expect(stats.max).toBe(20.0);
+      expect(stats.intervalCount).toBe(10);
+      // 4 negative values out of 10 = 40.0%
+      expect(stats.negativeIntervalPct).toBe(40.0);
+      expect(stats.stdDev).toBeGreaterThan(0);
+    });
+
+    it('handles empty value arrays without crashing', () => {
+      const stats = computeWindowStats([]);
+      expect(stats.avg).toBe(0);
+      expect(stats.min).toBe(0);
+      expect(stats.max).toBe(0);
+      expect(stats.stdDev).toBe(0);
+      expect(stats.negativeIntervalPct).toBe(0);
+      expect(stats.intervalCount).toBe(0);
+    });
+
+    it('populates default trailing rolling averages for all triad assets', () => {
+      expect(FALLBACK_MARKET_DATA.ETH.trailingAverages.funding7d).toBeGreaterThan(0);
+      expect(FALLBACK_MARKET_DATA.ETH.trailingAverages.funding30d).toBeGreaterThan(0);
+      expect(FALLBACK_MARKET_DATA.ETH.trailingAverages.staking7d).toBeGreaterThan(0);
+      expect(FALLBACK_MARKET_DATA.SOL.trailingAverages.staking30d).toBe(1.80);
+      expect(FALLBACK_MARKET_DATA.BTC.trailingAverages.staking7d).toBe(0.0);
+    });
+  });
+
+  describe('Historical Carry Analytics Fetcher & Series Alignment', () => {
+    it('generates contiguous daily series matching requested rangeDays', async () => {
+      const { fetchAssetHistoricalAnalytics } = await import('../src/services/marketData.js');
+
+      const analytics30 = await fetchAssetHistoricalAnalytics('ETH', 30, 'real');
+      expect(analytics30.symbol).toBe('ETH');
+      expect(analytics30.rangeDays).toBe(30);
+      expect(analytics30.series.length).toBe(30);
+
+      // Verify net carry formula: consensusApr + stakingApy
+      const lastPoint = analytics30.series[analytics30.series.length - 1];
+      expect(lastPoint.netCarryApy).toBeCloseTo(lastPoint.consensusApr + lastPoint.stakingApy, 1);
+      expect(analytics30.binanceAvg).toBeDefined();
+      expect(analytics30.hyperliquidAvg).toBeDefined();
+      expect(analytics30.fundingDivergence).toBeGreaterThanOrEqual(0);
+    });
+
+    it('respects SOL Real vs Nominal Staking Yield modes', async () => {
+      const { fetchAssetHistoricalAnalytics } = await import('../src/services/marketData.js');
+
+      const realSol = await fetchAssetHistoricalAnalytics('SOL', 30, 'real');
+      const nomSol = await fetchAssetHistoricalAnalytics('SOL', 30, 'nominal');
+
+      expect(nomSol.stakingAvg).toBeGreaterThan(realSol.stakingAvg);
+      expect(nomSol.netCarryAvg).toBeGreaterThan(realSol.netCarryAvg);
+    });
+
+    it('handles BTC historical carry with zero spot staking for native spot', async () => {
+      const { fetchAssetHistoricalAnalytics } = await import('../src/services/marketData.js');
+
+      const btcAnalytics = await fetchAssetHistoricalAnalytics('BTC', 30, 'real');
+      expect(btcAnalytics.symbol).toBe('BTC');
+      expect(btcAnalytics.series.length).toBe(30);
+      expect(btcAnalytics.binanceAvg).toBeDefined();
     });
   });
 });

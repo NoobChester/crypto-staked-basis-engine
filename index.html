@@ -129,6 +129,13 @@
       <!-- Live Sync Controls -->
       <div class="flex items-center gap-2 shrink-0">
         <span id="feed-last-updated" class="text-[10px] text-slate-500 hidden md:inline">Syncing feeds...</span>
+        <button id="btn-open-historical-modal" onclick="openHistoricalModal()" 
+          class="px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition flex items-center gap-1.5 text-[11px] font-mono cursor-pointer" title="View multi-venue historical funding rates and carry analytics">
+          <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+          </svg>
+          <span class="hidden sm:inline">Historical Carry</span> Analytics
+        </button>
         <button id="btn-refresh-feed" onclick="refreshLiveRates()" 
           class="px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 transition flex items-center gap-1.5 text-[11px] font-mono cursor-pointer" title="Fetch latest funding rates and staking yields">
           <svg id="refresh-icon" class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -593,16 +600,35 @@
           <!-- Spot Staking APY Slider -->
           <div class="space-y-1">
             <div class="flex items-center justify-between text-xs">
-              <div class="flex items-center gap-1.5">
-                <label class="font-semibold text-slate-300">Spot Staking APY (Preset-Linked)</label>
-                <button type="button" id="btn-use-live-staking" onclick="applyLiveStaking()" 
-                  class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition flex items-center gap-1 font-mono cursor-pointer" 
-                  title="Snap staking rate to live protocol yield">
-                  <span>⚡ Live: <span id="label-live-staking-snap">2.30%</span></span>
-                </button>
-              </div>
+              <label class="font-semibold text-slate-300">Spot Staking APY (Preset-Linked)</label>
               <span id="val-staking" class="font-mono text-emerald-400 font-bold">3.2% APY</span>
             </div>
+
+            <!-- Rolling Trailing Horizon Pills for Staking -->
+            <div class="flex items-center gap-1 flex-wrap py-0.5">
+              <span class="text-[9px] text-slate-500 font-mono">APPLY:</span>
+              <button type="button" id="pill-stake-live" onclick="applyHistoricalStaking('live')" 
+                class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/80 hover:bg-cyan-900 transition flex items-center gap-1 font-mono cursor-pointer" 
+                title="Snap staking rate to live protocol yield">
+                ⚡ Live: <span id="label-pill-stake-live">2.30%</span>
+              </button>
+              <button type="button" id="pill-stake-7d" onclick="applyHistoricalStaking('7d')" 
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
+                title="Apply 7-day trailing average staking APY">
+                7d: <span id="label-pill-stake-7d">2.28%</span>
+              </button>
+              <button type="button" id="pill-stake-30d" onclick="applyHistoricalStaking('30d')" 
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
+                title="Apply 30-day trailing average staking APY">
+                30d: <span id="label-pill-stake-30d">2.31%</span>
+              </button>
+              <button type="button" id="pill-stake-90d" onclick="applyHistoricalStaking('90d')" 
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
+                title="Apply 90-day trailing average staking APY">
+                90d: <span id="label-pill-stake-90d">2.35%</span>
+              </button>
+            </div>
+
             <input type="range" id="input-staking" min="0" max="15" step="0.1" value="3.2" class="w-full">
             <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
               <span>0% (Vanilla Spot)</span>
@@ -629,14 +655,35 @@
                   <button type="button" onclick="setFundingVenue('average')" id="slider-venue-btn-average"
                     class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Average</button>
                 </div>
-                <button type="button" id="btn-use-live-funding" onclick="applyLiveFunding()" 
-                  class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 transition flex items-center gap-1 font-mono cursor-pointer" 
-                  title="Snap funding rate to selected live exchange rate">
-                  <span>⚡ Live: <span id="label-live-funding-snap">+10.95%</span></span>
-                </button>
               </div>
               <span id="val-funding" class="font-mono text-emerald-400 font-bold">+10.00% APR</span>
             </div>
+
+            <!-- Rolling Trailing Horizon Pills for Funding -->
+            <div class="flex items-center gap-1 flex-wrap py-0.5">
+              <span class="text-[9px] text-slate-500 font-mono">APPLY:</span>
+              <button type="button" id="pill-fund-live" onclick="applyHistoricalFunding('live')" 
+                class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/80 hover:bg-cyan-900 transition flex items-center gap-1 font-mono cursor-pointer" 
+                title="Snap funding rate to selected live exchange rate">
+                ⚡ Live: <span id="label-pill-fund-live">+10.95%</span>
+              </button>
+              <button type="button" id="pill-fund-7d" onclick="applyHistoricalFunding('7d')" 
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
+                title="Apply 7-day trailing average perp funding rate">
+                7d: <span id="label-pill-fund-7d">+10.42%</span>
+              </button>
+              <button type="button" id="pill-fund-30d" onclick="applyHistoricalFunding('30d')" 
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
+                title="Apply 30-day trailing average perp funding rate">
+                30d: <span id="label-pill-fund-30d">+10.15%</span>
+              </button>
+              <button type="button" id="pill-fund-90d" onclick="applyHistoricalFunding('90d')" 
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer" 
+                title="Apply 90-day trailing average perp funding rate">
+                90d: <span id="label-pill-fund-90d">+9.80%</span>
+              </button>
+            </div>
+
             <input type="range" id="input-funding" min="-25" max="60" step="0.5" value="10" class="w-full">
             <!-- Asymmetric Tick Row: Range = 85. 0% is at (25/85) = 29.41% -->
             <div class="relative w-full h-4 text-[10px] font-mono text-slate-400">
@@ -918,6 +965,155 @@
         <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">DELTA-Q ENGINE // RISK POLICY SPECIFICATION</span>
         <button onclick="closeTriadModal()" id="btn-triad-close-footer" class="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs transition">
           Close Guide
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- HISTORICAL CARRY ANALYTICS MODAL -->
+  <div id="historical-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true">
+    <div class="relative w-full max-w-4xl bg-brand-surface border border-brand-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-brand-border flex items-center justify-between bg-brand-card/90 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse"></div>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white font-mono flex items-center gap-2">
+              HISTORICAL CARRY & FUNDING ANALYTICS
+              <span id="hist-modal-symbol-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">ETH</span>
+            </h2>
+            <p class="text-[11px] text-slate-400 font-mono">Multi-venue empirical funding rates vs spot staking yields</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Timeframe Range Switcher -->
+          <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700 text-xs font-mono">
+            <button type="button" id="hist-btn-range-30" onclick="setHistoricalTimeframe(30)" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">30D</button>
+            <button type="button" id="hist-btn-range-90" onclick="setHistoricalTimeframe(90)" class="px-2.5 py-1 rounded-md font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm transition cursor-pointer">90D</button>
+            <button type="button" id="hist-btn-range-180" onclick="setHistoricalTimeframe(180)" class="px-2.5 py-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer">180D</button>
+          </div>
+
+          <!-- Close 'X' Button -->
+          <button onclick="closeHistoricalModal()" id="btn-historical-close" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition" aria-label="Close Modal">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-5 overflow-y-auto space-y-4">
+
+        <!-- Top Statistical Metric Summary Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-mono">
+          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+            <div class="text-slate-400 text-[10px]">Binance Avg</div>
+            <div id="hist-stat-binance-avg" class="text-sm font-bold text-amber-400 mt-0.5">+10.42%</div>
+            <div class="text-[9px] text-slate-500">8h settlements</div>
+          </div>
+
+          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+            <div class="text-slate-400 text-[10px]">Hyperliquid Avg</div>
+            <div id="hist-stat-hl-avg" class="text-sm font-bold text-cyan-400 mt-0.5">+9.88%</div>
+            <div class="text-[9px] text-slate-500">1h settlements</div>
+          </div>
+
+          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+            <div class="text-slate-400 text-[10px]">Consensus Funding</div>
+            <div id="hist-stat-consensus-avg" class="text-sm font-bold text-white mt-0.5">+10.15%</div>
+            <div class="text-[9px] text-slate-500">50/50 blend</div>
+          </div>
+
+          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+            <div class="text-slate-400 text-[10px]">Basis Divergence</div>
+            <div id="hist-stat-divergence" class="text-sm font-bold text-indigo-300 mt-0.5">0.54%</div>
+            <div class="text-[9px] text-slate-500">|Binance - HL|</div>
+          </div>
+
+          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+            <div class="text-slate-400 text-[10px]">Spot Staking Avg</div>
+            <div id="hist-stat-staking-avg" class="text-sm font-bold text-emerald-400 mt-0.5">+2.31%</div>
+            <div class="text-[9px] text-slate-500">Protocol yield</div>
+          </div>
+
+          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+            <div class="text-slate-400 text-[10px]">Net Carry Yield</div>
+            <div id="hist-stat-netcarry-avg" class="text-sm font-bold text-purple-400 mt-0.5">+12.46%</div>
+            <div class="text-[9px] text-slate-500">Funding + Staking</div>
+          </div>
+        </div>
+
+        <!-- Canvas Chart Container -->
+        <div class="relative w-full h-[320px] sm:h-[350px] bg-brand-dark rounded-xl overflow-hidden border border-slate-800">
+          <canvas id="historicalCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+          
+          <!-- Interactive Floating Hover Tooltip -->
+          <div id="historical-tooltip" class="absolute pointer-events-none hidden bg-brand-surface/95 border border-indigo-500/60 rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs font-mono space-y-1 z-30 transition-opacity">
+            <div id="hist-tt-date" class="text-slate-300 font-semibold border-b border-slate-700/80 pb-1">Date: 2026-11-04</div>
+            <div class="flex items-center justify-between gap-3 text-amber-400">
+              <span>Binance APR:</span>
+              <span id="hist-tt-binance" class="font-bold">+10.95%</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 text-cyan-400">
+              <span>Hyperliquid APR:</span>
+              <span id="hist-tt-hl" class="font-bold">+9.85%</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 text-emerald-400">
+              <span>Staking APY:</span>
+              <span id="hist-tt-staking" class="font-bold">+2.30%</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 text-purple-400 border-t border-slate-700/80 pt-1">
+              <span>Net Carry Total:</span>
+              <span id="hist-tt-netcarry" class="font-bold">+12.45%</span>
+            </div>
+            <div class="flex items-center justify-between gap-3 text-slate-400 text-[10px]">
+              <span>Basis Divergence:</span>
+              <span id="hist-tt-divergence">1.10%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistical Regime & Risk Insights -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+          <div class="p-3 rounded-xl bg-brand-dark/60 border border-slate-800 space-y-1">
+            <div class="text-slate-400 font-bold flex items-center gap-1.5 text-[11px]">
+              <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Negative Funding Regime Frequency
+            </div>
+            <p class="text-slate-300 text-[11px]" id="hist-stat-neg-intervals">
+              Negative intervals: <strong class="text-emerald-400">0.0%</strong> across selected timeframe. Carry remained structurally accretive.
+            </p>
+          </div>
+
+          <div class="p-3 rounded-xl bg-brand-dark/60 border border-slate-800 space-y-1">
+            <div class="text-slate-400 font-bold flex items-center gap-1.5 text-[11px]">
+              <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+              Volatility & Distribution
+            </div>
+            <p class="text-slate-300 text-[11px]" id="hist-stat-vol">
+              Standard deviation: <strong class="text-indigo-300">σ = 3.2%</strong>. Peak euphoric funding reached +28.5% APR.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 border-t border-brand-border bg-brand-card/90 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider hidden sm:inline">Apply to Model:</span>
+          <button onclick="applyHistoricalWindowToAll('30d')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs border border-slate-700 transition cursor-pointer">
+            Apply 30d Avg to Model
+          </button>
+          <button onclick="applyHistoricalWindowToAll('90d')" class="px-3 py-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 font-bold font-mono text-xs border border-cyan-700 transition cursor-pointer">
+            Apply 90d Avg to Model
+          </button>
+        </div>
+
+        <button onclick="closeHistoricalModal()" id="btn-historical-close-footer" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs transition cursor-pointer">
+          Close
         </button>
       </div>
 

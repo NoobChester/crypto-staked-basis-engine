@@ -1,6 +1,6 @@
 /**
  * @file marketData.ts
- * @description Real-time institutional market data service for perpetual funding rates and spot staking yields.
+ * @description Real-time & historical institutional market data service for perpetual funding rates and spot staking yields.
  * Sources:
  * - Multi-Venue Perpetual Funding Rates:
  *   1. Binance Futures API (CORS enabled public mark & funding index, 8-hour settlement)
@@ -23,6 +23,15 @@ export interface VenueRateInfo {
   venueName: string;
 }
 
+export interface TrailingAverages {
+  funding7d: number;
+  funding30d: number;
+  funding90d: number;
+  staking7d: number;
+  staking30d: number;
+  staking90d: number;
+}
+
 export interface AssetLiveRates {
   perpFundingAPR: number;
   markPrice: number;
@@ -36,6 +45,7 @@ export interface AssetLiveRates {
   fundingSource: string;
   lastUpdated: number;
   status: 'live' | 'fallback' | 'loading' | 'error';
+  trailingAverages: TrailingAverages;
   error?: string;
 }
 
@@ -43,6 +53,44 @@ export interface BtcLstLiveRates {
   lbtc: { stakingAPY: number; source: string; status: 'live' | 'fallback' };
   solvbtc: { stakingAPY: number; source: string; status: 'live' | 'fallback' };
   native: { stakingAPY: number; source: string; status: 'live' | 'fallback' };
+}
+
+export interface HistoricalRatePoint {
+  date: string; // YYYY-MM-DD
+  timestamp: number;
+  binanceApr: number;
+  hyperliquidApr: number;
+  consensusApr: number;
+  stakingApy: number;
+  netCarryApy: number;
+}
+
+export interface HistoricalWindowStats {
+  avg: number;
+  min: number;
+  max: number;
+  stdDev: number;
+  negativeIntervalPct: number;
+  intervalCount: number;
+}
+
+export interface AssetHistoricalAnalytics {
+  symbol: 'ETH' | 'BTC' | 'SOL';
+  rangeDays: 30 | 90 | 180;
+  funding7d: HistoricalWindowStats;
+  funding30d: HistoricalWindowStats;
+  funding90d: HistoricalWindowStats;
+  staking7d: HistoricalWindowStats;
+  staking30d: HistoricalWindowStats;
+  staking90d: HistoricalWindowStats;
+  series: HistoricalRatePoint[];
+  binanceAvg: number;
+  hyperliquidAvg: number;
+  consensusAvg: number;
+  stakingAvg: number;
+  netCarryAvg: number;
+  fundingDivergence: number; // abs(binance - hyperliquid)
+  lastFetched: number;
 }
 
 export interface MarketDataSnapshot {
@@ -75,6 +123,33 @@ const DEFAULT_VENUE_RATES: Record<'ETH' | 'BTC' | 'SOL', Record<FundingVenue, Ve
   }
 };
 
+const DEFAULT_TRAILING_AVERAGES: Record<'ETH' | 'BTC' | 'SOL', TrailingAverages> = {
+  ETH: {
+    funding7d: 2.13,
+    funding30d: 3.22,
+    funding90d: 4.66,
+    staking7d: 4.25,
+    staking30d: 2.73,
+    staking90d: 2.40
+  },
+  BTC: {
+    funding7d: 2.05,
+    funding30d: 3.10,
+    funding90d: 4.50,
+    staking7d: 0.0,
+    staking30d: 0.0,
+    staking90d: 0.0
+  },
+  SOL: {
+    funding7d: 2.50,
+    funding30d: 3.80,
+    funding90d: 5.20,
+    staking7d: 1.80,
+    staking30d: 1.80,
+    staking90d: 1.80
+  }
+};
+
 export const FALLBACK_MARKET_DATA: MarketDataSnapshot = {
   ETH: {
     perpFundingAPR: 10.0,
@@ -86,7 +161,8 @@ export const FALLBACK_MARKET_DATA: MarketDataSnapshot = {
     stakingSource: 'Lido Protocol Preset',
     fundingSource: 'Binance (ETHUSDT)',
     lastUpdated: 0,
-    status: 'fallback'
+    status: 'fallback',
+    trailingAverages: DEFAULT_TRAILING_AVERAGES.ETH
   },
   BTC: {
     perpFundingAPR: 10.0,
@@ -98,7 +174,8 @@ export const FALLBACK_MARKET_DATA: MarketDataSnapshot = {
     stakingSource: 'Native Spot (0%)',
     fundingSource: 'Binance (BTCUSDT)',
     lastUpdated: 0,
-    status: 'fallback'
+    status: 'fallback',
+    trailingAverages: DEFAULT_TRAILING_AVERAGES.BTC
   },
   SOL: {
     perpFundingAPR: 10.0,
@@ -112,7 +189,8 @@ export const FALLBACK_MARKET_DATA: MarketDataSnapshot = {
     stakingSource: 'Jito Protocol Preset',
     fundingSource: 'Binance (SOLUSDT)',
     lastUpdated: 0,
-    status: 'fallback'
+    status: 'fallback',
+    trailingAverages: DEFAULT_TRAILING_AVERAGES.SOL
   },
   btcLst: {
     lbtc: { stakingAPY: 3.2, source: 'Babylon Baseline (3.2%)', status: 'fallback' },
@@ -130,10 +208,27 @@ export const FALLBACK_MARKET_DATA: MarketDataSnapshot = {
 let currentSnapshot: MarketDataSnapshot = JSON.parse(JSON.stringify(FALLBACK_MARKET_DATA));
 const listeners: Array<(data: MarketDataSnapshot) => void> = [];
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
+const analyticsCache: Map<string, AssetHistoricalAnalytics> = new Map();
 
 // ==========================================
-// Pure Parsers (Exported for Unit Testing)
+// Pure Parsers & Statistical Math
 // ==========================================
+
+export function computeWindowStats(values: number[]): HistoricalWindowStats {
+  if (!values || values.length === 0) {
+    return { avg: 0, min: 0, max: 0, stdDev: 0, negativeIntervalPct: 0, intervalCount: 0 };
+  }
+  const count = values.length;
+  const sum = values.reduce((a, b) => a + b, 0);
+  const avg = parseFloat((sum / count).toFixed(2));
+  const min = parseFloat(Math.min(...values).toFixed(2));
+  const max = parseFloat(Math.max(...values).toFixed(2));
+  const negCount = values.filter(v => v < 0).length;
+  const negativeIntervalPct = parseFloat(((negCount / count) * 100).toFixed(1));
+  const variance = values.reduce((acc, v) => acc + Math.pow(v - avg, 2), 0) / count;
+  const stdDev = parseFloat(Math.sqrt(variance).toFixed(2));
+  return { avg, min, max, stdDev, negativeIntervalPct, intervalCount: count };
+}
 
 export function parseBinanceFunding(data: any): {
   apr: number;
@@ -148,7 +243,6 @@ export function parseBinanceFunding(data: any): {
   const rate8h = parseFloat(data.lastFundingRate);
   if (isNaN(rate8h)) throw new Error('Invalid lastFundingRate');
 
-  // Binance settlement is 3 times daily (every 8 hours)
   const apr = parseFloat((rate8h * 3 * 365 * 100).toFixed(2));
   const markPrice = parseFloat(data.markPrice) || 0;
   const indexPrice = parseFloat(data.indexPrice) || markPrice;
@@ -175,7 +269,6 @@ export function parseHyperliquidFunding(
   const rate1h = parseFloat(ctx?.funding);
   if (isNaN(rate1h)) throw new Error('Invalid Hyperliquid funding');
 
-  // Hyperliquid funding payment is hourly (24 times/day)
   const apr = parseFloat((rate1h * 24 * 365 * 100).toFixed(2));
   const markPrice = parseFloat(ctx?.markPx) || 0;
 
@@ -197,9 +290,7 @@ export function parseJitoApy(data: any): { nominal: number; real: number } {
     const lastEntry = data.apy[data.apy.length - 1];
     const rawVal = parseFloat(lastEntry?.data);
     if (!isNaN(rawVal) && rawVal > 0) {
-      // Jito API returns fractional yield, e.g. 0.0493 => 4.93%
       const nominal = parseFloat((rawVal * 100).toFixed(2));
-      // Solana network token inflation dilution is ~5.4% annual
       const realCalc = nominal - 5.4;
       const real = parseFloat((realCalc > 0 ? realCalc : Math.max(0.5, nominal * 0.35)).toFixed(2));
       return { nominal, real };
@@ -300,7 +391,6 @@ export async function fetchLidoStaking(): Promise<{ apy: number; source: string 
       return { apy, source: 'Lido Protocol (stETH Oracle)' };
     }
   } catch {
-    // Fallback to DeFiLlama wstETH
     try {
       const res = await fetchWithTimeout('https://yields.llama.fi/chart/747c1d2a-c668-4682-b9f9-296708a3dd90', undefined, 5000);
       if (res.ok) {
@@ -312,7 +402,6 @@ export async function fetchLidoStaking(): Promise<{ apy: number; source: string 
       // Fallback
     }
   }
-
   return { apy: 3.2, source: 'Institutional Baseline (3.2%)' };
 }
 
@@ -325,7 +414,6 @@ export async function fetchJitoStaking(): Promise<{ nominal: number; real: numbe
       return { nominal, real, source: 'Jito Network (Stake Pool Stats)' };
     }
   } catch {
-    // Fallback to DeFiLlama JitoSOL pool
     try {
       const res = await fetchWithTimeout('https://yields.llama.fi/chart/0e7d0722-9054-4907-8593-567b353c0900', undefined, 5000);
       if (res.ok) {
@@ -339,7 +427,6 @@ export async function fetchJitoStaking(): Promise<{ nominal: number; real: numbe
       // Fallback
     }
   }
-
   return { nominal: 7.2, real: 1.8, source: 'Institutional Baseline (Nom 7.2% / Real 1.8%)' };
 }
 
@@ -365,7 +452,6 @@ export async function fetchBtcLstStaking(): Promise<BtcLstLiveRates> {
   let solvbtcStatus: 'live' | 'fallback' = 'fallback';
 
   try {
-    // Endur / Solv BTC pool on DeFiLlama
     const res = await fetchWithTimeout('https://yields.llama.fi/chart/3827d6b6-f6f1-4162-9df7-9024503e42ce', undefined, 5000);
     if (res.ok) {
       const data = await res.json();
@@ -389,6 +475,200 @@ export async function fetchBtcLstStaking(): Promise<BtcLstLiveRates> {
 }
 
 // ==========================================
+// Historical Analytics Time-Series Fetcher
+// ==========================================
+
+const POOL_IDS: Record<'ETH' | 'BTC' | 'SOL', string> = {
+  ETH: '747c1d2a-c668-4682-b9f9-296708a3dd90', // Lido wstETH
+  SOL: '0e7d0722-9054-4907-8593-567b353c0900', // JitoSOL
+  BTC: 'c9762afb-7746-4b5a-a484-a8881a348999'  // Lombard LBTC
+};
+
+export async function fetchAssetHistoricalAnalytics(
+  symbol: 'ETH' | 'BTC' | 'SOL',
+  rangeDays: 30 | 90 | 180 = 90,
+  solYieldType: 'nominal' | 'real' = 'real'
+): Promise<AssetHistoricalAnalytics> {
+  const cacheKey = `${symbol}_${rangeDays}_${solYieldType}`;
+  const cached = analyticsCache.get(cacheKey);
+  if (cached && Date.now() - cached.lastFetched < 300000) {
+    return cached;
+  }
+
+  const limitBinance = Math.min(1000, rangeDays * 3 + 10);
+  const startTimeHl = Date.now() - (rangeDays + 2) * 86400000;
+
+  // 1. Fetch Binance Funding History
+  let binanceData: any[] = [];
+  try {
+    const res = await fetchWithTimeout(
+      `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=${limitBinance}`,
+      undefined,
+      6000
+    );
+    if (res.ok) binanceData = await res.json();
+  } catch {
+    // Binance historical fallback
+  }
+
+  // 2. Fetch Hyperliquid Funding History
+  let hlData: any[] = [];
+  try {
+    const res = await fetchWithTimeout(
+      'https://api.hyperliquid.xyz/info',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'fundingHistory', coin: symbol, startTime: startTimeHl })
+      },
+      6000
+    );
+    if (res.ok) hlData = await res.json();
+  } catch {
+    // Hyperliquid historical fallback
+  }
+
+  // 3. Fetch DeFiLlama Staking History
+  let stakingData: any[] = [];
+  try {
+    const poolId = POOL_IDS[symbol];
+    const res = await fetchWithTimeout(`https://yields.llama.fi/chart/${poolId}`, undefined, 6000);
+    if (res.ok) {
+      const json = await res.json();
+      if (Array.isArray(json?.data)) stakingData = json.data;
+    }
+  } catch {
+    // Staking fallback
+  }
+
+  // Group Binance by Date (YYYY-MM-DD)
+  const binanceByDate: Record<string, number[]> = {};
+  binanceData.forEach((item: any) => {
+    const dStr = new Date(item.fundingTime).toISOString().slice(0, 10);
+    const apr = parseFloat(item.fundingRate) * 3 * 365 * 100;
+    if (!binanceByDate[dStr]) binanceByDate[dStr] = [];
+    binanceByDate[dStr].push(apr);
+  });
+
+  // Group Hyperliquid by Date (YYYY-MM-DD)
+  const hlByDate: Record<string, number[]> = {};
+  hlData.forEach((item: any) => {
+    const dStr = new Date(item.time).toISOString().slice(0, 10);
+    const apr = parseFloat(item.fundingRate) * 24 * 365 * 100;
+    if (!hlByDate[dStr]) hlByDate[dStr] = [];
+    hlByDate[dStr].push(apr);
+  });
+
+  // Group Staking by Date (YYYY-MM-DD)
+  const stakingByDate: Record<string, number> = {};
+  stakingData.forEach((item: any) => {
+    const dStr = new Date(item.timestamp).toISOString().slice(0, 10);
+    let apy = parseFloat(item.apy);
+    if (symbol === 'SOL' && solYieldType === 'real') {
+      const realCalc = apy - 5.4;
+      apy = realCalc > 0 ? realCalc : Math.max(0.5, apy * 0.35);
+    }
+    if (symbol === 'BTC') {
+      apy = parseFloat(item.apy) || 0.95;
+    }
+    stakingByDate[dStr] = parseFloat(apy.toFixed(2));
+  });
+
+  // Build contiguous daily series for the requested rangeDays
+  const series: HistoricalRatePoint[] = [];
+  const now = Date.now();
+  const dayMs = 86400000;
+
+  for (let i = rangeDays - 1; i >= 0; i--) {
+    const dateObj = new Date(now - i * dayMs);
+    const dStr = dateObj.toISOString().slice(0, 10);
+
+    // Binance Daily Avg
+    const bArr = binanceByDate[dStr];
+    const bApr = (bArr && bArr.length > 0)
+      ? parseFloat((bArr.reduce((a, b) => a + b, 0) / bArr.length).toFixed(2))
+      : (series.length > 0 ? series[series.length - 1].binanceApr : 10.0);
+
+    // Hyperliquid Daily Avg
+    const hlArr = hlByDate[dStr];
+    const hlApr = (hlArr && hlArr.length > 0)
+      ? parseFloat((hlArr.reduce((a, b) => a + b, 0) / hlArr.length).toFixed(2))
+      : (series.length > 0 ? series[series.length - 1].hyperliquidApr : bApr);
+
+    const consensusApr = parseFloat(((bApr + hlApr) / 2).toFixed(2));
+
+    // Staking APY for day
+    let sApy = stakingByDate[dStr];
+    if (sApy === undefined) {
+      if (symbol === 'BTC') sApy = 0.0;
+      else if (series.length > 0) sApy = series[series.length - 1].stakingApy;
+      else sApy = symbol === 'ETH' ? 2.3 : 1.8;
+    }
+
+    const netCarryApy = parseFloat((sApy + consensusApr).toFixed(2));
+
+    series.push({
+      date: dStr,
+      timestamp: dateObj.getTime(),
+      binanceApr: bApr,
+      hyperliquidApr: hlApr,
+      consensusApr,
+      stakingApy: sApy,
+      netCarryApy
+    });
+  }
+
+  // Calculate Rolling Window Statistics
+  const fundingValues = series.map(s => s.consensusApr);
+  const stakingValues = series.map(s => s.stakingApy);
+
+  const funding7d = computeWindowStats(fundingValues.slice(-7));
+  const funding30d = computeWindowStats(fundingValues.slice(-30));
+  const funding90d = computeWindowStats(fundingValues.slice(-90));
+
+  const staking7d = computeWindowStats(stakingValues.slice(-7));
+  const staking30d = computeWindowStats(stakingValues.slice(-30));
+  const staking90d = computeWindowStats(stakingValues.slice(-90));
+
+  const binanceAvg = parseFloat(
+    (series.map(s => s.binanceApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+  );
+  const hyperliquidAvg = parseFloat(
+    (series.map(s => s.hyperliquidApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+  );
+  const consensusAvg = parseFloat(
+    (series.map(s => s.consensusApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+  );
+  const stakingAvg = parseFloat(
+    (series.map(s => s.stakingApy).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+  );
+  const netCarryAvg = parseFloat((stakingAvg + consensusAvg).toFixed(2));
+  const fundingDivergence = parseFloat(Math.abs(binanceAvg - hyperliquidAvg).toFixed(2));
+
+  const analytics: AssetHistoricalAnalytics = {
+    symbol,
+    rangeDays,
+    funding7d,
+    funding30d,
+    funding90d,
+    staking7d,
+    staking30d,
+    staking90d,
+    series,
+    binanceAvg,
+    hyperliquidAvg,
+    consensusAvg,
+    stakingAvg,
+    netCarryAvg,
+    fundingDivergence,
+    lastFetched: Date.now()
+  };
+
+  analyticsCache.set(cacheKey, analytics);
+  return analytics;
+}
+
+// ==========================================
 // Master Live Data Synchronizer
 // ==========================================
 
@@ -397,7 +677,6 @@ export async function fetchLiveMarketData(): Promise<MarketDataSnapshot> {
   notifyListeners();
 
   try {
-    // Fetch Hyperliquid payload once for all symbols
     let hlData: any = null;
     try {
       const res = await fetchWithTimeout('https://api.hyperliquid.xyz/info', {
@@ -458,6 +737,48 @@ export async function fetchLiveMarketData(): Promise<MarketDataSnapshot> {
     const now = Date.now();
     const isLive = ethBinance.status === 'live' || ethHl.status === 'live';
 
+    // Compute or retrieve eager trailing averages
+    let ethHist: AssetHistoricalAnalytics | null = null;
+    let btcHist: AssetHistoricalAnalytics | null = null;
+    let solHist: AssetHistoricalAnalytics | null = null;
+
+    try {
+      [ethHist, btcHist, solHist] = await Promise.all([
+        fetchAssetHistoricalAnalytics('ETH', 90),
+        fetchAssetHistoricalAnalytics('BTC', 90),
+        fetchAssetHistoricalAnalytics('SOL', 90, 'real')
+      ]);
+    } catch {
+      // Use fallback averages if network history is slow
+    }
+
+    const ethTrailing: TrailingAverages = ethHist ? {
+      funding7d: ethHist.funding7d.avg,
+      funding30d: ethHist.funding30d.avg,
+      funding90d: ethHist.funding90d.avg,
+      staking7d: ethHist.staking7d.avg,
+      staking30d: ethHist.staking30d.avg,
+      staking90d: ethHist.staking90d.avg
+    } : DEFAULT_TRAILING_AVERAGES.ETH;
+
+    const btcTrailing: TrailingAverages = btcHist ? {
+      funding7d: btcHist.funding7d.avg,
+      funding30d: btcHist.funding30d.avg,
+      funding90d: btcHist.funding90d.avg,
+      staking7d: btcHist.staking7d.avg,
+      staking30d: btcHist.staking30d.avg,
+      staking90d: btcHist.staking90d.avg
+    } : DEFAULT_TRAILING_AVERAGES.BTC;
+
+    const solTrailing: TrailingAverages = solHist ? {
+      funding7d: solHist.funding7d.avg,
+      funding30d: solHist.funding30d.avg,
+      funding90d: solHist.funding90d.avg,
+      staking7d: solHist.staking7d.avg,
+      staking30d: solHist.staking30d.avg,
+      staking90d: solHist.staking90d.avg
+    } : DEFAULT_TRAILING_AVERAGES.SOL;
+
     currentSnapshot = {
       ETH: {
         perpFundingAPR: ethVenues[venue].apr,
@@ -469,7 +790,8 @@ export async function fetchLiveMarketData(): Promise<MarketDataSnapshot> {
         stakingSource: lidoStaking.source,
         fundingSource: ethVenues[venue].venueName,
         lastUpdated: now,
-        status: ethVenues[venue].status
+        status: ethVenues[venue].status,
+        trailingAverages: ethTrailing
       },
       BTC: {
         perpFundingAPR: btcVenues[venue].apr,
@@ -481,7 +803,8 @@ export async function fetchLiveMarketData(): Promise<MarketDataSnapshot> {
         stakingSource: 'Native BTC Spot (0%)',
         fundingSource: btcVenues[venue].venueName,
         lastUpdated: now,
-        status: btcVenues[venue].status
+        status: btcVenues[venue].status,
+        trailingAverages: btcTrailing
       },
       SOL: {
         perpFundingAPR: solVenues[venue].apr,
@@ -495,7 +818,8 @@ export async function fetchLiveMarketData(): Promise<MarketDataSnapshot> {
         stakingSource: jitoStaking.source,
         fundingSource: solVenues[venue].venueName,
         lastUpdated: now,
-        status: solVenues[venue].status
+        status: solVenues[venue].status,
+        trailingAverages: solTrailing
       },
       btcLst: btcLstRates,
       selectedVenue: venue,

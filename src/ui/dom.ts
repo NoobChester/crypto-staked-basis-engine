@@ -5,7 +5,13 @@
 
 import { fmtUSD, fmtPct, type HedgingState, type HedgingOutcome } from '../math/hedging.js';
 import { getInstrumentDetails } from '../config/presets.js';
-import { getLatestMarketData } from '../services/marketData.js';
+import {
+  getLatestMarketData,
+  type AssetHistoricalAnalytics,
+  type HistoricalRatePoint,
+  type MarketDataSnapshot,
+  type FundingVenue
+} from '../services/marketData.js';
 
 export interface UIElements {
   modeUnifiedBtn: HTMLElement | null;
@@ -134,6 +140,52 @@ export interface UIElements {
   sliderVenueBtnBinance: HTMLElement | null;
   sliderVenueBtnHyperliquid: HTMLElement | null;
   sliderVenueBtnAverage: HTMLElement | null;
+
+  // Rolling Trailing Horizon Pills
+  pillStakeLive: HTMLElement | null;
+  pillStake7d: HTMLElement | null;
+  pillStake30d: HTMLElement | null;
+  pillStake90d: HTMLElement | null;
+  labelPillStakeLive: HTMLElement | null;
+  labelPillStake7d: HTMLElement | null;
+  labelPillStake30d: HTMLElement | null;
+  labelPillStake90d: HTMLElement | null;
+
+  pillFundLive: HTMLElement | null;
+  pillFund7d: HTMLElement | null;
+  pillFund30d: HTMLElement | null;
+  pillFund90d: HTMLElement | null;
+  labelPillFundLive: HTMLElement | null;
+  labelPillFund7d: HTMLElement | null;
+  labelPillFund30d: HTMLElement | null;
+  labelPillFund90d: HTMLElement | null;
+
+  // Historical Carry Modal Elements
+  btnOpenHistoricalModal: HTMLElement | null;
+  historicalModal: HTMLElement | null;
+  btnHistoricalClose: HTMLElement | null;
+  btnHistoricalCloseFooter: HTMLElement | null;
+  histModalSymbolBadge: HTMLElement | null;
+  histBtnRange30: HTMLElement | null;
+  histBtnRange90: HTMLElement | null;
+  histBtnRange180: HTMLElement | null;
+  historicalCanvas: HTMLCanvasElement | null;
+  historicalTooltip: HTMLElement | null;
+  histTtDate: HTMLElement | null;
+  histTtBinance: HTMLElement | null;
+  histTtHl: HTMLElement | null;
+  histTtStaking: HTMLElement | null;
+  histTtNetcarry: HTMLElement | null;
+  histTtDivergence: HTMLElement | null;
+
+  histStatBinanceAvg: HTMLElement | null;
+  histStatHlAvg: HTMLElement | null;
+  histStatConsensusAvg: HTMLElement | null;
+  histStatDivergence: HTMLElement | null;
+  histStatStakingAvg: HTMLElement | null;
+  histStatNetcarryAvg: HTMLElement | null;
+  histStatNegIntervals: HTMLElement | null;
+  histStatVol: HTMLElement | null;
 
   [key: string]: HTMLElement | HTMLInputElement | HTMLCanvasElement | null;
 }
@@ -270,7 +322,53 @@ export function getUIElements(): UIElements {
     triadModal: document.getElementById('triad-modal'),
     btnTriadInfo: document.getElementById('btn-triad-info'),
     btnTriadClose: document.getElementById('btn-triad-close'),
-    btnTriadCloseFooter: document.getElementById('btn-triad-close-footer')
+    btnTriadCloseFooter: document.getElementById('btn-triad-close-footer'),
+
+    // Rolling Trailing Horizon Pills
+    pillStakeLive: document.getElementById('pill-stake-live'),
+    pillStake7d: document.getElementById('pill-stake-7d'),
+    pillStake30d: document.getElementById('pill-stake-30d'),
+    pillStake90d: document.getElementById('pill-stake-90d'),
+    labelPillStakeLive: document.getElementById('label-pill-stake-live'),
+    labelPillStake7d: document.getElementById('label-pill-stake-7d'),
+    labelPillStake30d: document.getElementById('label-pill-stake-30d'),
+    labelPillStake90d: document.getElementById('label-pill-stake-90d'),
+
+    pillFundLive: document.getElementById('pill-fund-live'),
+    pillFund7d: document.getElementById('pill-fund-7d'),
+    pillFund30d: document.getElementById('pill-fund-30d'),
+    pillFund90d: document.getElementById('pill-fund-90d'),
+    labelPillFundLive: document.getElementById('label-pill-fund-live'),
+    labelPillFund7d: document.getElementById('label-pill-fund-7d'),
+    labelPillFund30d: document.getElementById('label-pill-fund-30d'),
+    labelPillFund90d: document.getElementById('label-pill-fund-90d'),
+
+    // Historical Modal Elements
+    btnOpenHistoricalModal: document.getElementById('btn-open-historical-modal'),
+    historicalModal: document.getElementById('historical-modal'),
+    btnHistoricalClose: document.getElementById('btn-historical-close'),
+    btnHistoricalCloseFooter: document.getElementById('btn-historical-close-footer'),
+    histModalSymbolBadge: document.getElementById('hist-modal-symbol-badge'),
+    histBtnRange30: document.getElementById('hist-btn-range-30'),
+    histBtnRange90: document.getElementById('hist-btn-range-90'),
+    histBtnRange180: document.getElementById('hist-btn-range-180'),
+    historicalCanvas: document.getElementById('historicalCanvas') as HTMLCanvasElement | null,
+    historicalTooltip: document.getElementById('historical-tooltip'),
+    histTtDate: document.getElementById('hist-tt-date'),
+    histTtBinance: document.getElementById('hist-tt-binance'),
+    histTtHl: document.getElementById('hist-tt-hl'),
+    histTtStaking: document.getElementById('hist-tt-staking'),
+    histTtNetcarry: document.getElementById('hist-tt-netcarry'),
+    histTtDivergence: document.getElementById('hist-tt-divergence'),
+
+    histStatBinanceAvg: document.getElementById('hist-stat-binance-avg'),
+    histStatHlAvg: document.getElementById('hist-stat-hl-avg'),
+    histStatConsensusAvg: document.getElementById('hist-stat-consensus-avg'),
+    histStatDivergence: document.getElementById('hist-stat-divergence'),
+    histStatStakingAvg: document.getElementById('hist-stat-staking-avg'),
+    histStatNetcarryAvg: document.getElementById('hist-stat-netcarry-avg'),
+    histStatNegIntervals: document.getElementById('hist-stat-neg-intervals'),
+    histStatVol: document.getElementById('hist-stat-vol')
   };
 }
 
@@ -653,6 +751,162 @@ export function renderMarketData(UI: UIElements, state: HedgingState): void {
       }
     }
   }
+
+  // Render rolling horizon pills under sliders
+  renderHistoricalPills(UI, state, data);
+}
+
+export function renderHistoricalPills(UI: UIElements, state: any, data: MarketDataSnapshot): void {
+  const asset = (state.tradedAsset || 'ETH') as 'ETH' | 'BTC' | 'SOL';
+  const assetRates = data[asset];
+  if (!assetRates) return;
+
+  // 1. Staking Trailing
+  let liveStaking = assetRates.stakingAPY;
+  let stake7d = assetRates.trailingAverages?.staking7d ?? liveStaking;
+  let stake30d = assetRates.trailingAverages?.staking30d ?? liveStaking;
+  let stake90d = assetRates.trailingAverages?.staking90d ?? liveStaking;
+
+  if (state.mode === 'unified') {
+    if (state.activePreset === 'btc_95') {
+      liveStaking = 0.0;
+      stake7d = 0.0;
+      stake30d = 0.0;
+      stake90d = 0.0;
+    } else if (state.activePreset === 'sol_lrt_85' && state.solYieldType === 'nominal') {
+      liveStaking = assetRates.nominalStakingAPY ?? 7.2;
+      stake7d = parseFloat((stake7d + 5.4).toFixed(2));
+      stake30d = parseFloat((stake30d + 5.4).toFixed(2));
+      stake90d = parseFloat((stake90d + 5.4).toFixed(2));
+    }
+  } else {
+    if (asset === 'BTC') {
+      if (state.btcVariant === 'lbtc') {
+        liveStaking = data.btcLst.lbtc.stakingAPY;
+        stake7d = liveStaking;
+        stake30d = liveStaking;
+        stake90d = liveStaking;
+      } else if (state.btcVariant === 'solvbtc') {
+        liveStaking = data.btcLst.solvbtc.stakingAPY;
+        stake7d = liveStaking;
+        stake30d = liveStaking;
+        stake90d = liveStaking;
+      } else {
+        liveStaking = 0.0;
+        stake7d = 0.0;
+        stake30d = 0.0;
+        stake90d = 0.0;
+      }
+    } else if (asset === 'SOL' && state.solYieldType === 'nominal') {
+      liveStaking = assetRates.nominalStakingAPY ?? 7.2;
+      stake7d = parseFloat((stake7d + 5.4).toFixed(2));
+      stake30d = parseFloat((stake30d + 5.4).toFixed(2));
+      stake90d = parseFloat((stake90d + 5.4).toFixed(2));
+    }
+  }
+
+  if (UI.labelPillStakeLive) UI.labelPillStakeLive.textContent = `${liveStaking.toFixed(2)}%`;
+  if (UI.labelPillStake7d) UI.labelPillStake7d.textContent = `${stake7d.toFixed(2)}%`;
+  if (UI.labelPillStake30d) UI.labelPillStake30d.textContent = `${stake30d.toFixed(2)}%`;
+  if (UI.labelPillStake90d) UI.labelPillStake90d.textContent = `${stake90d.toFixed(2)}%`;
+
+  // 2. Funding Trailing
+  const fundLive = assetRates.perpFundingAPR;
+  const fund7d = assetRates.trailingAverages?.funding7d ?? fundLive;
+  const fund30d = assetRates.trailingAverages?.funding30d ?? fundLive;
+  const fund90d = assetRates.trailingAverages?.funding90d ?? fundLive;
+
+  if (UI.labelPillFundLive) UI.labelPillFundLive.textContent = fmtPct(fundLive);
+  if (UI.labelPillFund7d) UI.labelPillFund7d.textContent = fmtPct(fund7d);
+  if (UI.labelPillFund30d) UI.labelPillFund30d.textContent = fmtPct(fund30d);
+  if (UI.labelPillFund90d) UI.labelPillFund90d.textContent = fmtPct(fund90d);
+
+  // Active Pill Styling
+  const activeClass = 'text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700/80 font-bold transition flex items-center gap-1 font-mono cursor-pointer shadow-sm';
+  const inactiveClass = 'text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1 font-mono cursor-pointer';
+
+  const sWin = state.stakingWindow ?? (state.isLiveStaking ? 'live' : 'custom');
+  if (UI.pillStakeLive) UI.pillStakeLive.className = sWin === 'live' ? activeClass : inactiveClass;
+  if (UI.pillStake7d) UI.pillStake7d.className = sWin === '7d' ? activeClass : inactiveClass;
+  if (UI.pillStake30d) UI.pillStake30d.className = sWin === '30d' ? activeClass : inactiveClass;
+  if (UI.pillStake90d) UI.pillStake90d.className = sWin === '90d' ? activeClass : inactiveClass;
+
+  const fWin = state.fundingWindow ?? (state.isLiveFunding ? 'live' : 'custom');
+  if (UI.pillFundLive) UI.pillFundLive.className = fWin === 'live' ? activeClass : inactiveClass;
+  if (UI.pillFund7d) UI.pillFund7d.className = fWin === '7d' ? activeClass : inactiveClass;
+  if (UI.pillFund30d) UI.pillFund30d.className = fWin === '30d' ? activeClass : inactiveClass;
+  if (UI.pillFund90d) UI.pillFund90d.className = fWin === '90d' ? activeClass : inactiveClass;
+}
+
+export function renderHistoricalModal(
+  UI: UIElements,
+  analytics: AssetHistoricalAnalytics,
+  _activeVenue: FundingVenue
+): void {
+  if (UI.histModalSymbolBadge) {
+    UI.histModalSymbolBadge.textContent = analytics.symbol;
+  }
+  if (UI.histStatBinanceAvg) {
+    UI.histStatBinanceAvg.textContent = fmtPct(analytics.binanceAvg);
+  }
+  if (UI.histStatHlAvg) {
+    UI.histStatHlAvg.textContent = fmtPct(analytics.hyperliquidAvg);
+  }
+  if (UI.histStatConsensusAvg) {
+    UI.histStatConsensusAvg.textContent = fmtPct(analytics.consensusAvg);
+  }
+  if (UI.histStatDivergence) {
+    UI.histStatDivergence.textContent = `${analytics.fundingDivergence.toFixed(2)}%`;
+  }
+  if (UI.histStatStakingAvg) {
+    UI.histStatStakingAvg.textContent = `${analytics.stakingAvg.toFixed(2)}% APY`;
+  }
+  if (UI.histStatNetcarryAvg) {
+    UI.histStatNetcarryAvg.textContent = fmtPct(analytics.netCarryAvg) + ' APY';
+  }
+
+  // Regime frequency stats
+  if (UI.histStatNegIntervals) {
+    const negPct = analytics.funding90d?.negativeIntervalPct ?? 0;
+    const isZero = negPct === 0;
+    UI.histStatNegIntervals.innerHTML = `Negative intervals: <strong class="${isZero ? 'text-emerald-400' : 'text-amber-400'}">${negPct.toFixed(1)}%</strong> across selected timeframe. ${isZero ? 'Carry remained structurally accretive.' : 'Brief inverse discount periods observed.'}`;
+  }
+
+  // Volatility stats
+  if (UI.histStatVol) {
+    const stdDev = analytics.funding90d?.stdDev ?? 0;
+    const maxRate = analytics.funding90d?.max ?? 0;
+    UI.histStatVol.innerHTML = `Standard deviation: <strong class="text-indigo-300">&sigma; = ${stdDev.toFixed(2)}%</strong>. Peak observed rate reached <strong>${fmtPct(maxRate)}</strong>.`;
+  }
+}
+
+export function updateHistoricalTooltip(
+  UI: UIElements,
+  point: HistoricalRatePoint | null,
+  mouseX: number,
+  mouseY: number
+): void {
+  if (!UI.historicalTooltip) return;
+
+  if (!point) {
+    UI.historicalTooltip.classList.add('hidden');
+    return;
+  }
+
+  UI.historicalTooltip.classList.remove('hidden');
+  const parentW = UI.historicalCanvas?.parentElement?.clientWidth || 700;
+  UI.historicalTooltip.style.left = `${Math.min(mouseX + 15, parentW - 200)}px`;
+  UI.historicalTooltip.style.top = `${Math.max(mouseY - 80, 10)}px`;
+
+  if (UI.histTtDate) UI.histTtDate.textContent = `Date: ${point.date}`;
+  if (UI.histTtBinance) UI.histTtBinance.textContent = fmtPct(point.binanceApr);
+  if (UI.histTtHl) UI.histTtHl.textContent = fmtPct(point.hyperliquidApr);
+  if (UI.histTtStaking) UI.histTtStaking.textContent = `${point.stakingApy.toFixed(2)}% APY`;
+  if (UI.histTtNetcarry) UI.histTtNetcarry.textContent = fmtPct(point.netCarryApy);
+  if (UI.histTtDivergence) {
+    const div = Math.abs(point.binanceApr - point.hyperliquidApr);
+    UI.histTtDivergence.textContent = `${div.toFixed(2)}%`;
+  }
 }
 
 export function bindInputListeners(
@@ -689,6 +943,7 @@ export function bindInputListeners(
     UI.inputFunding.addEventListener('input', (e) => {
       state.fundingAPR = parseFloat((e.target as HTMLInputElement).value);
       state.isLiveFunding = false;
+      (state as any).fundingWindow = 'custom';
       if (UI.valFunding) {
         UI.valFunding.textContent = fmtPct(state.fundingAPR) + ' APR';
         UI.valFunding.className = `font-mono font-bold ${state.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
@@ -701,6 +956,7 @@ export function bindInputListeners(
     UI.inputStaking.addEventListener('input', (e) => {
       state.stakingAPY = parseFloat((e.target as HTMLInputElement).value);
       state.isLiveStaking = false;
+      (state as any).stakingWindow = 'custom';
       if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
       onUpdate();
     });
