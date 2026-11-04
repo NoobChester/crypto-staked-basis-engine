@@ -6,6 +6,8 @@
   "scripts": {
     "test": "node --test tests/**/*.test.js",
     "test:watch": "node --test --watch tests/**/*.test.js",
+    "build": "esbuild src/app.js --bundle --outfile=dist/bundle.js --format=iife",
+    "dev": "esbuild src/app.js --bundle --outfile=dist/bundle.js --format=iife --watch",
     "start": "npx serve ."
   },
   "keywords": [
@@ -18,5 +20,8 @@
     "staked-basis"
   ],
   "author": "NoobChester",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
 }
