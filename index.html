@@ -306,6 +306,10 @@
               <button onclick="setTradedAsset('ETH')" id="asset-btn-eth" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition">ETH</button>
               <button onclick="setTradedAsset('BTC')" id="asset-btn-btc" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">BTC</button>
               <button onclick="setTradedAsset('SOL')" id="asset-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">SOL</button>
+              <button onclick="openTriadModal()" id="btn-triad-info" class="ml-1 text-slate-400 hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-600 transition flex items-center gap-1 text-[10px] font-mono" title="Institutional Asset Whitelist: Why only BTC, ETH, and SOL?">
+                <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="hidden sm:inline">Why 3?</span>
+              </button>
             </div>
           </div>
 
@@ -446,6 +450,10 @@
                 <button onclick="setTradedAsset('ETH')" id="iso-btn-eth" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">ETH</button>
                 <button onclick="setTradedAsset('BTC')" id="iso-btn-btc" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition">BTC</button>
                 <button onclick="setTradedAsset('SOL')" id="iso-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">SOL</button>
+                <button onclick="openTriadModal()" class="ml-1 text-slate-400 hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-600 transition flex items-center gap-1 text-[10px]" title="Institutional Asset Whitelist: Why only BTC, ETH, and SOL?">
+                  <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <span class="hidden sm:inline">Why 3?</span>
+                </button>
               </div>
             </div>
 
@@ -567,37 +575,262 @@
     </div>
 
     <!-- Quantitative Insights & Structural Guide -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
-      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-1.5">
-        <h4 class="font-bold text-white flex items-center gap-2 text-xs">
-          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-          Unified Cross-Margin Mechanics
-        </h4>
-        <p class="text-slate-400 text-[11px] leading-relaxed">
-          In Unified Margin, your spot crypto serves directly as margin collateral for the short perp. When the asset rallies, your spot collateral value gains offset short perp unrealized losses, expanding your liquidation buffer to <strong>+852% (at 90% valuation)</strong> or making it mathematically impossible (Inverse 100%).
-        </p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono">
+      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-1.5 flex flex-col justify-between">
+        <div>
+          <h4 class="font-bold text-white flex items-center gap-2 text-xs">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            Unified Cross-Margin Mechanics
+          </h4>
+          <p class="text-slate-400 text-[11px] leading-relaxed mt-1.5">
+            In Unified Margin, spot crypto serves directly as margin collateral for the short perp. Collateral gains cushion perp losses, expanding your liquidation buffer to <strong>+852% (at 90% valuation)</strong> or &infin; (Inverse 100%).
+          </p>
+        </div>
       </div>
 
-      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-1.5">
-        <h4 class="font-bold text-white flex items-center gap-2 text-xs">
-          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-          Solana Staking: Nominal vs. Real Yield
-        </h4>
-        <p class="text-slate-400 text-[11px] leading-relaxed">
-          JitoSOL advertises ~7.2% nominal yield. However, Solana has a ~5.4% annual network inflation rate. Because this delta-neutral setup locks your position to USD, nominal token issuance dilutes unhedged purchasing power. <strong>Real economic yield is ~1.8% APR</strong>.
-        </p>
+      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-1.5 flex flex-col justify-between">
+        <div>
+          <h4 class="font-bold text-white flex items-center gap-2 text-xs">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            Solana Staking: Nominal vs. Real
+          </h4>
+          <p class="text-slate-400 text-[11px] leading-relaxed mt-1.5">
+            JitoSOL advertises ~7.2% nominal yield. However, Solana's ~5.4% annual token inflation dilutes unhedged USD purchasing power. <strong>Real economic yield is ~1.8% APY</strong>.
+          </p>
+        </div>
       </div>
 
-      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-1.5">
-        <h4 class="font-bold text-white flex items-center gap-2 text-xs">
-          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-          Isolated Margin: The Bitcoin LST Gateway
-        </h4>
-        <p class="text-slate-400 text-[11px] leading-relaxed">
-          Major centralized derivatives desks do not whitelist Babylon restaking tokens (LBTC, SolvBTC.BBN) as cross-margin collateral. <strong>Isolated Margin is the only venue to hedge BTC LSTs</strong>: you custody the LST in Web3 to harvest Babylon staking yield while running an isolated cash-margined short on the exchange.
-        </p>
+      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-1.5 flex flex-col justify-between">
+        <div>
+          <h4 class="font-bold text-white flex items-center gap-2 text-xs">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            Isolated Margin: Bitcoin LSTs
+          </h4>
+          <p class="text-slate-400 text-[11px] leading-relaxed mt-1.5">
+            CEXs do not whitelist Babylon tokens (LBTC, SolvBTC) as cross-margin collateral. <strong>Isolated Margin is mandatory</strong>: custody the LST in Web3 while running a cash short on CEX.
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-2 flex flex-col justify-between border-cyan-900/50">
+        <div>
+          <h4 class="font-bold text-white flex items-center gap-2 text-xs">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+            Asset Whitelist: The Triad
+          </h4>
+          <p class="text-slate-400 text-[11px] leading-relaxed mt-1.5">
+            Only BTC, ETH, and SOL qualify for institutional delta-neutral execution due to 80%–98% CEX valuation ratios and multi-billion perp liquidity.
+          </p>
+        </div>
+        <button onclick="openTriadModal()" class="w-full mt-2 py-1.5 px-2.5 rounded-lg bg-cyan-950/80 hover:bg-cyan-900 text-cyan-300 hover:text-white border border-cyan-700/60 transition text-[11px] font-mono font-semibold flex items-center justify-center gap-1.5">
+          <span>Read Whitelist Analysis</span>
+          <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+        </button>
       </div>
     </div>
+
+  </main>
+
+  <!-- Institutional Triad Whitelist Explainer Modal (Strategy 1) -->
+  <div id="triad-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="triad-modal-title">
+    <div class="relative w-full max-w-4xl bg-brand-surface border border-cyan-800/80 rounded-2xl shadow-2xl overflow-hidden my-auto modal-enter flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-brand-border bg-brand-card/90 flex items-start justify-between gap-4 shrink-0">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+            <h3 id="triad-modal-title" class="text-base sm:text-lg font-bold font-mono tracking-tight text-white flex items-center gap-2">
+              INSTITUTIONAL ASSET WHITELIST
+            </h3>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">
+              THE BTC–ETH–SOL TRIAD
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono">
+            Structural rationale: Why delta-neutral cash-and-carry and portfolio-margin execution are strictly confined to three assets.
+          </p>
+        </div>
+        
+        <button onclick="closeTriadModal()" id="btn-triad-close" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" aria-label="Close modal">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs font-mono">
+        
+        <!-- Executive Summary Banner -->
+        <div class="p-3.5 rounded-xl bg-cyan-950/40 border border-cyan-800/60 text-cyan-200/90 leading-relaxed flex items-start gap-3">
+          <div class="p-1.5 bg-cyan-900/80 rounded-lg text-cyan-300 shrink-0 mt-0.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <p class="text-[11px] sm:text-xs">
+            <strong class="text-cyan-300">Executive Quantitative Summary:</strong> Delta-neutral basis trading typically targets <strong>8%–18% net carry</strong>. In this regime, execution viability is mathematically dictated by three structural boundaries: exchange risk engine haircuts, perpetual order book depth, and funding stability. Across the digital asset universe, only <strong>BTC, ETH, and SOL</strong> survive all three filters.
+          </p>
+        </div>
+
+        <!-- The 3 Pillars Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          
+          <!-- Pillar 1 -->
+          <div class="p-4 rounded-xl bg-brand-card border border-brand-border space-y-2 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between text-cyan-400 mb-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pillar 1</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">MARGIN ENGINE</span>
+              </div>
+              <h4 class="text-sm font-bold text-white tracking-tight">Top-Tier Collateral Valuation</h4>
+              <p class="text-[11px] text-slate-300 leading-relaxed mt-2">
+                Tier-1 exchange risk engines (Bybit UTA, OKX PM, Binance PM) credit <strong>95%–98% for BTC/ETH</strong> and <strong>80%–85% for SOL</strong> spot collateral value.
+              </p>
+              <div class="mt-2.5 p-2 rounded bg-brand-dark/70 border border-slate-800 text-[10px] text-slate-400 space-y-1">
+                <div class="text-emerald-400 font-semibold">• BTC/ETH: +1,718% rally buffer</div>
+                <div class="text-cyan-400 font-semibold">• SOL: +545% rally buffer</div>
+                <div class="text-rose-400 font-semibold">• Altcoins: 0%–50% haircut trap</div>
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-2">
+              Altcoins trigger forced liquidation on modest 20%–40% rallies, destroying delta-neutral solvency.
+            </p>
+          </div>
+
+          <!-- Pillar 2 -->
+          <div class="p-4 rounded-xl bg-brand-card border border-brand-border space-y-2 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between text-cyan-400 mb-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pillar 2</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">EXECUTION</span>
+              </div>
+              <h4 class="text-sm font-bold text-white tracking-tight">Multi-Billion Perp Liquidity</h4>
+              <p class="text-[11px] text-slate-300 leading-relaxed mt-2">
+                BTC, ETH, and SOL represent &gt;80% of global perpetual futures open interest (tens of billions in BTC/ETH, multi-billions in SOL).
+              </p>
+              <div class="mt-2.5 p-2 rounded bg-brand-dark/70 border border-slate-800 text-[10px] text-slate-400 space-y-1">
+                <div>• Zero-slippage algorithmic rebalancing</div>
+                <div>• 20 bps slippage burns 1–2 months carry</div>
+                <div class="text-rose-400">• Alts prone to -30% funding flip traps</div>
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-2">
+              Deep order books allow $10M–$50M+ programmatic hedges without price distortion or carry drag.
+            </p>
+          </div>
+
+          <!-- Pillar 3 -->
+          <div class="p-4 rounded-xl bg-brand-card border border-brand-border space-y-2 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between text-cyan-400 mb-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Pillar 3</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold">PORTFOLIO FIT</span>
+              </div>
+              <h4 class="text-sm font-bold text-white tracking-tight">Distinct Yield Archetypes</h4>
+              <p class="text-[11px] text-slate-300 leading-relaxed mt-2">
+                Each asset occupies a distinct quantitative niche spanning pure basis carry, conservative staking, and high-beta yield.
+              </p>
+              <div class="mt-2.5 p-2 rounded bg-brand-dark/70 border border-slate-800 text-[10px] text-slate-400 space-y-1">
+                <div class="text-slate-200 font-semibold">• BTC: Pure funding, 0% de-peg risk</div>
+                <div class="text-cyan-300 font-semibold">• ETH: ~3.2% PoS stake + steady carry</div>
+                <div class="text-amber-300 font-semibold">• SOL: ~7.2% nom / ~1.8% real yield</div>
+              </div>
+            </div>
+            <p class="text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-2">
+              Covers the entire risk-adjusted return spectrum from sovereign preservation to aggressive compounding.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Matrix Comparison Table -->
+        <div class="border border-brand-border rounded-xl overflow-hidden bg-brand-card">
+          <div class="px-4 py-2.5 bg-brand-surface border-b border-brand-border flex items-center justify-between">
+            <span class="text-[11px] font-bold text-white uppercase tracking-wider">Institutional Quantitative Comparison Matrix</span>
+            <span class="text-[10px] text-slate-400 font-mono">Exchange Maintenance Margin = 0.5% (MMR)</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-[11px] font-mono">
+              <thead class="bg-brand-dark/60 text-slate-400 border-b border-brand-border">
+                <tr>
+                  <th class="p-3">Asset</th>
+                  <th class="p-3">Primary Collateral Form</th>
+                  <th class="p-3">CEX Valuation (V)</th>
+                  <th class="p-3">Liquidation Shock (r_liq)</th>
+                  <th class="p-3">Staking Yield</th>
+                  <th class="p-3">Dominant Institutional Role</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-brand-border text-slate-300">
+                <tr class="hover:bg-slate-800/30 transition">
+                  <td class="p-3 font-bold text-white flex items-center gap-1.5 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span> Bitcoin (BTC)
+                  </td>
+                  <td class="p-3 text-slate-300">Native BTC / Inverse COIN-M</td>
+                  <td class="p-3 text-emerald-400 font-semibold">95% – 100% (0%–5% Haircut)</td>
+                  <td class="p-3 font-bold text-emerald-400">+1,718% (or &infin; on Inverse)</td>
+                  <td class="p-3 text-slate-400">0.0% (Vanilla) / 3.2% (Babylon Isolated)</td>
+                  <td class="p-3 text-slate-300">Macro anchor & pure funding harvest</td>
+                </tr>
+                <tr class="hover:bg-slate-800/30 transition">
+                  <td class="p-3 font-bold text-white flex items-center gap-1.5 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-cyan-400 shrink-0"></span> Ethereum (ETH)
+                  </td>
+                  <td class="p-3 text-slate-300">Lido wstETH (Whitelisted LST)</td>
+                  <td class="p-3 text-cyan-400 font-semibold">90.0% (10% Haircut)</td>
+                  <td class="p-3 font-bold text-cyan-300">+852.4% runway</td>
+                  <td class="p-3 text-emerald-400 font-semibold">~3.2% APY (PoS Base)</td>
+                  <td class="p-3 text-slate-300">Institutional gold-standard basis stacking</td>
+                </tr>
+                <tr class="hover:bg-slate-800/30 transition">
+                  <td class="p-3 font-bold text-white flex items-center gap-1.5 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-purple-400 shrink-0"></span> Solana (SOL)
+                  </td>
+                  <td class="p-3 text-slate-300">JitoSOL / mSOL (Tier 2 LST)</td>
+                  <td class="p-3 text-amber-400 font-semibold">80% – 85% (15% Haircut)</td>
+                  <td class="p-3 font-bold text-amber-300">+545.2% runway</td>
+                  <td class="p-3 text-amber-400 font-semibold">~7.2% Nom / ~1.8% Real</td>
+                  <td class="p-3 text-slate-300">Retail speculative funding & high cash flow</td>
+                </tr>
+                <tr class="hover:bg-rose-950/20 bg-rose-950/10 transition text-rose-300/80">
+                  <td class="p-3 font-bold text-rose-300 flex items-center gap-1.5 whitespace-nowrap">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span> Excluded Altcoins
+                  </td>
+                  <td class="p-3 text-slate-400">Mid/Small-Cap Tokens</td>
+                  <td class="p-3 text-rose-400 font-semibold">0% – 50% (Tiered Caps)</td>
+                  <td class="p-3 text-rose-400 font-bold">+20% to +45% (Liquidation Cliff)</td>
+                  <td class="p-3 text-slate-400">Volatile / Inflationary</td>
+                  <td class="p-3 text-rose-300">Non-viable: forced liquidation & negative carry</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Babylon BTC Callout Notice -->
+        <div class="p-3 rounded-xl bg-amber-950/30 border border-amber-800/60 text-slate-300 text-[11px] leading-relaxed flex items-start gap-2.5">
+          <svg class="w-4 h-4 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <div>
+            <strong class="text-amber-300">Institutional Collateral Exception (Babylon BTC):</strong> Centralized derivatives desks do not whitelist restaked Bitcoin (LBTC, SolvBTC.BBN) as cross-margin collateral. Delta-Q models Babylon BTC exclusively under <strong>Isolated Margin Mode</strong>, pairing Web3 spot staking custody with exchange cash margin.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 border-t border-brand-border bg-brand-card/90 flex items-center justify-between shrink-0">
+        <span class="text-[10px] font-mono text-slate-500 uppercase tracking-wider">DELTA-Q ENGINE // RISK POLICY SPECIFICATION</span>
+        <button onclick="closeTriadModal()" id="btn-triad-close-footer" class="px-4 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold font-mono text-xs transition">
+          Close Guide
+        </button>
+      </div>
+
+    </div>
+  </div>
 
   </main>
 

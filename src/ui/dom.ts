@@ -98,6 +98,10 @@ export interface UIElements {
   ttVal: HTMLElement | null;
   ttRoi: HTMLElement | null;
   ttStatus: HTMLElement | null;
+  triadModal: HTMLElement | null;
+  btnTriadInfo: HTMLElement | null;
+  btnTriadClose: HTMLElement | null;
+  btnTriadCloseFooter: HTMLElement | null;
   [key: string]: HTMLElement | HTMLInputElement | HTMLCanvasElement | null;
 }
 
@@ -199,7 +203,11 @@ export function getUIElements(): UIElements {
     ttPrice: document.getElementById('tt-price'),
     ttVal: document.getElementById('tt-val'),
     ttRoi: document.getElementById('tt-roi'),
-    ttStatus: document.getElementById('tt-status')
+    ttStatus: document.getElementById('tt-status'),
+    triadModal: document.getElementById('triad-modal'),
+    btnTriadInfo: document.getElementById('btn-triad-info'),
+    btnTriadClose: document.getElementById('btn-triad-close'),
+    btnTriadCloseFooter: document.getElementById('btn-triad-close-footer')
   };
 }
 

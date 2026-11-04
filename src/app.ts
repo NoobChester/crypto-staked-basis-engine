@@ -288,6 +288,20 @@ export function resetDefaults(): void {
   updateApp();
 }
 
+export function openTriadModal(): void {
+  if (UI?.triadModal) {
+    UI.triadModal.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+}
+
+export function closeTriadModal(): void {
+  if (UI?.triadModal) {
+    UI.triadModal.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+}
+
 declare global {
   interface Window {
     setAccountMode: typeof setAccountMode;
@@ -299,6 +313,8 @@ declare global {
     setDays: typeof setDays;
     setSplit: typeof setSplit;
     resetDefaults: typeof resetDefaults;
+    openTriadModal: typeof openTriadModal;
+    closeTriadModal: typeof closeTriadModal;
   }
 }
 
@@ -311,6 +327,8 @@ window.setPriceChange = setPriceChange;
 window.setDays = setDays;
 window.setSplit = setSplit;
 window.resetDefaults = resetDefaults;
+window.openTriadModal = openTriadModal;
+window.closeTriadModal = closeTriadModal;
 
 function init() {
   UI = getUIElements();
@@ -323,6 +341,21 @@ function init() {
     });
     ro.observe(UI.canvas.parentElement);
   }
+
+  // Setup Triad Modal backdrop and keyboard dismiss listeners
+  if (UI.triadModal) {
+    UI.triadModal.addEventListener('click', (e) => {
+      if (e.target === UI.triadModal) {
+        closeTriadModal();
+      }
+    });
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeTriadModal();
+    }
+  });
 
   applyCollateralPreset('wsteth_90');
   setSplit(50);
