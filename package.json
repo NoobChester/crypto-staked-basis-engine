@@ -1,0 +1,21 @@
+{
+  "name": "delta-q-simulator",
+  "version": "1.0.0",
+  "description": "Institutional Delta-Neutral Cross-Margin vs Isolated Cash Hedging Engine",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/**/*.test.js",
+    "test:watch": "node --test --watch tests/**/*.test.js",
+    "start": "npx serve ."
+  },
+  "keywords": [
+    "crypto",
+    "hedging",
+    "delta-neutral",
+    "liquidation",
+    "cross-margin",
+    "isolated-margin"
+  ],
+  "author": "NoobChester",
+  "license": "MIT"
+}
