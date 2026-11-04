@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delta-Neutral Crypto Simulator & PnL Visualizer</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              dark: '#070b12',
+              surface: '#0d1527',
+              card: '#121d36',
+              border: '#1b2b4d',
+              accent: '#06b6d4',
+              emerald: '#10b981',
+              crimson: '#f43f5e',
+              amber: '#f59e0b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-brand-dark text-slate-100 font-sans antialiased min-h-screen selection:bg-cyan-500 selection:text-black">
+
+  <!-- Header Section -->
+  <header class="border-b border-brand-border bg-brand-surface/80 backdrop-blur-md sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+          <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg tracking-tight text-white flex items-center gap-2">
+              DELTA-Q <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60 font-mono">QUANT TERMINAL</span>
+            </h1>
+          </div>
+          <p class="text-xs text-slate-400 font-mono">Cross-Margin Unified Account vs Isolated Cash Hedging Engine</p>
+        </div>
+      </div>
+
+      <!-- Account Mode Switcher Tabs -->
+      <div class="flex items-center bg-brand-card p-1 rounded-xl border border-brand-border text-xs font-mono">
+        <button id="mode-btn-unified" onclick="setAccountMode('unified')" 
+          class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          Unified Margin (Cross-Collateral)
+        </button>
+        <button id="mode-btn-isolated" onclick="setAccountMode('isolated')" 
+          class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Isolated Margin (USDC)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
+
+    <!-- KPI Metrics Ribbon -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      <!-- Net Portfolio Value -->
+      <div class="bg-brand-card/90 rounded-2xl p-4 border border-brand-border backdrop-blur-sm relative overflow-hidden">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Net Portfolio Value</div>
+        <div class="mt-1 flex items-baseline gap-2">
+          <span id="kpi-net-value" class="text-2xl font-bold font-mono text-white">$10,000</span>
+          <span id="kpi-roi" class="text-xs font-mono font-semibold text-emerald-400">+0.00%</span>
+        </div>
+        <div class="text-[11px] text-slate-400 mt-1">Starting: <span id="kpi-starting-cap" class="text-slate-300 font-mono">$10,000</span></div>
+        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-cyan-500/10 rounded-full blur-xl pointer-events-none"></div>
+      </div>
+
+      <!-- Strategy Combined Net APY (Decomposed) -->
+      <div class="bg-brand-card/90 rounded-2xl p-4 border border-brand-border backdrop-blur-sm">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          <span>Net Strategy APY</span>
+          <span id="kpi-apy-mode" class="text-[9px] px-1 rounded bg-slate-800 text-cyan-300 font-mono">UNIFIED</span>
+        </div>
+        <div class="mt-1 flex items-baseline gap-2">
+          <span id="kpi-total-apy" class="text-2xl font-bold font-mono text-emerald-400">13.20%</span>
+          <span class="text-xs font-mono font-medium text-slate-400">Annual</span>
+        </div>
+        <div class="text-[10px] text-slate-400 mt-1 font-mono truncate">
+          Spot: <span id="kpi-spot-apy-contrib" class="text-cyan-300 font-semibold">+3.2%</span> | Perp: <span id="kpi-perp-apy-contrib" class="text-emerald-300 font-semibold">+10.0%</span>
+        </div>
+      </div>
+
+      <!-- Liquidation Runway Buffer -->
+      <div class="bg-brand-card/90 rounded-2xl p-4 border border-brand-border backdrop-blur-sm">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Liquidation Buffer</div>
+        <div class="mt-1 flex items-baseline justify-between gap-1.5 flex-nowrap">
+          <span id="kpi-liq-distance" class="text-xl xl:text-2xl font-bold font-mono text-white whitespace-nowrap">+852.4%</span>
+          <span id="kpi-liq-status" class="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">SAFE</span>
+        </div>
+        <div class="text-[11px] text-slate-400 mt-1 truncate">Breach threshold: <span id="kpi-liq-threshold-label" class="text-slate-300 font-mono">+852.4%</span></div>
+      </div>
+
+      <!-- Cumulative Accrued Cash Yield -->
+      <div class="bg-brand-card/90 rounded-2xl p-4 border border-brand-border backdrop-blur-sm">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Accrued Cash Harvest</div>
+        <div class="mt-1 flex items-baseline gap-2">
+          <span id="kpi-accrued-yield" class="text-2xl font-bold font-mono text-emerald-400">+$325.48</span>
+          <span id="kpi-horizon-tag" class="text-xs font-mono font-medium text-slate-400">90d</span>
+        </div>
+        <div class="text-[11px] text-slate-400 mt-1 font-mono">
+          Funding: <span id="kpi-funding-cash" class="text-slate-300">$246.58</span> | Staking: <span id="kpi-staking-cash" class="text-slate-300">$78.90</span>
+        </div>
+      </div>
+
+      <!-- Net Dollar Delta Exposure -->
+      <div class="bg-brand-card/90 rounded-2xl p-4 border border-brand-border backdrop-blur-sm col-span-2 lg:col-span-1">
+        <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400">Net Dollar Delta (Δ)</div>
+        <div class="mt-1 flex items-baseline gap-2">
+          <span id="kpi-delta" class="text-2xl font-bold font-mono text-cyan-400">$0.00</span>
+          <span id="kpi-delta-tag" class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">NEUTRAL</span>
+        </div>
+        <div class="text-[11px] text-slate-400 mt-1" id="kpi-delta-sub">Long Spot Δ minus Short Perp Δ</div>
+      </div>
+    </div>
+
+    <!-- Liquidation Alert Notification Banner -->
+    <div id="liquidation-banner" class="hidden p-4 rounded-2xl bg-rose-950/80 border border-rose-600/70 text-rose-100 flex items-start gap-3.5 glow-crimson transition-all">
+      <div class="p-2 bg-rose-600 rounded-xl text-white mt-0.5 flex-shrink-0 animate-bounce">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="font-bold text-sm tracking-wide text-rose-200 uppercase flex items-center gap-2">
+          CRITICAL LIQUIDATION EVENT OCCURRED
+          <span class="text-xs px-2 py-0.5 bg-rose-900 rounded font-mono text-rose-300">SHORT WIPED</span>
+        </div>
+        <p class="text-xs text-rose-200/90 mt-1">
+          Underlying asset price surged beyond the liquidation threshold (<span id="alert-liq-trigger" class="font-mono font-bold">+99.0%</span>). 
+          The short perpetual position was terminated and margin collateral absorbed by exchange maintenance penalties. 
+          <strong>Your hedge is erased: the portfolio is now 100% exposed as an unhedged directional long spot position.</strong>
+        </p>
+      </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      
+      <!-- Interactive Chart Column (7 Cols) -->
+      <div class="lg:col-span-7 space-y-4">
+        <div class="bg-brand-card rounded-2xl border border-brand-border p-5 relative">
+          
+          <!-- Chart Header & Legend -->
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                  DELTA-NEUTRAL PnL TRAJECTORY
+                </h2>
+                <span id="chart-instruments-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">
+                  PAIR: wstETH / ETH-PERP
+                </span>
+              </div>
+              <p class="text-xs text-slate-400" id="chart-sub-caption">Cross-collateralized: Spot collateral appreciation cushions perp losses</p>
+            </div>
+            <!-- Legend -->
+            <div class="flex items-center gap-3 text-[11px] font-mono">
+              <span class="flex items-center gap-1.5 text-cyan-300">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> Strategy PnL
+              </span>
+              <span class="flex items-center gap-1.5 text-slate-400">
+                <span class="w-2.5 h-0.5 bg-slate-500"></span> Unhedged Spot
+              </span>
+              <span class="flex items-center gap-1.5 text-rose-400">
+                <span class="w-2.5 h-0.5 border-t border-dashed border-rose-500"></span> Liq Cliff
+              </span>
+            </div>
+          </div>
+
+          <!-- Canvas Container -->
+          <div class="relative w-full h-[360px] sm:h-[400px] bg-brand-dark rounded-xl overflow-hidden border border-slate-800">
+            <canvas id="pnlCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+            
+            <!-- Hover Tooltip -->
+            <div id="canvas-tooltip" class="absolute pointer-events-none hidden bg-brand-surface/95 border border-cyan-500/60 rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs font-mono space-y-1 z-30 transition-opacity">
+              <div id="tt-price" class="text-slate-300 font-semibold border-b border-slate-700/80 pb-1">Price Change: 0.0%</div>
+              <div id="tt-val" class="text-cyan-300 font-bold">Portfolio: $10,000</div>
+              <div id="tt-roi" class="text-emerald-400">ROI: +0.0%</div>
+              <div id="tt-status" class="text-[10px] text-slate-400">Status: Delta-Neutral</div>
+            </div>
+          </div>
+
+          <!-- Underlying Price Movement Slider (Integrated directly below Chart) -->
+          <div class="mt-3.5 pt-3.5 border-t border-brand-border/60 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <label for="input-price-move" class="font-bold text-cyan-300 text-sm flex items-center gap-1.5 cursor-pointer">
+                  <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                  Underlying Price Movement
+                </label>
+                <span class="text-[11px] text-slate-400 hidden sm:inline font-mono">(Simulated Spot Shock)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="setPriceChange(0)" title="Reset price shock to 0%" class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">Reset (0%)</button>
+                <span id="val-price-move" class="font-mono font-bold text-base text-cyan-300 bg-cyan-950/80 px-2.5 py-0.5 rounded-lg border border-cyan-800/80">0.0%</span>
+              </div>
+            </div>
+
+            <input type="range" id="input-price-move" min="-100" max="100" step="0.5" value="0" class="w-full cursor-pointer">
+
+            <div class="flex justify-between text-[11px] font-mono text-slate-400 select-none">
+              <button type="button" onclick="setPriceChange(-100)" class="hover:text-rose-400 transition cursor-pointer text-left">-100% (Capitulation)</button>
+              <button type="button" onclick="setPriceChange(-50)" class="hover:text-slate-300 transition cursor-pointer hidden sm:inline">-50%</button>
+              <button type="button" onclick="setPriceChange(-20)" class="hover:text-slate-300 transition cursor-pointer">-20%</button>
+              <button type="button" onclick="setPriceChange(0)" class="hover:text-cyan-300 font-bold transition cursor-pointer">0% (Entry)</button>
+              <button type="button" onclick="setPriceChange(20)" class="hover:text-slate-300 transition cursor-pointer">+20%</button>
+              <button type="button" onclick="setPriceChange(50)" class="hover:text-slate-300 transition cursor-pointer hidden sm:inline">+50%</button>
+              <button type="button" onclick="setPriceChange(100)" class="hover:text-emerald-400 transition cursor-pointer text-right">+100% (2x Rally)</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio Accounting Decomposition Table -->
+        <div class="bg-brand-card rounded-2xl border border-brand-border p-4 sm:p-5">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-mono uppercase tracking-wider text-slate-400">Balance Sheet at Simulated Price Point</h3>
+            <span id="state-badge" class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold font-mono">DELTA NEUTRAL</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs font-mono">
+            <div class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800/80">
+              <div class="text-slate-400 text-[11px]" id="label-spot-collat">Spot Long Asset</div>
+              <div id="breakdown-spot-val" class="text-sm font-bold text-white mt-0.5">$10,000.00</div>
+              <div id="breakdown-spot-pnl" class="text-[10px] text-slate-400 mt-0.5">PnL: +$0.00</div>
+            </div>
+
+            <div class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800/80">
+              <div class="text-slate-400 text-[11px]" id="label-short-collat">Short Perp Position</div>
+              <div id="breakdown-short-val" class="text-sm font-bold text-white mt-0.5">-$10,000.00</div>
+              <div id="breakdown-short-pnl" class="text-[10px] text-slate-400 mt-0.5">Perp PnL: -$0.00</div>
+            </div>
+
+            <div class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800/80">
+              <div class="text-slate-400 text-[11px]">Funding Rate Cashflow</div>
+              <div id="breakdown-funding" class="text-sm font-bold text-emerald-400 mt-0.5">+$246.58</div>
+              <div id="breakdown-funding-rate" class="text-[10px] text-slate-400 mt-0.5">Rate: +10.0% APR</div>
+            </div>
+
+            <div class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800/80">
+              <div class="text-slate-400 text-[11px]">Staking Yield Accrual</div>
+              <div id="breakdown-staking" class="text-sm font-bold text-emerald-400 mt-0.5">+$78.90</div>
+              <div id="breakdown-staking-rate" class="text-[10px] text-slate-400 mt-0.5">Rate: 3.2% APY</div>
+            </div>
+
+            <div class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800/80">
+              <div class="text-slate-400 text-[11px]">LST De-Peg / Basis Drag</div>
+              <div id="breakdown-depeg" class="text-sm font-bold text-slate-300 mt-0.5">$0.00</div>
+              <div id="breakdown-depeg-pct" class="text-[10px] text-slate-400 mt-0.5">Discount: 0.0%</div>
+            </div>
+
+            <div class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800/80">
+              <div class="text-slate-400 text-[11px]">Total Net Return</div>
+              <div id="breakdown-net-pnl" class="text-sm font-bold text-emerald-400 mt-0.5">+$325.48</div>
+              <div id="breakdown-net-roi" class="text-[10px] text-emerald-300 mt-0.5">ROI: +3.25%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Column (5 Cols) -->
+      <div class="lg:col-span-5 space-y-4">
+        
+        <!-- ACTIVE INSTRUMENTS TRADED PANEL -->
+        <div class="bg-brand-card rounded-2xl border border-brand-border p-4 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-brand-border pb-2.5">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+              <h2 class="text-xs font-bold tracking-tight text-white uppercase font-mono flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                </svg>
+                TRADED INSTRUMENTS
+              </h2>
+              <span id="inst-pair-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">
+                wstETH / ETH-USDT PERP
+              </span>
+            </div>
+            <!-- Quick Asset Filter/Selector -->
+            <div class="flex items-center gap-1 text-[10px] font-mono" id="asset-selector-group">
+              <span class="text-slate-500 text-[10px] mr-0.5">ASSET:</span>
+              <button onclick="setTradedAsset('ETH')" id="asset-btn-eth" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition">ETH</button>
+              <button onclick="setTradedAsset('BTC')" id="asset-btn-btc" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">BTC</button>
+              <button onclick="setTradedAsset('SOL')" id="asset-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">SOL</button>
+            </div>
+          </div>
+
+          <!-- Traded Legs 2-Column Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
+            <!-- Leg 1: Spot Long -->
+            <div class="p-3 bg-brand-surface/85 rounded-xl border border-emerald-900/40 relative overflow-hidden space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  LEG 1: SPOT LONG
+                </span>
+                <span id="inst-spot-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">LST SPOT</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div id="inst-spot-symbol" class="text-base font-bold text-white tracking-tight">wstETH</div>
+                <div id="inst-spot-yield" class="text-[11px] font-bold text-emerald-400">+3.2% APY</div>
+              </div>
+              <div id="inst-spot-desc" class="text-[10px] text-slate-400 truncate">Lido Wrapped Staked ETH</div>
+              <div class="pt-1.5 border-t border-slate-800/90 flex items-center justify-between text-[11px]">
+                <span class="text-slate-400">Initial Allocation:</span>
+                <span id="inst-spot-amount" class="font-bold text-cyan-300 font-mono">$10,000.00</span>
+              </div>
+            </div>
+
+            <!-- Leg 2: Derivative Short -->
+            <div class="p-3 bg-brand-surface/85 rounded-xl border border-rose-900/40 relative overflow-hidden space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                  LEG 2: SHORT PERP
+                </span>
+                <span id="inst-perp-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">LINEAR PERP</span>
+              </div>
+              <div class="flex items-baseline justify-between">
+                <div id="inst-perp-symbol" class="text-base font-bold text-white tracking-tight">ETH-USDT PERP</div>
+                <div id="inst-perp-rate" class="text-[11px] font-bold text-emerald-400">+10.0% APR</div>
+              </div>
+              <div id="inst-perp-desc" class="text-[10px] text-slate-400 truncate">Ethereum Linear Perpetual</div>
+              <div class="pt-1.5 border-t border-slate-800/90 flex items-center justify-between text-[11px]">
+                <span class="text-slate-400">Hedge Notional:</span>
+                <span id="inst-perp-amount" class="font-bold text-rose-300 font-mono">-$10,000.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Margin / Collateral Architecture Strip -->
+          <div class="p-2.5 rounded-xl bg-brand-surface/60 border border-slate-800/90 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Margin Collateral:</span>
+              <span id="inst-margin-desc" class="text-white font-medium">wstETH (Unified Cross-Margin, 10% Haircut)</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-400">Target:</span>
+              <span class="px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 font-bold border border-cyan-800/70">Δ = 0.00 NEUTRAL</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Institutional Collateral Notice -->
+          <div id="inst-collateral-note" class="text-[10px] font-mono px-2.5 py-1.5 rounded-lg bg-brand-surface/40 border border-slate-800 text-slate-400 flex items-start gap-1.5 leading-snug">
+            <svg class="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span id="inst-collateral-note-text">Cross-collateralized: Spot collateral appreciation cushions perp losses</span>
+          </div>
+        </div>
+        
+        <div class="bg-brand-card rounded-2xl border border-brand-border p-5 space-y-4">
+          <div class="border-b border-brand-border pb-2.5 flex items-center justify-between">
+            <h2 class="text-xs font-bold tracking-tight text-white uppercase font-mono flex items-center gap-2">
+              <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+              </svg>
+              MODEL PARAMETERS
+            </h2>
+            <button onclick="resetDefaults()" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300">Reset</button>
+          </div>
+
+          <!-- UNIFIED MARGIN PRESETS (Visible in Unified Mode) -->
+          <div id="panel-unified-presets" class="space-y-2 p-3.5 rounded-xl bg-brand-surface/70 border border-cyan-900/40">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-bold text-cyan-300 flex items-center gap-1">
+                Collateral Valuation Ratio (Haircut)
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">CROSS-MARGIN</span>
+              </label>
+              <span id="val-collateral-ratio" class="font-mono text-cyan-300 font-bold">90.0% (10% Haircut)</span>
+            </div>
+
+            <!-- The 4 Core Institutional Presets -->
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
+              <button onclick="applyCollateralPreset('inverse_100')" id="btn-preset-100"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition">
+                <div class="font-bold text-white">100% (Inverse)</div>
+                <div class="text-[10px] text-slate-400">0% Haircut | 0.0% Stake</div>
+                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: Infinite (∞)</div>
+              </button>
+
+              <button onclick="applyCollateralPreset('btc_eth_95')" id="btn-preset-95"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition">
+                <div class="font-bold text-white">95% (BTC / ETH)</div>
+                <div class="text-[10px] text-slate-400">5% Haircut | 0.0% Stake</div>
+                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +1,718% move</div>
+              </button>
+
+              <button onclick="applyCollateralPreset('wsteth_90')" id="btn-preset-90"
+                class="preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition">
+                <div class="font-bold text-cyan-300">90% (wstETH)</div>
+                <div class="text-[10px] text-slate-300">10% Haircut | 3.2% Stake</div>
+                <div class="text-[9px] text-emerald-300 mt-0.5">Buffer: +852% move</div>
+              </button>
+
+              <button onclick="applyCollateralPreset('sol_lrt_85')" id="btn-preset-85"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition">
+                <div class="font-bold text-white">85% (SOL / LRTs)</div>
+                <div id="subtext-preset-85" class="text-[10px] text-slate-400">15% Haircut | 1.8% Real Stake</div>
+                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +545% move</div>
+              </button>
+            </div>
+
+            <!-- JitoSOL Dynamic Real vs Nominal Staking Toggle (Conditional) -->
+            <div id="jitosol-yield-toggle-box" class="hidden mt-2 p-2.5 rounded-lg bg-brand-dark border border-amber-600/50 space-y-1.5">
+              <div class="flex items-center justify-between text-[11px] font-mono">
+                <span class="text-amber-300 font-bold flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  Solana Staking Mode:
+                </span>
+                <span id="label-sol-yield-mode" class="text-xs font-bold text-white">Real (+1.8%)</span>
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono">
+                <button onclick="setSolYieldType('nominal')" id="btn-sol-nominal" class="py-1 px-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">
+                  Nominal (7.2% APR)
+                </button>
+                <button onclick="setSolYieldType('real')" id="btn-sol-real" class="py-1 px-2 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold">
+                  Real Yield (1.8% APR)
+                </button>
+              </div>
+              <p class="text-[10px] text-slate-400 font-mono leading-tight">
+                *Solana expands supply by ~5.4% annually. Real yield strips out network dilution drag on USD purchasing power.
+              </p>
+            </div>
+
+            <p id="collateral-ratio-explainer" class="text-[10px] text-slate-400 font-mono pt-1">
+              100% capital in spot. Collateral appreciation covers 90% of short perp losses, yielding an 8.5x (+852%) runway.
+            </p>
+          </div>
+
+          <!-- ISOLATED SPLIT CONTROL (Visible only in Isolated Mode) -->
+          <div id="panel-isolated-split" class="hidden space-y-3 p-3.5 rounded-xl bg-brand-surface/70 border border-slate-700">
+            <!-- Isolated Asset Selector -->
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-semibold text-slate-300">Underlying Asset</label>
+              <div class="flex items-center gap-1 text-[10px] font-mono">
+                <button onclick="setTradedAsset('ETH')" id="iso-btn-eth" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">ETH</button>
+                <button onclick="setTradedAsset('BTC')" id="iso-btn-btc" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500 font-bold transition">BTC</button>
+                <button onclick="setTradedAsset('SOL')" id="iso-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">SOL</button>
+              </div>
+            </div>
+
+            <!-- Bitcoin LST / Holding Selector (Active in Isolated Mode when BTC is selected) -->
+            <div id="box-isolated-btclst" class="p-2.5 rounded-lg bg-brand-dark border border-amber-600/40 space-y-1.5">
+              <div class="flex items-center justify-between text-[11px] font-mono">
+                <span class="text-amber-300 font-bold flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  BTC Spot Instrument (Isolated Only):
+                </span>
+                <span id="label-btclst-mode" class="text-xs font-bold text-amber-300">LBTC (Babylon LST)</span>
+              </div>
+              <div class="grid grid-cols-3 gap-1 text-[10px] font-mono">
+                <button onclick="setBtcVariant('native')" id="btn-btc-native" class="py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate">
+                  Native BTC (0%)
+                </button>
+                <button onclick="setBtcVariant('lbtc')" id="btn-btc-lbtc" class="py-1 px-1 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold transition text-center truncate">
+                  LBTC (3.2%)
+                </button>
+                <button onclick="setBtcVariant('solvbtc')" id="btn-btc-solvbtc" class="py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate">
+                  SolvBTC.BBN (3.5%)
+                </button>
+              </div>
+              <p class="text-[10px] text-slate-400 font-mono leading-tight">
+                *Major centralized derivatives desks do not accept Babylon restaking tokens as cross-margin collateral. Isolated margin allows holding LBTC / SolvBTC.BBN in Web3 custody while hedging with cash.
+              </p>
+            </div>
+
+            <div class="space-y-1.5 pt-1 border-t border-slate-800">
+              <div class="flex items-center justify-between text-xs">
+                <label class="font-semibold text-slate-300">Capital Split (Spot Long vs Cash Margin)</label>
+                <span id="val-split" class="font-mono text-cyan-400 font-bold">50% Spot / 50% Margin</span>
+              </div>
+              <input type="range" id="input-split" min="30" max="85" step="1" value="50" class="w-full">
+              <div class="flex items-center justify-between gap-1.5 pt-1">
+                <button onclick="setSplit(50)" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">50/50 (1x)</button>
+                <button onclick="setSplit(67)" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">67/33 (2x)</button>
+                <button onclick="setSplit(75)" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">75/25 (3x)</button>
+                <button onclick="setSplit(80)" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300">80/20 (4x)</button>
+              </div>
+              <p id="split-helper-text" class="text-[11px] text-slate-400 font-mono pt-0.5">
+                Effective Short Leverage: 1.00x (Liquidation buffer: +99.0%)
+              </p>
+            </div>
+          </div>
+
+          <!-- Total Starting Capital Input -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-semibold text-slate-300">Total Capital Pool ($ USD)</label>
+              <span id="val-capital" class="font-mono text-slate-200 font-bold">$10,000</span>
+            </div>
+            <div class="relative">
+              <span class="absolute left-3 top-2 text-xs font-mono text-slate-500">$</span>
+              <input type="number" id="input-capital" min="1000" max="10000000" step="1000" value="10000" 
+                class="w-full bg-brand-surface border border-slate-700 rounded-xl px-7 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-cyan-500">
+            </div>
+          </div>
+
+          <!-- Holding Horizon Controls -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-semibold text-slate-300">Investment Horizon</label>
+              <span id="val-days" class="font-mono text-slate-200 font-bold">90 Days</span>
+            </div>
+            <input type="range" id="input-days" min="1" max="365" step="1" value="90" class="w-full">
+            <div class="flex justify-between gap-1 pt-0.5">
+              <button onclick="setDays(30)" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">30d</button>
+              <button onclick="setDays(90)" class="w-full py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800">90d</button>
+              <button onclick="setDays(180)" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">180d</button>
+              <button onclick="setDays(365)" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">365d (1y)</button>
+            </div>
+          </div>
+
+          <!-- Annualized Funding Rate APR (WITH EXACT 29.41% ALIGNMENT) -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-semibold text-slate-300">Annualized Perp Funding Rate (APR)</label>
+              <span id="val-funding" class="font-mono text-emerald-400 font-bold">+10.00% APR</span>
+            </div>
+            <input type="range" id="input-funding" min="-25" max="60" step="0.5" value="10" class="w-full">
+            <!-- Asymmetric Tick Row: Range = 85. 0% is at (25/85) = 29.41% -->
+            <div class="relative w-full h-4 text-[10px] font-mono text-slate-400">
+              <span class="absolute left-0 text-rose-400">-25% (Bear)</span>
+              <span class="absolute -translate-x-1/2 text-slate-300 font-bold" style="left: 29.41%;">0%</span>
+              <span class="absolute right-0 text-emerald-400">+60% (Euphoria)</span>
+            </div>
+          </div>
+
+          <!-- Staking APR Slider -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-semibold text-slate-300">Spot Staking APY (Preset-Linked)</label>
+              <span id="val-staking" class="font-mono text-emerald-400 font-bold">3.2% APY</span>
+            </div>
+            <input type="range" id="input-staking" min="0" max="15" step="0.1" value="3.2" class="w-full">
+            <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+              <span>0% (Vanilla Spot)</span>
+              <span>3.2% (wstETH)</span>
+              <span>1.8% / 7.2% (SOL)</span>
+              <span>15% (High Restake)</span>
+            </div>
+          </div>
+
+          <!-- LST Depeg / Basis Discount Slider -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-semibold text-slate-300">LST Basis Discount / De-Peg Shock</label>
+              <span id="val-depeg" class="font-mono text-rose-300 font-bold">0.0% Discount</span>
+            </div>
+            <input type="range" id="input-depeg" min="0" max="15" step="0.5" value="0" class="w-full">
+            <p class="text-[10px] text-slate-500 font-mono">Simulates secondary market liquidation discount of LST vs native coin.</p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Quantitative Insights & Structural Guide -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
+      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-1.5">
+        <h4 class="font-bold text-white flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+          Unified Cross-Margin Mechanics
+        </h4>
+        <p class="text-slate-400 text-[11px] leading-relaxed">
+          In Unified Margin, your spot crypto serves directly as margin collateral for the short perp. When the asset rallies, your spot collateral value gains offset short perp unrealized losses, expanding your liquidation buffer to <strong>+852% (at 90% valuation)</strong> or making it mathematically impossible (Inverse 100%).
+        </p>
+      </div>
+
+      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-1.5">
+        <h4 class="font-bold text-white flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+          Solana Staking: Nominal vs. Real Yield
+        </h4>
+        <p class="text-slate-400 text-[11px] leading-relaxed">
+          JitoSOL advertises ~7.2% nominal yield. However, Solana has a ~5.4% annual network inflation rate. Because this delta-neutral setup locks your position to USD, nominal token issuance dilutes unhedged purchasing power. <strong>Real economic yield is ~1.8% APR</strong>.
+        </p>
+      </div>
+
+      <div class="bg-brand-card/70 rounded-2xl p-4 border border-brand-border space-y-1.5">
+        <h4 class="font-bold text-white flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+          Isolated Margin: The Bitcoin LST Gateway
+        </h4>
+        <p class="text-slate-400 text-[11px] leading-relaxed">
+          Major centralized derivatives desks do not whitelist Babylon restaking tokens (LBTC, SolvBTC.BBN) as cross-margin collateral. <strong>Isolated Margin is the only venue to hedge BTC LSTs</strong>: you custody the LST in Web3 to harvest Babylon staking yield while running an isolated cash-margined short on the exchange.
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <footer class="border-t border-brand-border py-4 text-center text-xs font-mono text-slate-500">
+    DELTA-Q QUANTITATIVE PLATFORM // FOR INSTITUTIONAL RESEARCH AND MODELING ONLY
+  </footer>
+
+  <!-- Application Engine Script -->
+  <script src="app.js"></script>
+</body>
+</html>
