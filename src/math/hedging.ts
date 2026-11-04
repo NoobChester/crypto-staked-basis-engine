@@ -1,7 +1,7 @@
 /**
  * @file hedging.ts
  * @description Pure quantitative calculation engine for delta-neutral hedging,
- * cross-margin liquidation thresholds, isolated cash margin buffers, and yield accrual.
+ * cross-margin liquidation thresholds, isolated cash margin buffers, fee drag, and yield accrual.
  */
 
 import type { MarginMode, TradedAsset, BtcVariant, CollateralPresetKey, SolYieldType } from '../config/presets.js';
@@ -17,6 +17,9 @@ export interface HedgingState {
   mmr: number;
   collateralRatio: number;
   splitSpot: number;
+  roundtripFeePct?: number;
+  tbillRate?: number;
+  feeTier?: string;
   tradedAsset?: TradedAsset;
   btcVariant?: BtcVariant;
   activePreset?: CollateralPresetKey;
@@ -47,6 +50,17 @@ export interface HedgingOutcome {
   perpAPYContrib: number;
   totalStrategyAPY: number;
   distanceToLiqPct: number;
+  // Execution Fee Friction & Realized Yield
+  roundtripFeePct: number;
+  feeDragAPY: number;
+  netRealizedAPY: number;
+  netFeeDollarLoss: number;
+  netRealizedPnL: number;
+  netRealizedRoiPct: number;
+  // Macro Risk-Free Benchmark Comparison
+  tbillRate: number;
+  excessSpreadAPY: number;
+  excessDollarCarry: number;
 }
 
 /**
@@ -59,11 +73,14 @@ export function calculateOutcome(
   const C = Math.max(0, customState.capital ?? 10000);
   const r = priceChangePct / 100;
   const depeg = Math.max(0, Math.min(1, (customState.depegPct ?? 0) / 100));
-  const durationYears = Math.max(0, (customState.days ?? 90) / 365);
+  const days = Math.max(1, customState.days ?? 90);
+  const durationYears = days / 365;
   const mmr = customState.mmr ?? 0.005;
   const mode = customState.mode ?? 'unified';
   const fundingAPR = customState.fundingAPR ?? 10.0;
   const stakingAPY = customState.stakingAPY ?? 3.2;
+  const roundtripFeePct = customState.roundtripFeePct ?? 0.10;
+  const tbillRate = customState.tbillRate ?? 4.35;
 
   let S0: number, M0: number, N0: number, rLiq: number, isLiquidated: boolean;
   let spotVal = 0, spotPnL = 0;
@@ -124,13 +141,33 @@ export function calculateOutcome(
     const totalStrategyAPY = spotAPYContrib + perpAPYContrib;
     const distanceToLiqPct = (rLiq === Infinity) ? Infinity : (rLiq - r) * 100;
 
+    // Fee drag calculations
+    const feeDragAPY = parseFloat((roundtripFeePct * (365 / days)).toFixed(2));
+    const netRealizedAPY = parseFloat((totalStrategyAPY - feeDragAPY).toFixed(2));
+    const netFeeDollarLoss = parseFloat((C * (roundtripFeePct / 100)).toFixed(2));
+    const netRealizedPnL = parseFloat((netPnL - netFeeDollarLoss).toFixed(2));
+    const netRealizedRoiPct = C > 0 ? parseFloat(((netRealizedPnL / C) * 100).toFixed(2)) : 0;
+
+    // Macro Benchmark Spread
+    const excessSpreadAPY = parseFloat((netRealizedAPY - tbillRate).toFixed(2));
+    const excessDollarCarry = parseFloat((C * (excessSpreadAPY / 100) * durationYears).toFixed(2));
+
     return {
       C, S0, M0, N0, rLiq, isLiquidated,
       spotVal, spotPnL, perpMarginVal, perpPnL,
       fundingYieldTotal, stakingYieldTotal, depegLoss,
       totalPortfolioVal, netPnL, roiPct, netDelta,
       spotAPYContrib, perpAPYContrib, totalStrategyAPY,
-      distanceToLiqPct
+      distanceToLiqPct,
+      roundtripFeePct,
+      feeDragAPY,
+      netRealizedAPY,
+      netFeeDollarLoss,
+      netRealizedPnL,
+      netRealizedRoiPct,
+      tbillRate,
+      excessSpreadAPY,
+      excessDollarCarry
     };
 
   } else {
@@ -177,13 +214,33 @@ export function calculateOutcome(
     const totalStrategyAPY = spotAPYContrib + perpAPYContrib;
     const distanceToLiqPct = (rLiq === Infinity) ? Infinity : (rLiq - r) * 100;
 
+    // Fee drag calculations
+    const feeDragAPY = parseFloat((roundtripFeePct * (365 / days)).toFixed(2));
+    const netRealizedAPY = parseFloat((totalStrategyAPY - feeDragAPY).toFixed(2));
+    const netFeeDollarLoss = parseFloat((C * (roundtripFeePct / 100)).toFixed(2));
+    const netRealizedPnL = parseFloat((netPnL - netFeeDollarLoss).toFixed(2));
+    const netRealizedRoiPct = C > 0 ? parseFloat(((netRealizedPnL / C) * 100).toFixed(2)) : 0;
+
+    // Macro Benchmark Spread
+    const excessSpreadAPY = parseFloat((netRealizedAPY - tbillRate).toFixed(2));
+    const excessDollarCarry = parseFloat((C * (excessSpreadAPY / 100) * durationYears).toFixed(2));
+
     return {
       C, S0, M0, N0, rLiq, isLiquidated,
       spotVal, spotPnL, perpMarginVal, perpPnL,
       fundingYieldTotal, stakingYieldTotal, depegLoss,
       totalPortfolioVal, netPnL, roiPct, netDelta,
       spotAPYContrib, perpAPYContrib, totalStrategyAPY,
-      distanceToLiqPct
+      distanceToLiqPct,
+      roundtripFeePct,
+      feeDragAPY,
+      netRealizedAPY,
+      netFeeDollarLoss,
+      netRealizedPnL,
+      netRealizedRoiPct,
+      tbillRate,
+      excessSpreadAPY,
+      excessDollarCarry
     };
   }
 }

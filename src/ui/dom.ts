@@ -207,6 +207,38 @@ export interface UIElements {
   histStatNegIntervals: HTMLElement | null;
   histStatVol: HTMLElement | null;
 
+  // Net Realized & Fee Drag Elements
+  kpiNetRealizedApy: HTMLElement | null;
+  kpiFeeDragBadge: HTMLElement | null;
+  kpiTbillSpreadBadge: HTMLElement | null;
+  valFeeDragAnnual: HTMLElement | null;
+  breakdownFeeLoss: HTMLElement | null;
+  breakdownNetRealizedPnl: HTMLElement | null;
+  breakdownNetRealizedRoi: HTMLElement | null;
+  breakdownExcessDollarCarry: HTMLElement | null;
+  feeTierBtnVip: HTMLElement | null;
+  feeTierBtnRetail: HTMLElement | null;
+  feeTierBtnMm: HTMLElement | null;
+  labelActiveFeeTier: HTMLElement | null;
+  badgeForwardCarry: HTMLElement | null;
+
+  // Collateral Intelligence Card
+  ciCard: HTMLElement | null;
+  ciRankBadge: HTMLElement | null;
+  ciTitle: HTMLElement | null;
+  ciVenue: HTMLElement | null;
+  ciBuffer: HTMLElement | null;
+  ciRealApy: HTMLElement | null;
+  ciWhy: HTMLElement | null;
+  ciBeats: HTMLElement | null;
+  ciVerdict: HTMLElement | null;
+
+  // Spot Staking Sub-Chart Elements
+  historicalStakingSubCanvas: HTMLCanvasElement | null;
+  histStakingSubchartWrapper: HTMLElement | null;
+  histStakingSubchartEmpty: HTMLElement | null;
+  histStakingSubchartStats: HTMLElement | null;
+
   [key: string]: HTMLElement | HTMLInputElement | HTMLCanvasElement | null;
 }
 
@@ -417,6 +449,38 @@ export function getUIElements(): UIElements {
     histStatNetcarryAvg: document.getElementById('hist-stat-netcarry-avg'),
     histStatNetcarrySub: document.getElementById('hist-stat-netcarry-sub'),
     histStatNegIntervals: document.getElementById('hist-stat-neg-intervals'),
+    // Net Realized & Fee Drag Elements
+    kpiNetRealizedApy: document.getElementById('kpi-net-realized-apy'),
+    kpiFeeDragBadge: document.getElementById('kpi-fee-drag-badge'),
+    kpiTbillSpreadBadge: document.getElementById('kpi-tbill-spread-badge'),
+    valFeeDragAnnual: document.getElementById('val-fee-drag-annual'),
+    breakdownFeeLoss: document.getElementById('breakdown-fee-loss'),
+    breakdownNetRealizedPnl: document.getElementById('breakdown-net-realized-pnl'),
+    breakdownNetRealizedRoi: document.getElementById('breakdown-net-realized-roi'),
+    breakdownExcessDollarCarry: document.getElementById('breakdown-excess-dollar-carry'),
+    feeTierBtnVip: document.getElementById('fee-tier-btn-vip'),
+    feeTierBtnRetail: document.getElementById('fee-tier-btn-retail'),
+    feeTierBtnMm: document.getElementById('fee-tier-btn-mm'),
+    labelActiveFeeTier: document.getElementById('label-active-fee-tier'),
+    badgeForwardCarry: document.getElementById('badge-forward-carry'),
+
+    // Collateral Intelligence Card
+    ciCard: document.getElementById('ci-card'),
+    ciRankBadge: document.getElementById('ci-rank-badge'),
+    ciTitle: document.getElementById('ci-title'),
+    ciVenue: document.getElementById('ci-venue'),
+    ciBuffer: document.getElementById('ci-buffer'),
+    ciRealApy: document.getElementById('ci-real-apy'),
+    ciWhy: document.getElementById('ci-why'),
+    ciBeats: document.getElementById('ci-beats'),
+    ciVerdict: document.getElementById('ci-verdict'),
+
+    // Spot Staking Sub-Chart Elements
+    historicalStakingSubCanvas: document.getElementById('historicalStakingSubCanvas') as HTMLCanvasElement | null,
+    histStakingSubchartWrapper: document.getElementById('hist-staking-subchart-wrapper'),
+    histStakingSubchartEmpty: document.getElementById('hist-staking-subchart-empty'),
+    histStakingSubchartStats: document.getElementById('hist-staking-subchart-stats'),
+
     histStatVol: document.getElementById('hist-stat-vol')
   };
 }

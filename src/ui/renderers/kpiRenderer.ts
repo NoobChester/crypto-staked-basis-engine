@@ -1,12 +1,45 @@
 /**
  * @file kpiRenderer.ts
- * @description Renders main scenario KPI outcome cards, Net Delta, Liquidation distance, and PnL breakdown table.
+ * @description Renders main scenario KPI outcome cards, Net Realized APY, T-Bill spread,
+ * Net Delta, Liquidation distance, Collateral Intelligence, and PnL breakdown table.
  */
 
 import { fmtUSD, fmtPct, type HedgingState, type HedgingOutcome } from '../../math/hedging.js';
-import { getInstrumentDetails } from '../../config/presets.js';
+import { getInstrumentDetails, COLLATERAL_INTELLIGENCE, type CollateralPresetKey } from '../../config/presets.js';
+import { FEE_TIERS, type ExecutionFeeTier } from '../../services/marketData.js';
 import type { UIElements } from '../dom.js';
 import { renderMarketData } from './feedRenderer.js';
+
+export function renderCollateralIntelligence(UI: UIElements, state: HedgingState): void {
+  const presetKey = (state.activePreset || 'wsteth_90') as CollateralPresetKey;
+  const intel = COLLATERAL_INTELLIGENCE[presetKey];
+  if (!intel) return;
+
+  if (UI.ciRankBadge) {
+    UI.ciRankBadge.textContent = intel.rank > 0 ? `#${intel.rank} RANK` : 'BENCHMARK';
+  }
+  if (UI.ciTitle) {
+    UI.ciTitle.textContent = `${intel.protocol} (${intel.asset})`;
+  }
+  if (UI.ciVenue) {
+    UI.ciVenue.textContent = intel.marginVenue;
+  }
+  if (UI.ciBuffer) {
+    UI.ciBuffer.textContent = intel.bufferText;
+  }
+  if (UI.ciRealApy) {
+    UI.ciRealApy.textContent = intel.realApyText;
+  }
+  if (UI.ciWhy) {
+    UI.ciWhy.textContent = intel.whyWorthUsing;
+  }
+  if (UI.ciBeats) {
+    UI.ciBeats.textContent = intel.beatsAlternative;
+  }
+  if (UI.ciVerdict) {
+    UI.ciVerdict.textContent = intel.verdict;
+  }
+}
 
 export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcome): void {
   if (UI.kpiNetValue) UI.kpiNetValue.textContent = fmtUSD(res.totalPortfolioVal);
@@ -16,7 +49,27 @@ export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcom
     UI.kpiRoi.className = `text-xs font-mono font-semibold ${res.roiPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
   }
 
-  if (UI.kpiTotalApy) UI.kpiTotalApy.textContent = fmtPct(res.totalStrategyAPY, false) + ' APY';
+  // Net Realized APY headline & duration fee drag
+  if (UI.kpiNetRealizedApy) {
+    UI.kpiNetRealizedApy.textContent = fmtPct(res.netRealizedAPY, false);
+  }
+  if (UI.kpiFeeDragBadge) {
+    UI.kpiFeeDragBadge.textContent = `-${res.feeDragAPY.toFixed(2)}% fee (${state.days}d)`;
+  }
+  if (UI.valFeeDragAnnual) {
+    UI.valFeeDragAnnual.textContent = `-${res.feeDragAPY.toFixed(2)}% APY (${state.days}d)`;
+  }
+
+  // 3-Month US Treasury Bills Benchmark comparison (+X.XX% vs 4.35% T-Bills)
+  if (UI.kpiTbillSpreadBadge) {
+    const isSpreadPositive = res.excessSpreadAPY >= 0;
+    UI.kpiTbillSpreadBadge.textContent = `${isSpreadPositive ? '+' : ''}${res.excessSpreadAPY.toFixed(2)}% vs ${res.tbillRate.toFixed(2)}% T-Bills`;
+    UI.kpiTbillSpreadBadge.className = isSpreadPositive
+      ? 'px-1.5 py-0.5 rounded font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800 text-[10px] font-mono'
+      : 'px-1.5 py-0.5 rounded font-bold text-rose-400 bg-rose-950/80 border border-rose-800 text-[10px] font-mono';
+  }
+
+  if (UI.kpiTotalApy) UI.kpiTotalApy.textContent = `Gross: ${fmtPct(res.totalStrategyAPY, false)}`;
   if (UI.kpiSpotApyContrib) UI.kpiSpotApyContrib.textContent = fmtPct(res.spotAPYContrib);
   if (UI.kpiPerpApyContrib) UI.kpiPerpApyContrib.textContent = fmtPct(res.perpAPYContrib);
   if (UI.kpiApyMode) UI.kpiApyMode.textContent = state.mode === 'unified' ? 'UNIFIED 100%' : `${state.splitSpot}% SPOT`;
@@ -79,6 +132,7 @@ export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcom
     }
   }
 
+  // PnL Balance Sheet Breakdown
   if (UI.breakdownSpotVal) UI.breakdownSpotVal.textContent = fmtUSD(res.spotVal);
   if (UI.breakdownSpotPnl) UI.breakdownSpotPnl.textContent = `PnL: ${res.spotPnL >= 0 ? '+' : ''}${fmtUSD(res.spotPnL)}`;
 
@@ -98,13 +152,52 @@ export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcom
   if (UI.breakdownStakingRate) UI.breakdownStakingRate.textContent = `Rate: ${state.stakingAPY.toFixed(1)}% APY`;
   if (UI.breakdownDepeg) UI.breakdownDepeg.textContent = `-${fmtUSD(res.depegLoss)}`;
   if (UI.breakdownDepegPct) UI.breakdownDepegPct.textContent = `Discount: ${state.depegPct.toFixed(1)}%`;
+
+  // Net Returns & Fee Accounting
+  if (UI.breakdownFeeLoss) {
+    UI.breakdownFeeLoss.textContent = `-${fmtUSD(res.netFeeDollarLoss)}`;
+  }
+  if (UI.breakdownNetRealizedPnl) {
+    UI.breakdownNetRealizedPnl.textContent = (res.netRealizedPnL >= 0 ? '+' : '') + fmtUSD(res.netRealizedPnL);
+    UI.breakdownNetRealizedPnl.className = `text-sm font-bold font-mono mt-0.5 ${res.netRealizedPnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  if (UI.breakdownNetRealizedRoi) {
+    UI.breakdownNetRealizedRoi.textContent = `Net ROI: ${fmtPct(res.netRealizedRoiPct)}`;
+    UI.breakdownNetRealizedRoi.className = `text-[10px] font-mono mt-0.5 ${res.netRealizedRoiPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}`;
+  }
+  if (UI.breakdownExcessDollarCarry) {
+    const isExcessPos = res.excessDollarCarry >= 0;
+    UI.breakdownExcessDollarCarry.textContent = (isExcessPos ? '+' : '') + fmtUSD(res.excessDollarCarry);
+    UI.breakdownExcessDollarCarry.className = `text-sm font-bold font-mono mt-0.5 ${isExcessPos ? 'text-indigo-300' : 'text-rose-400'}`;
+  }
+
   if (UI.breakdownNetPnl) {
     UI.breakdownNetPnl.textContent = (res.netPnL >= 0 ? '+' : '') + fmtUSD(res.netPnL);
     UI.breakdownNetPnl.className = `text-sm font-bold font-mono mt-0.5 ${res.netPnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
   }
   if (UI.breakdownNetRoi) {
-    UI.breakdownNetRoi.textContent = `ROI: ${fmtPct(res.roiPct)}`;
+    UI.breakdownNetRoi.textContent = `Gross ROI: ${fmtPct(res.roiPct)}`;
     UI.breakdownNetRoi.className = `text-[10px] font-mono mt-0.5 ${res.roiPct >= 0 ? 'text-emerald-300' : 'text-rose-300'}`;
+  }
+
+  // Fee Tier Switcher Highlight
+  const activeFeeTier = (state.feeTier || 'vip') as ExecutionFeeTier;
+  const tierBtns = {
+    vip: UI.feeTierBtnVip,
+    retail: UI.feeTierBtnRetail,
+    mm: UI.feeTierBtnMm
+  };
+  (Object.keys(tierBtns) as ExecutionFeeTier[]).forEach(t => {
+    const btn = tierBtns[t];
+    if (btn) {
+      btn.className = t === activeFeeTier
+        ? 'py-1 px-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition text-center truncate cursor-pointer shadow-sm'
+        : 'py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate cursor-pointer';
+    }
+  });
+  if (UI.labelActiveFeeTier) {
+    const info = FEE_TIERS[activeFeeTier] || FEE_TIERS.vip;
+    UI.labelActiveFeeTier.textContent = info.label;
   }
 
   if (UI.stateBadge) {
@@ -216,5 +309,9 @@ export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcom
     UI.instCollateralNoteText.textContent = inst.note;
   }
 
+  // Render Collateral Intelligence Card
+  renderCollateralIntelligence(UI, state);
+
+  // Render Live Market Ticker Ribbon
   renderMarketData(UI, state);
 }

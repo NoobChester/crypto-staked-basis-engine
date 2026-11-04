@@ -89,6 +89,25 @@ export function renderHistoricalModal(
     UI.histStatVol.innerHTML = `Standard deviation: <strong class="text-indigo-300">&sigma; = ${stdDev.toFixed(2)}%</strong>. Peak observed rate reached <strong>${fmtPct(maxRate)}</strong>.`;
   }
 
+  // Staking Sub-Chart status
+  if (UI.histStakingSubchartStats && analytics.series && analytics.series.length > 0) {
+    if (analytics.symbol === 'BTC' && analytics.series.every(pt => pt.stakingApy === 0)) {
+      UI.histStakingSubchartStats.textContent = 'Vanilla Spot Collateral (0.00% Stake)';
+    } else {
+      const minStake = Math.min(...analytics.series.map(p => p.stakingApy)).toFixed(2);
+      const maxStake = Math.max(...analytics.series.map(p => p.stakingApy)).toFixed(2);
+      UI.histStakingSubchartStats.textContent = `Avg: ${analytics.stakingAvg.toFixed(2)}% | Min: ${minStake}% | Max: ${maxStake}%`;
+    }
+  }
+
+  if (UI.histStakingSubchartEmpty) {
+    if (analytics.symbol === 'BTC' && analytics.series.every(pt => pt.stakingApy === 0)) {
+      UI.histStakingSubchartEmpty.classList.remove('hidden');
+    } else {
+      UI.histStakingSubchartEmpty.classList.add('hidden');
+    }
+  }
+
   // Sub-chart status
   if (UI.histSubchartStats && analytics.lstDiscountAvg !== undefined) {
     if (analytics.symbol === 'BTC') {

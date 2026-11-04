@@ -7,7 +7,7 @@
 import { fmtUSD, fmtPct, type HedgingState } from '../math/hedging.js';
 import type { UIElements } from './dom.js';
 import type { MarginMode, TradedAsset, BtcVariant, CollateralPresetKey, SolYieldType } from '../config/presets.js';
-import type { FundingVenue } from '../services/marketData.js';
+import type { FundingVenue, ExecutionFeeTier } from '../services/marketData.js';
 
 export interface AppActions {
   setAccountMode: (mode: MarginMode) => void;
@@ -34,6 +34,7 @@ export interface AppActions {
   setHistoricalTimeframe: (tf: 30 | 90 | 180) => void;
   setFundingVenue: (venue: FundingVenue) => void;
   refreshLiveRates: () => void;
+  setFeeTier?: (tier: ExecutionFeeTier) => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -130,6 +131,11 @@ export function setupEventDelegation(actions: AppActions): void {
       case 'set-historical-asset': {
         const asset = target.getAttribute('data-asset') as TradedAsset;
         if (asset) actions.setHistoricalAsset(asset);
+        break;
+      }
+      case 'set-fee-tier': {
+        const tier = target.getAttribute('data-tier') as ExecutionFeeTier;
+        if (tier && actions.setFeeTier) actions.setFeeTier(tier);
         break;
       }
       case 'set-historical-timeframe': {

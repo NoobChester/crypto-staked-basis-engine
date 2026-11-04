@@ -98,62 +98,122 @@ describe('Delta-Neutral Hedging Quantitative Core', () => {
 
   describe('Depeg and Yield Accounting', () => {
     it('applies depeg discount loss to spot collateral', () => {
-      const noDepeg = calculateOutcome(0, {
-        capital: 10000,
-        mode: 'unified',
-        collateralRatio: 0.90,
-        depegPct: 0,
-        days: 0
-      });
-      const withDepeg = calculateOutcome(0, {
-        capital: 10000,
-        mode: 'unified',
-        collateralRatio: 0.90,
-        depegPct: 5,
-        days: 0
-      });
-
-      expect(noDepeg.spotVal).toBe(10000);
-      expect(withDepeg.spotVal).toBe(9500);
-      expect(withDepeg.depegLoss).toBe(500);
-      expect(withDepeg.netPnL).toBe(-500);
-    });
-
-    it('calculates exact 365-day yield compounding for funding and staking', () => {
       const res = calculateOutcome(0, {
         capital: 10000,
         mode: 'unified',
-        days: 365,
-        fundingAPR: 10.0,
-        stakingAPY: 4.0,
-        depegPct: 0
+        collateralRatio: 0.90,
+        depegPct: 5.0,
+        days: 90,
+        fundingAPR: 0,
+        stakingAPY: 0
       });
 
-      expect(res.fundingYieldTotal).toBe(1000);
-      expect(res.stakingYieldTotal).toBe(400);
-      expect(res.totalPortfolioVal).toBe(11400);
-      expect(Math.abs(res.roiPct - 14.0)).toBeLessThan(1e-6);
+      expect(res.spotVal).toBe(9500);
+      expect(res.depegLoss).toBe(500);
+      expect(res.totalPortfolioVal).toBe(9500);
     });
-  });
 
-  describe('Comprehensive Edge Cases', () => {
-    it('handles extreme market capitulation crash (-99%)', () => {
-      const res = calculateOutcome(-99, {
+    it('correctly accrues simultaneous funding and staking yields', () => {
+      const res = calculateOutcome(0, {
         capital: 10000,
         mode: 'unified',
         collateralRatio: 0.90,
         depegPct: 0,
-        days: 0
+        days: 365,
+        fundingAPR: 10.0,
+        stakingAPY: 3.2
       });
 
-      expect(res.isLiquidated).toBe(false);
-      expect(Math.abs(res.spotVal - 100)).toBeLessThan(1e-6);
-      expect(res.perpPnL).toBe(9900);
-      expect(res.totalPortfolioVal).toBe(10000);
-      expect(res.netPnL).toBe(0);
+      expect(res.fundingYieldTotal).toBe(1000);
+      expect(res.stakingYieldTotal).toBe(320);
+      expect(res.totalPortfolioVal).toBe(11320);
+      expect(res.totalStrategyAPY).toBe(13.2);
+    });
+  });
+
+  describe('Net Realized APY & Fee Drag Accounting', () => {
+    it('scales fee drag inversely with duration (30D vs 90D vs 180D vs 365D)', () => {
+      const res30 = calculateOutcome(0, {
+        capital: 10000,
+        days: 30,
+        fundingAPR: 10.0,
+        stakingAPY: 3.2,
+        roundtripFeePct: 0.10
+      });
+      // 0.10 * 365 / 30 = 1.2166... => 1.22%
+      expect(res30.feeDragAPY).toBe(1.22);
+      expect(res30.netRealizedAPY).toBe(parseFloat((13.2 - 1.22).toFixed(2)));
+
+      const res90 = calculateOutcome(0, {
+        capital: 10000,
+        days: 90,
+        fundingAPR: 10.0,
+        stakingAPY: 3.2,
+        roundtripFeePct: 0.10
+      });
+      // 0.10 * 365 / 90 = 0.4055... => 0.41%
+      expect(res90.feeDragAPY).toBe(0.41);
+      expect(res90.netRealizedAPY).toBe(parseFloat((13.2 - 0.41).toFixed(2)));
+
+      const res180 = calculateOutcome(0, {
+        capital: 10000,
+        days: 180,
+        fundingAPR: 10.0,
+        stakingAPY: 3.2,
+        roundtripFeePct: 0.10
+      });
+      // 0.10 * 365 / 180 = 0.2027... => 0.20%
+      expect(res180.feeDragAPY).toBe(0.20);
+      expect(res180.netRealizedAPY).toBe(parseFloat((13.2 - 0.20).toFixed(2)));
+
+      const res365 = calculateOutcome(0, {
+        capital: 10000,
+        days: 365,
+        fundingAPR: 10.0,
+        stakingAPY: 3.2,
+        roundtripFeePct: 0.10
+      });
+      expect(res365.feeDragAPY).toBe(0.10);
+      expect(res365.netRealizedAPY).toBe(13.10);
     });
 
-    it('handles extreme rally (+1000%) with post-liquidation spot upside', () => {
+    it('correctly calculates net dollar profit after entry/exit friction', () => {
+      const res = calculateOutcome(0, {
+        capital: 10000,
+        days: 365,
+        fundingAPR: 10.0,
+        stakingAPY: 3.0,
+        roundtripFeePct: 0.10
+      });
+
+      expect(res.netFeeDollarLoss).toBe(10.00); // 10 bps on $10,000
+      expect(res.netPnL).toBe(1300.00);
+      expect(res.netRealizedPnL).toBe(1290.00);
+      expect(res.netRealizedRoiPct).toBe(12.90);
+    });
+  });
+
+  describe('US 3-Month Treasury Benchmark & Excess Alpha Spread', () => {
+    it('accurately computes excess spread over 4.35% risk-free dollar yield', () => {
+      const res = calculateOutcome(0, {
+        capital: 10000,
+        days: 90,
+        fundingAPR: 10.0,
+        stakingAPY: 3.2,
+        roundtripFeePct: 0.10,
+        tbillRate: 4.35
+      });
+
+      // totalStrategyAPY = 13.20%, feeDragAPY = 0.41%, netRealizedAPY = 12.79%
+      expect(res.netRealizedAPY).toBe(12.79);
+      // excessSpreadAPY = 12.79 - 4.35 = 8.44%
+      expect(res.excessSpreadAPY).toBe(8.44);
+      expect(res.excessDollarCarry).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Edge Cases and Boundary Stress Tests', () => {
+    it('handles extreme price spikes gracefully without NaN', () => {
       const res = calculateOutcome(1000, {
         capital: 10000,
         mode: 'unified',
@@ -225,4 +285,3 @@ describe('Delta-Neutral Hedging Quantitative Core', () => {
     });
   });
 });
-

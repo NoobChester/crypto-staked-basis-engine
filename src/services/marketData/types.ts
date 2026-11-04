@@ -113,6 +113,22 @@ export interface MarketDataSnapshot {
   error?: string | null;
 }
 
+export const DEFAULT_TBILL_RATE = 4.35; // 3-Month US Treasury Bill Yield (% APY)
+
+export const VENUE_EXECUTION_FEES: Record<FundingVenue, { roundtripPct: number; label: string }> = {
+  binance: { roundtripPct: 0.10, label: 'Binance (10 bps roundtrip)' },
+  hyperliquid: { roundtripPct: 0.07, label: 'Hyperliquid (7 bps roundtrip)' },
+  average: { roundtripPct: 0.085, label: 'Consensus Blend (8.5 bps)' }
+};
+
+export type ExecutionFeeTier = 'vip' | 'retail' | 'mm';
+
+export const FEE_TIERS: Record<ExecutionFeeTier, { feePct: number; label: string; desc: string }> = {
+  vip: { feePct: 0.10, label: 'Institutional VIP (10 bps)', desc: 'Standard Tier-1 CEX VIP 3-5 taker/maker execution blend' },
+  retail: { feePct: 0.16, label: 'Retail Standard (16 bps)', desc: 'Standard non-VIP public taker schedule' },
+  mm: { feePct: 0.04, label: 'Market Maker (4 bps)', desc: 'High-volume liquidity provision rebate & VIP 9 schedule' }
+};
+
 export const DEFAULT_VENUE_RATES: Record<'ETH' | 'BTC' | 'SOL', Record<FundingVenue, VenueRateInfo>> = {
   ETH: {
     binance: { apr: 10.0, rateInterval: 0.00009132, markPrice: 2315.0, nextFundingTime: 0, status: 'fallback', venueName: 'Binance (ETHUSDT)' },

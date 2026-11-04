@@ -159,18 +159,19 @@
         <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-cyan-500/10 rounded-full blur-xl pointer-events-none"></div>
       </div>
 
-      <!-- Strategy Combined Net APY (Decomposed) -->
+      <!-- Strategy Net Realized APY & T-Bill Spread -->
       <div class="bg-brand-card/90 rounded-2xl p-4 border border-brand-border backdrop-blur-sm">
         <div class="text-[11px] font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
-          <span>Net Strategy APY</span>
+          <span>Net Realized APY</span>
           <span id="kpi-apy-mode" class="text-[9px] px-1 rounded bg-slate-800 text-cyan-300 font-mono">UNIFIED</span>
         </div>
         <div class="mt-1 flex items-baseline gap-2">
-          <span id="kpi-total-apy" class="text-2xl font-bold font-mono text-emerald-400">13.20%</span>
-          <span class="text-xs font-mono font-medium text-slate-400">Annual</span>
+          <span id="kpi-net-realized-apy" class="text-2xl font-bold font-mono text-emerald-400">12.80%</span>
+          <span class="text-xs font-mono font-medium text-slate-400" id="kpi-fee-drag-badge">-0.40% fee</span>
         </div>
-        <div class="text-[10px] text-slate-400 mt-1 font-mono truncate">
-          Spot: <span id="kpi-spot-apy-contrib" class="text-cyan-300 font-semibold">+3.2%</span> | Perp: <span id="kpi-perp-apy-contrib" class="text-emerald-300 font-semibold">+10.0%</span>
+        <div class="flex items-center justify-between text-[10px] text-slate-400 mt-1 font-mono">
+          <span id="kpi-tbill-spread-badge" class="px-1.5 py-0.5 rounded font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800">+8.45% vs 4.35% T-Bills</span>
+          <span id="kpi-total-apy" class="text-slate-400 font-medium">Gross: 13.2%</span>
         </div>
       </div>
 
@@ -343,9 +344,21 @@
             </div>
 
             <div class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800/80">
-              <div class="text-slate-400 text-[11px]">Total Net Return</div>
-              <div id="breakdown-net-pnl" class="text-sm font-bold text-emerald-400 mt-0.5">+$325.48</div>
-              <div id="breakdown-net-roi" class="text-[10px] text-emerald-300 mt-0.5">ROI: +3.25%</div>
+              <div class="text-slate-400 text-[11px]">Execution Fee Drag</div>
+              <div id="breakdown-fee-loss" class="text-sm font-bold text-rose-400 mt-0.5">-$10.00</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 font-mono">Roundtrip Taker</div>
+            </div>
+
+            <div class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800/80">
+              <div class="text-slate-400 text-[11px]">Net Realized Return</div>
+              <div id="breakdown-net-realized-pnl" class="text-sm font-bold text-emerald-400 mt-0.5">+$315.48</div>
+              <div id="breakdown-net-realized-roi" class="text-[10px] text-emerald-300 mt-0.5">Net ROI: +3.15%</div>
+            </div>
+
+            <div class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800/80">
+              <div class="text-slate-400 text-[11px]">Excess vs 3M T-Bills</div>
+              <div id="breakdown-excess-dollar-carry" class="text-sm font-bold text-indigo-300 mt-0.5">+$208.23</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 font-mono">Alpha vs 4.35% Cash</div>
             </div>
           </div>
         </div>
@@ -367,6 +380,11 @@
               </h2>
               <span id="inst-pair-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold truncate max-w-[120px] sm:max-w-[150px] xl:max-w-none">
                 wstETH / ETH-USDT PERP
+              </span>
+              <span id="badge-forward-carry" class="group relative inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/80 font-bold cursor-help" title="Forward Carry (Contango) Rationale: Crypto futures maintain persistent positive funding because natural market demand is net-long. Speculators pay continuous funding to rent leverage, creating a perpetual positive carry harvest for delta-neutral hedgers.">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                FORWARD CARRY (CONTANGO)
+                <svg class="w-3 h-3 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </span>
             </div>
             <!-- Quick Asset Filter/Selector -->
@@ -464,50 +482,108 @@
               <span id="val-collateral-ratio" class="font-mono text-cyan-300 font-bold">90.0% (10% Haircut)</span>
             </div>
 
-            <!-- The 4 Core Institutional Presets -->
+            <!-- Institutional Staking Podium (4 Champions + Secondary) -->
             <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
-              <div data-action="apply-collateral-preset" data-preset="inverse_100" id="btn-preset-100" role="button" tabindex="0"
-                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
-                <div class="font-bold text-white">100% (Inverse)</div>
-                <div class="text-[10px] text-slate-400">0% Haircut | 0.0% Stake</div>
-                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: Infinite (∞)</div>
-              </div>
-
-              <div data-action="apply-collateral-preset" data-preset="btc_eth_95" id="btn-preset-95" role="button" tabindex="0"
-                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
-                <div class="font-bold text-white">95% (BTC / ETH)</div>
-                <div class="text-[10px] text-slate-400">5% Haircut | 0.0% Stake</div>
-                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +1,718% move</div>
-              </div>
-
-              <div data-action="apply-collateral-preset" data-preset="wsteth_90" id="btn-preset-90" role="button" tabindex="0"
+              <!-- #1 wstETH -->
+              <div data-action="apply-collateral-preset" data-preset="wsteth_90" id="btn-preset-wsteth" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition cursor-pointer select-none">
-                <div class="font-bold text-cyan-300">90% (wstETH)</div>
-                <div id="subtext-preset-90" class="text-[10px] text-slate-300">10% Haircut | 3.2% Stake</div>
-                <div class="text-[9px] text-emerald-300 mt-0.5">Buffer: +852% move</div>
+                <div class="flex items-center justify-between">
+                  <div class="font-bold text-cyan-300">#1 Lido wstETH</div>
+                  <span class="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">GOLD</span>
+                </div>
+                <div id="subtext-preset-90" class="text-[10px] text-slate-300 mt-0.5">10% Haircut | ~3.2% Stake</div>
+                <div class="text-[9px] text-emerald-300 mt-0.5">Buffer: +852% runway</div>
               </div>
 
-              <!-- 85% SOL LRT Preset with Inline Segmented Yield Sub-Pill -->
-              <div data-action="apply-collateral-preset" data-preset="sol_lrt_85" id="btn-preset-85" role="button" tabindex="0"
+              <!-- #2 FBTC -->
+              <div data-action="apply-collateral-preset" data-preset="fbtc_90" id="btn-preset-fbtc" role="button" tabindex="0"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
+                <div class="flex items-center justify-between">
+                  <div class="font-bold text-amber-300">#2 Cobo FBTC</div>
+                  <span class="text-[9px] px-1 rounded bg-slate-700 text-slate-300 font-bold">100% UTA</span>
+                </div>
+                <div class="text-[10px] text-slate-400 mt-0.5">10% Haircut | ~3.0% Stake</div>
+                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +852% (2x carry)</div>
+              </div>
+
+              <!-- #3 JitoSOL -->
+              <div data-action="apply-collateral-preset" data-preset="jitosol_85" id="btn-preset-jitosol" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none flex flex-col justify-between">
                 <div class="flex items-center justify-between gap-1">
-                  <div class="font-bold text-white truncate">85% (SOL)</div>
-                  <!-- Inline Yield Mode Sub-Pill -->
-                  <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[9px] font-mono shrink-0" title="Solana Token Inflation: Toggle Real (net of ~5.4% dilution) vs Nominal yield">
+                  <div class="font-bold text-purple-300 truncate">#3 JitoSOL</div>
+                  <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[9px] font-mono shrink-0" title="Solana Inflation: Real vs Nominal">
                     <button type="button" data-action="set-sol-yield" data-yield="real" id="btn-sol-real"
                       class="px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm">Real</button>
                     <button type="button" data-action="set-sol-yield" data-yield="nominal" id="btn-sol-nominal"
                       class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white">Nom</button>
                   </div>
                 </div>
-                <div id="subtext-preset-85" class="text-[10px] text-slate-400">15% Haircut | 1.8% Real Stake</div>
-                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +545% move</div>
+                <div id="subtext-preset-85" class="text-[10px] text-slate-400 mt-0.5">15% Haircut | 1.8% Real (MEV)</div>
+                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +545% runway</div>
+              </div>
+
+              <!-- #4 Sanctum INF -->
+              <div data-action="apply-collateral-preset" data-preset="sanctum_inf_85" id="btn-preset-sanctum" role="button" tabindex="0"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
+                <div class="flex items-center justify-between">
+                  <div class="font-bold text-emerald-300 truncate">#4 Sanctum INF</div>
+                  <span class="text-[9px] px-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-700 font-bold">DRIFT</span>
+                </div>
+                <div class="text-[10px] text-slate-400 mt-0.5">15% Haircut | ~3.1% Real</div>
+                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +545% runway</div>
+              </div>
+
+              <!-- Vanilla 95% -->
+              <div data-action="apply-collateral-preset" data-preset="btc_eth_95" id="btn-preset-95" role="button" tabindex="0"
+                class="preset-choice p-1.5 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
+                <div class="font-bold text-slate-300 text-[11px]">Vanilla 95% (Spot)</div>
+                <div class="text-[9px] text-slate-500">5% Haircut | 0% Stake | +1,718% Buffer</div>
+              </div>
+
+              <!-- Inverse 100% -->
+              <div data-action="apply-collateral-preset" data-preset="inverse_100" id="btn-preset-100" role="button" tabindex="0"
+                class="preset-choice p-1.5 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
+                <div class="font-bold text-slate-300 text-[11px]">Inverse 100% (COIN-M)</div>
+                <div class="text-[9px] text-emerald-400">0% Haircut | Buffer: Infinite (∞)</div>
               </div>
             </div>
 
             <p id="collateral-ratio-explainer" class="text-[10px] text-slate-400 font-mono pt-1">
               100% capital in spot. Collateral appreciation covers 90% of short perp losses, yielding an 8.5x (+852%) runway.
             </p>
+
+            <!-- Live Collateral Intelligence Explainer Card -->
+            <div id="ci-card" class="mt-2.5 p-3 rounded-xl bg-brand-surface/90 border border-cyan-800/60 font-mono text-xs space-y-2">
+              <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span id="ci-rank-badge" class="px-1.5 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">#1 RANK</span>
+                  <span id="ci-title" class="font-bold text-white text-[11px]">Lido wstETH (Ethereum)</span>
+                </div>
+                <span id="ci-venue" class="text-[10px] text-slate-400 truncate max-w-[160px]">Bybit UTA & Binance PM</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[10px]">
+                <div>
+                  <span class="text-slate-500 block text-[9px] uppercase">Runway Buffer</span>
+                  <div id="ci-buffer" class="font-bold text-emerald-400">+852.4% Rally Runway</div>
+                </div>
+                <div>
+                  <span class="text-slate-500 block text-[9px] uppercase">Real Strategy APY</span>
+                  <div id="ci-real-apy" class="font-bold text-cyan-300">~3.2% PoS + Funding</div>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-300 border-t border-slate-800/80 pt-1.5">
+                <span class="text-slate-500 block text-[9px] uppercase font-bold">Why Worth Using:</span>
+                <p id="ci-why" class="text-slate-300 mt-0.5 text-[10px] leading-relaxed">The undisputed Gold Standard. 10% haircut, multi-billion instant secondary liquidity, and 4 years of zero-exploit history.</p>
+              </div>
+              <div class="text-[10px] text-amber-200/90 border-t border-slate-800/80 pt-1.5">
+                <span class="text-amber-400 block text-[9px] uppercase font-bold">Beats Alternative:</span>
+                <p id="ci-beats" class="mt-0.5 text-[10px] leading-relaxed">Ether.fi (weETH) gives ~+0.8% more yield, but Bybit hits you with a 20% haircut and exposes funds to EigenLayer AVS slashing bugs.</p>
+              </div>
+              <div class="text-[10px] text-cyan-200/90 border-t border-slate-800/80 pt-1.5">
+                <span class="text-cyan-400 block text-[9px] uppercase font-bold">Quantitative Verdict:</span>
+                <p id="ci-verdict" class="mt-0.5 text-[10px] font-semibold leading-relaxed">For a 7-figure delta-neutral carry trade, wstETH is the cleanest, most sleep-at-night asset in crypto.</p>
+              </div>
+            </div>
           </div>
 
           <!-- ISOLATED SPLIT CONTROL (Visible only in Isolated Mode) -->
@@ -594,6 +670,38 @@
               <button data-action="set-days" data-days="90" class="w-full py-0.5 text-[10px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800">90d</button>
               <button data-action="set-days" data-days="180" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">180d</button>
               <button data-action="set-days" data-days="365" class="w-full py-0.5 text-[10px] font-mono rounded bg-slate-800 text-slate-300">365d (1y)</button>
+            </div>
+          </div>
+
+          <!-- Execution Fee Tier & Net Drag -->
+          <div class="space-y-1.5 p-2.5 rounded-xl bg-brand-surface/60 border border-slate-800">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-semibold text-slate-300 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                Execution Fee Tier
+              </label>
+              <span id="label-active-fee-tier" class="font-mono text-[10px] text-cyan-300 font-bold">Institutional VIP (10 bps)</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 font-mono text-[10px]">
+              <button type="button" data-action="set-fee-tier" data-tier="vip" id="fee-tier-btn-vip"
+                class="py-1 px-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition text-center truncate cursor-pointer"
+                title="VIP / Institutional Tier: 10 bps (0.10%) taker roundtrip">
+                VIP (10 bps)
+              </button>
+              <button type="button" data-action="set-fee-tier" data-tier="retail" id="fee-tier-btn-retail"
+                class="py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate cursor-pointer"
+                title="Standard Retail Tier: 16 bps (0.16%) taker roundtrip">
+                Retail (16 bps)
+              </button>
+              <button type="button" data-action="set-fee-tier" data-tier="mm" id="fee-tier-btn-mm"
+                class="py-1 px-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-center truncate cursor-pointer"
+                title="Market Maker / Passive Maker Tier: 4 bps (0.04%) roundtrip">
+                Maker (4 bps)
+              </button>
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-0.5">
+              <span>Annualized Drag: <strong id="val-fee-drag-annual" class="text-rose-400 font-bold">-0.41% APY</strong></span>
+              <span>Risk-Free Baseline: <strong class="text-indigo-300 font-bold">4.35% T-Bills</strong></span>
             </div>
           </div>
 
@@ -1113,6 +1221,25 @@
           </div>
         </div>
 
+        <!-- Spot Staking Protocol Yield Sub-Chart Panel -->
+        <div id="hist-staking-subchart-wrapper" class="space-y-1.5 pt-1">
+          <div class="flex items-center justify-between text-xs font-mono px-1">
+            <span class="text-emerald-400 font-bold flex items-center gap-1.5 text-[11px]">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Spot Staking Protocol Yield (% APY)
+            </span>
+            <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+              <span id="hist-staking-subchart-stats">Avg: 3.20% | Min: 3.10% | Max: 3.35%</span>
+            </div>
+          </div>
+          <div class="relative w-full h-[95px] sm:h-[105px] bg-brand-dark rounded-xl overflow-hidden border border-slate-800">
+            <canvas id="historicalStakingSubCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+            <div id="hist-staking-subchart-empty" class="hidden absolute inset-0 flex items-center justify-center text-xs font-mono text-slate-500 bg-brand-dark/90">
+              Vanilla Spot Collateral — 0.00% Spot Staking Yield
+            </div>
+          </div>
+        </div>
+
         <!-- LST Basis Discount Sub-Chart Panel -->
         <div id="hist-subchart-wrapper" class="space-y-1.5 pt-1">
           <div class="flex items-center justify-between text-xs font-mono px-1">
@@ -1124,11 +1251,73 @@
               <span id="hist-subchart-stats">Avg: 0.08% | Max Shock: 0.18%</span>
             </div>
           </div>
-          <div class="relative w-full h-[95px] sm:h-[110px] bg-brand-dark rounded-xl overflow-hidden border border-slate-800">
+          <div class="relative w-full h-[95px] sm:h-[105px] bg-brand-dark rounded-xl overflow-hidden border border-slate-800">
             <canvas id="historicalSubCanvas" class="w-full h-full block cursor-crosshair"></canvas>
             <div id="hist-subchart-empty" class="hidden absolute inset-0 flex items-center justify-center text-xs font-mono text-slate-500 bg-brand-dark/90">
               Vanilla Spot Collateral — 0.00% Structural Basis Risk
             </div>
+          </div>
+        </div>
+
+        <!-- Institutional Collateral Staking Podium Comparison Table -->
+        <div class="p-3.5 rounded-xl bg-brand-surface/75 border border-cyan-900/50 space-y-2 font-mono text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-cyan-300 font-bold flex items-center gap-1.5 text-xs">
+              <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
+              Institutional Collateral Staking Podium — Institutional Comparison
+            </span>
+            <span class="text-[10px] text-slate-400">Bybit UTA / Binance PM / Drift Protocol</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-[11px] border-collapse">
+              <thead>
+                <tr class="border-b border-slate-700 text-slate-400 text-[10px]">
+                  <th class="py-1 px-1.5">Rank & Asset</th>
+                  <th class="py-1 px-1.5">Margin Venue</th>
+                  <th class="py-1 px-1.5">Haircut / Buffer</th>
+                  <th class="py-1 px-1.5">Real APY</th>
+                  <th class="py-1 px-1.5">Institutional Edge vs Alternative</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800 text-slate-300">
+                <tr class="hover:bg-cyan-950/30">
+                  <td class="py-1.5 px-1.5 font-bold text-cyan-300 flex items-center gap-1">
+                    <span class="text-amber-400">#1</span> Lido wstETH
+                  </td>
+                  <td class="py-1.5 px-1.5 text-slate-300">Bybit UTA & Binance PM</td>
+                  <td class="py-1.5 px-1.5 text-emerald-400 font-bold">10% / +852%</td>
+                  <td class="py-1.5 px-1.5 font-bold text-white">~3.2% + Perp</td>
+                  <td class="py-1.5 px-1.5 text-[10px] text-slate-400">Beats weETH (weETH gets 20% haircut and exposes to AVS slashing). Multi-billion liquidity.</td>
+                </tr>
+                <tr class="hover:bg-cyan-950/30">
+                  <td class="py-1.5 px-1.5 font-bold text-amber-300 flex items-center gap-1">
+                    <span class="text-slate-300">#2</span> Cobo FBTC
+                  </td>
+                  <td class="py-1.5 px-1.5 text-slate-300">Bybit UTA (Unified)</td>
+                  <td class="py-1.5 px-1.5 text-emerald-400 font-bold">10% / +852%</td>
+                  <td class="py-1.5 px-1.5 font-bold text-white">~3.0% + Perp</td>
+                  <td class="py-1.5 px-1.5 text-[10px] text-slate-400">The ONLY BTC asset with 100% Unified Margin. Babylon (LBTC/SolvBTC) forces 50% idle cash, cutting net carry in half.</td>
+                </tr>
+                <tr class="hover:bg-cyan-950/30">
+                  <td class="py-1.5 px-1.5 font-bold text-purple-300 flex items-center gap-1">
+                    <span class="text-amber-600">#3</span> Jito JitoSOL
+                  </td>
+                  <td class="py-1.5 px-1.5 text-slate-300">Bybit UTA & Drift</td>
+                  <td class="py-1.5 px-1.5 text-emerald-400 font-bold">15% / +545%</td>
+                  <td class="py-1.5 px-1.5 font-bold text-white">1.8% Real (7.2% Nom)</td>
+                  <td class="py-1.5 px-1.5 text-[10px] text-slate-400">Captures MEV priority tips directly to stakers. Beats mSOL (~1.4% real) and whitelisted on Bybit.</td>
+                </tr>
+                <tr class="hover:bg-cyan-950/30">
+                  <td class="py-1.5 px-1.5 font-bold text-emerald-300 flex items-center gap-1">
+                    <span class="text-slate-500">#4</span> Sanctum INF
+                  </td>
+                  <td class="py-1.5 px-1.5 text-slate-300">Drift Protocol (DeFi)</td>
+                  <td class="py-1.5 px-1.5 text-emerald-400 font-bold">15% / +545%</td>
+                  <td class="py-1.5 px-1.5 font-bold text-white">~3.1% Real (8.5% Nom)</td>
+                  <td class="py-1.5 px-1.5 text-[10px] text-slate-400">Highest real Solana yield. Earns base stake + dynamic LST swap pool fees. Executed on Drift.</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 

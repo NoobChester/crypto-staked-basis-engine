@@ -23,7 +23,11 @@ import {
   setFundingVenue as setServiceFundingVenue,
   type FundingVenue,
   type MarketDataSnapshot,
-  type AssetHistoricalAnalytics
+  type AssetHistoricalAnalytics,
+  FEE_TIERS,
+  VENUE_EXECUTION_FEES,
+  DEFAULT_TBILL_RATE,
+  type ExecutionFeeTier
 } from './services/marketData.js';
 import {
   getUIElements,
@@ -36,7 +40,7 @@ import {
 } from './ui/dom.js';
 import { setupEventDelegation, bindSliderListeners } from './ui/events.js';
 import { drawChart, setupChartInteractions } from './ui/chart.js';
-import { drawHistoricalChart, drawHistoricalSubChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
+import { drawHistoricalChart, drawHistoricalStakingSubChart, drawHistoricalSubChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
 
 export type HistoricalHorizon = 'live' | '7d' | '30d' | '90d' | 'custom';
 
@@ -49,6 +53,7 @@ export const state: HedgingState & {
   isLiveStaking: boolean;
   stakingWindow: HistoricalHorizon;
   fundingWindow: HistoricalHorizon;
+  feeTier: ExecutionFeeTier;
 } = {
   mode: 'unified',
   capital: 10000,
@@ -58,6 +63,9 @@ export const state: HedgingState & {
   stakingAPY: 3.2,
   depegPct: 0.0,
   mmr: 0.005,
+  roundtripFeePct: 0.10,
+  tbillRate: DEFAULT_TBILL_RATE,
+  feeTier: 'vip',
   tradedAsset: 'ETH',
   btcVariant: 'lbtc',
   activePreset: 'wsteth_90',
@@ -290,6 +298,7 @@ export async function loadAndRenderHistoricalData(): Promise<void> {
 
     renderHistoricalModal(UI, analytics, venue);
     drawHistoricalChart(UI.historicalCanvas, analytics, venue);
+    drawHistoricalStakingSubChart(UI.historicalStakingSubCanvas, analytics);
     drawHistoricalSubChart(UI.historicalSubCanvas, analytics);
   } catch (err) {
     console.error('Failed to load historical analytics:', err);
@@ -298,6 +307,17 @@ export async function loadAndRenderHistoricalData(): Promise<void> {
 
 export function setFundingVenue(venue: FundingVenue): void {
   setServiceFundingVenue(venue);
+  if (venue === 'binance') {
+    state.roundtripFeePct = VENUE_EXECUTION_FEES.binance.roundtripPct;
+    state.feeTier = 'vip';
+  } else if (venue === 'hyperliquid') {
+    state.roundtripFeePct = VENUE_EXECUTION_FEES.hyperliquid.roundtripPct;
+    state.feeTier = 'mm';
+  } else {
+    state.roundtripFeePct = VENUE_EXECUTION_FEES.average.roundtripPct;
+    state.feeTier = 'vip';
+  }
+
   if (state.isLiveFunding) {
     applyLiveFunding();
   } else {
@@ -305,8 +325,16 @@ export function setFundingVenue(venue: FundingVenue): void {
   }
   if (isHistoricalModalOpen && currentHistoricalAnalytics) {
     drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, venue);
+    drawHistoricalStakingSubChart(UI.historicalStakingSubCanvas, currentHistoricalAnalytics);
     drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
   }
+}
+
+export function setFeeTier(tier: ExecutionFeeTier): void {
+  state.feeTier = tier;
+  const info = FEE_TIERS[tier] || FEE_TIERS.vip;
+  state.roundtripFeePct = info.feePct;
+  updateApp();
 }
 
 export async function refreshLiveRates(): Promise<void> {
@@ -495,9 +523,12 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
 
   // Update Preset Cards highlight
   const presetBtns: Record<CollateralPresetKey, HTMLElement | null> = {
-    inverse_100: null,
+    wsteth_90: document.getElementById('btn-preset-wsteth') || document.getElementById('btn-preset-90'),
+    fbtc_90: document.getElementById('btn-preset-fbtc'),
+    jitosol_85: document.getElementById('btn-preset-jitosol') || document.getElementById('btn-preset-85'),
+    sanctum_inf_85: document.getElementById('btn-preset-sanctum'),
     btc_eth_95: document.getElementById('btn-preset-95'),
-    wsteth_90: document.getElementById('btn-preset-90'),
+    inverse_100: document.getElementById('btn-preset-100'),
     sol_lrt_85: document.getElementById('btn-preset-85')
   };
 
@@ -650,7 +681,8 @@ function init() {
     setHistoricalAsset,
     setHistoricalTimeframe,
     setFundingVenue,
-    refreshLiveRates
+    refreshLiveRates,
+    setFeeTier
   });
   bindSliderListeners(UI, state, updateApp);
   setupChartInteractions(UI.canvas, UI, () => state);
@@ -661,6 +693,7 @@ function init() {
       if (isHistoricalModalOpen && currentHistoricalAnalytics) {
         const venue = getLatestMarketData().selectedVenue;
         drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, venue);
+        drawHistoricalStakingSubChart(UI.historicalStakingSubCanvas, currentHistoricalAnalytics);
         drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
       }
     });
@@ -689,18 +722,13 @@ function init() {
   const handleHistoricalHover = (point: any, index: number | null, mouseX: number, mouseY: number) => {
     const venue = getLatestMarketData().selectedVenue;
     drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, venue, index);
+    drawHistoricalStakingSubChart(UI.historicalStakingSubCanvas, currentHistoricalAnalytics, index);
     drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics, index);
     updateHistoricalTooltip(UI, point, mouseX, mouseY);
   };
 
   setupHistoricalChartInteractions(
-    UI.historicalCanvas,
-    () => currentHistoricalAnalytics?.series ?? null,
-    handleHistoricalHover
-  );
-
-  setupHistoricalChartInteractions(
-    UI.historicalSubCanvas,
+    [UI.historicalCanvas, UI.historicalStakingSubCanvas, UI.historicalSubCanvas],
     () => currentHistoricalAnalytics?.series ?? null,
     handleHistoricalHover
   );
@@ -732,6 +760,7 @@ function init() {
     if (UI) renderHistoricalPills(UI, state, snapshot);
     if (isHistoricalModalOpen && currentHistoricalAnalytics) {
       drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, snapshot.selectedVenue);
+      drawHistoricalStakingSubChart(UI.historicalStakingSubCanvas, currentHistoricalAnalytics);
       drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
     }
   });

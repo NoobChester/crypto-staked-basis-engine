@@ -17,6 +17,7 @@ export interface HistoricalTooltipElements {
 }
 
 const PAD = { top: 32, right: 28, bottom: 42, left: 58 };
+const SUB_PAD = { top: 18, right: 28, bottom: 18, left: 58 };
 
 export function drawHistoricalChart(
   canvas: HTMLCanvasElement | null,
@@ -59,13 +60,13 @@ export function drawHistoricalChart(
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
 
-  // Compute min and max across all series
+  // Compute min and max across perp funding & net carry (Staking moved to dedicated sub-chart)
   let minVal = 0;
   let maxVal = 10;
 
   for (const pt of series) {
-    minVal = Math.min(minVal, pt.binanceApr, pt.hyperliquidApr, pt.stakingApy, pt.netCarryApy);
-    maxVal = Math.max(maxVal, pt.binanceApr, pt.hyperliquidApr, pt.stakingApy, pt.netCarryApy);
+    minVal = Math.min(minVal, pt.binanceApr, pt.hyperliquidApr, pt.netCarryApy);
+    maxVal = Math.max(maxVal, pt.binanceApr, pt.hyperliquidApr, pt.netCarryApy);
   }
 
   // Add 15% padding above and below
@@ -98,6 +99,7 @@ export function drawHistoricalChart(
   for (let i = 0; i <= yTickCount; i++) {
     const val = yMin + (i / yTickCount) * (yMax - yMin);
     const y = toY(val);
+
     context.beginPath();
     context.moveTo(PAD.left, y);
     context.lineTo(PAD.left + plotW, y);
@@ -146,7 +148,7 @@ export function drawHistoricalChart(
     context.fillText(label, x, PAD.top + plotH + 8);
   }
 
-  // Shaded Net Carry Area (between active funding and 0 or Net Carry curve)
+  // Shaded Net Carry Area
   const netCarryGradient = context.createLinearGradient(0, PAD.top, 0, PAD.top + plotH);
   netCarryGradient.addColorStop(0, 'rgba(168, 85, 247, 0.20)');
   netCarryGradient.addColorStop(1, 'rgba(168, 85, 247, 0.01)');
@@ -189,17 +191,13 @@ export function drawHistoricalChart(
   // Curve 2: Hyperliquid Annualized APR (#06b6d4 cyan)
   drawCurve('#06b6d4', activeVenue === 'hyperliquid' ? 2.5 : 1.5, pt => pt.hyperliquidApr);
 
-  // Curve 3: Staking APY (#10b981 emerald)
-  drawCurve('#10b981', 2.0, pt => pt.stakingApy);
-
-  // Curve 4: Net Carry APY (#a855f7 purple dashed)
+  // Curve 3: Net Carry APY (#a855f7 purple dashed)
   drawCurve('#a855f7', 1.8, pt => pt.netCarryApy, [4, 3]);
 
   // Legend at Top Left of Plot
   const legendItems = [
     { label: 'Binance APR', color: '#f59e0b' },
     { label: 'Hyperliquid APR', color: '#06b6d4' },
-    { label: 'Spot Staking APY', color: '#10b981' },
     { label: 'Net Carry APY', color: '#a855f7' }
   ];
 
@@ -237,7 +235,6 @@ export function drawHistoricalChart(
     const dots = [
       { yVal: pt.binanceApr, color: '#f59e0b' },
       { yVal: pt.hyperliquidApr, color: '#06b6d4' },
-      { yVal: pt.stakingApy, color: '#10b981' },
       { yVal: pt.netCarryApy, color: '#a855f7' }
     ];
 
@@ -256,44 +253,153 @@ export function drawHistoricalChart(
   }
 }
 
-export function setupHistoricalChartInteractions(
+export function drawHistoricalStakingSubChart(
   canvas: HTMLCanvasElement | null,
-  getSeries: () => HistoricalRatePoint[] | null,
-  onHover: (point: HistoricalRatePoint | null, index: number | null, mouseX: number, mouseY: number) => void
+  analytics: AssetHistoricalAnalytics | null,
+  hoverIndex: number | null = null
 ): void {
   if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const context = ctx;
 
-  canvas.addEventListener('mousemove', (e: MouseEvent) => {
-    const series = getSeries();
-    if (!series || series.length === 0) {
-      onHover(null, null, 0, 0);
-      return;
-    }
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
 
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  context.resetTransform();
+  context.scale(dpr, dpr);
 
-    const plotW = rect.width - PAD.left - PAD.right;
+  const W = rect.width;
+  const H = rect.height;
 
-    if (mouseX < PAD.left || mouseX > PAD.left + plotW || mouseY < PAD.top || mouseY > rect.height - PAD.bottom) {
-      onHover(null, null, 0, 0);
-      return;
-    }
+  // Clear & dark background
+  context.clearRect(0, 0, W, H);
+  context.fillStyle = '#080d1a';
+  context.fillRect(0, 0, W, H);
 
-    const ratio = Math.max(0, Math.min(1, (mouseX - PAD.left) / plotW));
-    const idx = Math.round(ratio * (series.length - 1));
-    const pt = series[idx];
+  if (!analytics || !analytics.series || analytics.series.length === 0) {
+    return;
+  }
 
-    onHover(pt, idx, mouseX, mouseY);
-  });
+  // If Native BTC (zero spot staking)
+  if (analytics.symbol === 'BTC' && analytics.series.every(pt => pt.stakingApy === 0)) {
+    context.fillStyle = '#64748b';
+    context.font = '11px "JetBrains Mono", monospace';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText('Vanilla Spot Collateral — 0.00% Spot Staking Yield', W / 2, H / 2);
+    return;
+  }
 
-  canvas.addEventListener('mouseleave', () => {
-    onHover(null, null, 0, 0);
-  });
+  const series = analytics.series;
+  const count = series.length;
+  const plotW = W - SUB_PAD.left - SUB_PAD.right;
+  const plotH = H - SUB_PAD.top - SUB_PAD.bottom;
+
+  let minVal = series[0].stakingApy;
+  let maxVal = series[0].stakingApy;
+  for (const pt of series) {
+    if (pt.stakingApy < minVal) minVal = pt.stakingApy;
+    if (pt.stakingApy > maxVal) maxVal = pt.stakingApy;
+  }
+  const span = Math.max(1.0, maxVal - minVal);
+  const yMin = Math.max(0, Math.floor((minVal - span * 0.15) * 10) / 10);
+  const yMax = Math.ceil((maxVal + span * 0.15) * 10) / 10;
+
+  function toX(idx: number): number {
+    if (count <= 1) return SUB_PAD.left + plotW / 2;
+    return SUB_PAD.left + (idx / (count - 1)) * plotW;
+  }
+
+  function toY(val: number): number {
+    if (yMax === yMin) return SUB_PAD.top + plotH / 2;
+    return SUB_PAD.top + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
+  }
+
+  // Plot background grid area
+  context.fillStyle = '#0a101d';
+  context.fillRect(SUB_PAD.left, SUB_PAD.top, plotW, plotH);
+
+  // 3 Y-axis ticks
+  context.strokeStyle = '#141e30';
+  context.lineWidth = 1;
+  context.fillStyle = '#64748b';
+  context.font = '9px "JetBrains Mono", monospace';
+  context.textAlign = 'right';
+  context.textBaseline = 'middle';
+
+  const ticks = [yMin, parseFloat(((yMin + yMax) / 2).toFixed(2)), yMax];
+  for (const val of ticks) {
+    const y = toY(val);
+    context.beginPath();
+    context.moveTo(SUB_PAD.left, y);
+    context.lineTo(SUB_PAD.left + plotW, y);
+    context.stroke();
+    context.fillText(val.toFixed(2) + '%', SUB_PAD.left - 6, y);
+  }
+
+  // Shaded area
+  const gradient = context.createLinearGradient(0, SUB_PAD.top, 0, SUB_PAD.top + plotH);
+  gradient.addColorStop(0, 'rgba(16, 185, 129, 0.28)');
+  gradient.addColorStop(1, 'rgba(16, 185, 129, 0.02)');
+
+  context.fillStyle = gradient;
+  context.beginPath();
+  context.moveTo(toX(0), toY(yMin));
+  for (let i = 0; i < count; i++) {
+    context.lineTo(toX(i), toY(series[i].stakingApy));
+  }
+  context.lineTo(toX(count - 1), toY(yMin));
+  context.closePath();
+  context.fill();
+
+  // Draw curve
+  context.strokeStyle = '#10b981'; // Emerald-500
+  context.lineWidth = 1.8;
+  context.beginPath();
+  for (let i = 0; i < count; i++) {
+    const x = toX(i);
+    const y = toY(series[i].stakingApy);
+    if (i === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  }
+  context.stroke();
+
+  // Label at top left of plot
+  context.font = '9px "JetBrains Mono", monospace';
+  context.fillStyle = '#10b981';
+  context.textAlign = 'left';
+  context.textBaseline = 'top';
+  context.fillText('Spot Staking Yield % APY', SUB_PAD.left + 8, SUB_PAD.top - 14);
+
+  // Hover crosshair and dot
+  if (hoverIndex !== null && hoverIndex >= 0 && hoverIndex < count) {
+    const hoverX = toX(hoverIndex);
+    const pt = series[hoverIndex];
+
+    context.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+    context.lineWidth = 1;
+    context.setLineDash([3, 3]);
+    context.beginPath();
+    context.moveTo(hoverX, SUB_PAD.top);
+    context.lineTo(hoverX, SUB_PAD.top + plotH);
+    context.stroke();
+    context.setLineDash([]);
+
+    const dotY = toY(pt.stakingApy);
+    context.fillStyle = '#10b981';
+    context.beginPath();
+    context.arc(hoverX, dotY, 4, 0, Math.PI * 2);
+    context.fill();
+
+    context.fillStyle = '#ffffff';
+    context.beginPath();
+    context.arc(hoverX, dotY, 1.5, 0, Math.PI * 2);
+    context.fill();
+  }
 }
-
-const SUB_PAD = { top: 16, right: 28, bottom: 18, left: 58 };
 
 export function drawHistoricalSubChart(
   canvas: HTMLCanvasElement | null,
@@ -436,5 +542,46 @@ export function drawHistoricalSubChart(
     context.beginPath();
     context.arc(hoverX, dotY, 1.5, 0, Math.PI * 2);
     context.fill();
+  }
+}
+
+export function setupHistoricalChartInteractions(
+  canvases: HTMLCanvasElement | null | (HTMLCanvasElement | null)[],
+  getSeries: () => HistoricalRatePoint[] | null,
+  onHover: (point: HistoricalRatePoint | null, index: number | null, mouseX: number, mouseY: number) => void
+): void {
+  const canvasList = Array.isArray(canvases) ? canvases : [canvases];
+  for (const canvas of canvasList) {
+    if (!canvas) continue;
+    canvas.addEventListener('mousemove', (e: MouseEvent) => {
+      const series = getSeries();
+      if (!series || series.length === 0) {
+        onHover(null, null, 0, 0);
+        return;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const padLeft = canvas.id === 'historicalCanvas' ? PAD.left : SUB_PAD.left;
+      const padRight = canvas.id === 'historicalCanvas' ? PAD.right : SUB_PAD.right;
+      const plotW = rect.width - padLeft - padRight;
+
+      if (mouseX < padLeft || mouseX > padLeft + plotW) {
+        onHover(null, null, 0, 0);
+        return;
+      }
+
+      const ratio = Math.max(0, Math.min(1, (mouseX - padLeft) / plotW));
+      const idx = Math.round(ratio * (series.length - 1));
+      const pt = series[idx];
+
+      onHover(pt, idx, mouseX, mouseY);
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      onHover(null, null, 0, 0);
+    });
   }
 }

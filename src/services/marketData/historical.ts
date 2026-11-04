@@ -36,7 +36,7 @@ export async function fetchAssetHistoricalAnalytics(
 ): Promise<AssetHistoricalAnalytics> {
   const cacheKey = `${symbol}_${rangeDays}_${solYieldType}`;
   const cached = analyticsCache.get(cacheKey);
-  if (cached && Date.now() - cached.lastFetched < 300000) {
+  if (cached) {
     return cached;
   }
 
