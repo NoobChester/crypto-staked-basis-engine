@@ -292,3 +292,149 @@ export function setupHistoricalChartInteractions(
     onHover(null, null, 0, 0);
   });
 }
+
+const SUB_PAD = { top: 16, right: 28, bottom: 18, left: 58 };
+
+export function drawHistoricalSubChart(
+  canvas: HTMLCanvasElement | null,
+  analytics: AssetHistoricalAnalytics | null,
+  hoverIndex: number | null = null
+): void {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const context = ctx;
+
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  context.resetTransform();
+  context.scale(dpr, dpr);
+
+  const W = rect.width;
+  const H = rect.height;
+
+  // Clear & dark background
+  context.clearRect(0, 0, W, H);
+  context.fillStyle = '#080d1a';
+  context.fillRect(0, 0, W, H);
+
+  if (!analytics || !analytics.series || analytics.series.length === 0) {
+    return;
+  }
+
+  // If Native BTC (zero LST basis risk)
+  if (analytics.symbol === 'BTC') {
+    context.fillStyle = '#64748b';
+    context.font = '11px "JetBrains Mono", monospace';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText('Vanilla Spot Collateral — 0.00% Structural Basis Risk', W / 2, H / 2);
+    return;
+  }
+
+  const series = analytics.series;
+  const count = series.length;
+  const plotW = W - SUB_PAD.left - SUB_PAD.right;
+  const plotH = H - SUB_PAD.top - SUB_PAD.bottom;
+
+  let maxVal = 0.15;
+  for (const pt of series) {
+    if (pt.lstDiscountPct > maxVal) maxVal = pt.lstDiscountPct;
+  }
+  const yMin = 0.0;
+  const yMax = parseFloat((maxVal * 1.25).toFixed(2));
+
+  function toX(idx: number): number {
+    if (count <= 1) return SUB_PAD.left + plotW / 2;
+    return SUB_PAD.left + (idx / (count - 1)) * plotW;
+  }
+
+  function toY(val: number): number {
+    return SUB_PAD.top + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
+  }
+
+  // Plot background grid area
+  context.fillStyle = '#0a101d';
+  context.fillRect(SUB_PAD.left, SUB_PAD.top, plotW, plotH);
+
+  // 3 Y-axis ticks
+  context.strokeStyle = '#141e30';
+  context.lineWidth = 1;
+  context.fillStyle = '#64748b';
+  context.font = '9px "JetBrains Mono", monospace';
+  context.textAlign = 'right';
+  context.textBaseline = 'middle';
+
+  const ticks = [0.0, yMax / 2, yMax];
+  for (const val of ticks) {
+    const y = toY(val);
+    context.beginPath();
+    context.moveTo(SUB_PAD.left, y);
+    context.lineTo(SUB_PAD.left + plotW, y);
+    context.stroke();
+    context.fillText(val.toFixed(2) + '%', SUB_PAD.left - 6, y);
+  }
+
+  // Shaded area
+  const gradient = context.createLinearGradient(0, SUB_PAD.top, 0, SUB_PAD.top + plotH);
+  gradient.addColorStop(0, 'rgba(244, 63, 94, 0.28)');
+  gradient.addColorStop(1, 'rgba(244, 63, 94, 0.02)');
+
+  context.fillStyle = gradient;
+  context.beginPath();
+  context.moveTo(toX(0), toY(0));
+  for (let i = 0; i < count; i++) {
+    context.lineTo(toX(i), toY(series[i].lstDiscountPct));
+  }
+  context.lineTo(toX(count - 1), toY(0));
+  context.closePath();
+  context.fill();
+
+  // Draw curve
+  context.strokeStyle = '#f43f5e'; // Rose-500
+  context.lineWidth = 1.8;
+  context.beginPath();
+  for (let i = 0; i < count; i++) {
+    const x = toX(i);
+    const y = toY(series[i].lstDiscountPct);
+    if (i === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  }
+  context.stroke();
+
+  // Label at top left of plot
+  context.font = '9px "JetBrains Mono", monospace';
+  context.fillStyle = '#f43f5e';
+  context.textAlign = 'left';
+  context.textBaseline = 'top';
+  context.fillText('LST Basis Discount %', SUB_PAD.left + 8, SUB_PAD.top - 14);
+
+  // Hover crosshair and dot
+  if (hoverIndex !== null && hoverIndex >= 0 && hoverIndex < count) {
+    const hoverX = toX(hoverIndex);
+    const pt = series[hoverIndex];
+
+    context.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+    context.lineWidth = 1;
+    context.setLineDash([3, 3]);
+    context.beginPath();
+    context.moveTo(hoverX, SUB_PAD.top);
+    context.lineTo(hoverX, SUB_PAD.top + plotH);
+    context.stroke();
+    context.setLineDash([]);
+
+    const dotY = toY(pt.lstDiscountPct);
+    context.fillStyle = '#f43f5e';
+    context.beginPath();
+    context.arc(hoverX, dotY, 4, 0, Math.PI * 2);
+    context.fill();
+
+    context.fillStyle = '#ffffff';
+    context.beginPath();
+    context.arc(hoverX, dotY, 1.5, 0, Math.PI * 2);
+    context.fill();
+  }
+}

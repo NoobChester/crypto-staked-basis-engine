@@ -160,7 +160,20 @@ export interface UIElements {
   labelPillFund30d: HTMLElement | null;
   labelPillFund90d: HTMLElement | null;
 
-  // Historical Carry Modal Elements
+  // LST Depeg / Basis Discount Elements
+  boxDepegControl: HTMLElement | null;
+  badgeDepegNative: HTMLElement | null;
+  containerDepegPills: HTMLElement | null;
+  pillDepegLive: HTMLElement | null;
+  labelPillDepegLive: HTMLElement | null;
+  pillDepeg0: HTMLElement | null;
+  pillDepeg2: HTMLElement | null;
+  pillDepeg5: HTMLElement | null;
+  pillDepeg8: HTMLElement | null;
+  descDepegSource: HTMLElement | null;
+  descDepegStatus: HTMLElement | null;
+
+  // Historical Modal Elements
   btnOpenHistoricalModal: HTMLElement | null;
   historicalModal: HTMLElement | null;
   btnHistoricalClose: HTMLElement | null;
@@ -174,6 +187,10 @@ export interface UIElements {
   histBtnRange90: HTMLElement | null;
   histBtnRange180: HTMLElement | null;
   historicalCanvas: HTMLCanvasElement | null;
+  histSubchartWrapper: HTMLElement | null;
+  historicalSubCanvas: HTMLCanvasElement | null;
+  histSubchartEmpty: HTMLElement | null;
+  histSubchartStats: HTMLElement | null;
   historicalTooltip: HTMLElement | null;
   histTtDate: HTMLElement | null;
   histTtBinance: HTMLElement | null;
@@ -181,6 +198,8 @@ export interface UIElements {
   histTtStaking: HTMLElement | null;
   histTtNetcarry: HTMLElement | null;
   histTtDivergence: HTMLElement | null;
+  histTtDepegRow: HTMLElement | null;
+  histTtDepeg: HTMLElement | null;
 
   histStatBinanceAvg: HTMLElement | null;
   histStatBinanceSub: HTMLElement | null;
@@ -353,6 +372,19 @@ export function getUIElements(): UIElements {
     labelPillFund30d: document.getElementById('label-pill-fund-30d'),
     labelPillFund90d: document.getElementById('label-pill-fund-90d'),
 
+    // LST Depeg / Basis Discount Elements
+    boxDepegControl: document.getElementById('box-depeg-control'),
+    badgeDepegNative: document.getElementById('badge-depeg-native'),
+    containerDepegPills: document.getElementById('container-depeg-pills'),
+    pillDepegLive: document.getElementById('pill-depeg-live'),
+    labelPillDepegLive: document.getElementById('label-pill-depeg-live'),
+    pillDepeg0: document.getElementById('pill-depeg-0'),
+    pillDepeg2: document.getElementById('pill-depeg-2'),
+    pillDepeg5: document.getElementById('pill-depeg-5'),
+    pillDepeg8: document.getElementById('pill-depeg-8'),
+    descDepegSource: document.getElementById('desc-depeg-source'),
+    descDepegStatus: document.getElementById('desc-depeg-status'),
+
     // Historical Modal Elements
     btnOpenHistoricalModal: document.getElementById('btn-open-historical-modal'),
     historicalModal: document.getElementById('historical-modal'),
@@ -367,6 +399,10 @@ export function getUIElements(): UIElements {
     histBtnRange90: document.getElementById('hist-btn-range-90'),
     histBtnRange180: document.getElementById('hist-btn-range-180'),
     historicalCanvas: document.getElementById('historicalCanvas') as HTMLCanvasElement | null,
+    histSubchartWrapper: document.getElementById('hist-subchart-wrapper'),
+    historicalSubCanvas: document.getElementById('historicalSubCanvas') as HTMLCanvasElement | null,
+    histSubchartEmpty: document.getElementById('hist-subchart-empty'),
+    histSubchartStats: document.getElementById('hist-subchart-stats'),
     historicalTooltip: document.getElementById('historical-tooltip'),
     histTtDate: document.getElementById('hist-tt-date'),
     histTtBinance: document.getElementById('hist-tt-binance'),
@@ -374,6 +410,8 @@ export function getUIElements(): UIElements {
     histTtStaking: document.getElementById('hist-tt-staking'),
     histTtNetcarry: document.getElementById('hist-tt-netcarry'),
     histTtDivergence: document.getElementById('hist-tt-divergence'),
+    histTtDepegRow: document.getElementById('hist-tt-depeg-row'),
+    histTtDepeg: document.getElementById('hist-tt-depeg'),
 
     histStatBinanceAvg: document.getElementById('hist-stat-binance-avg'),
     histStatBinanceSub: document.getElementById('hist-stat-binance-sub'),
@@ -935,6 +973,23 @@ export function renderHistoricalModal(
     const maxRate = analytics.funding90d?.max ?? 0;
     UI.histStatVol.innerHTML = `Standard deviation: <strong class="text-indigo-300">&sigma; = ${stdDev.toFixed(2)}%</strong>. Peak observed rate reached <strong>${fmtPct(maxRate)}</strong>.`;
   }
+
+  // Sub-chart status
+  if (UI.histSubchartStats && analytics.lstDiscountAvg !== undefined) {
+    if (analytics.symbol === 'BTC') {
+      UI.histSubchartStats.textContent = 'Vanilla Spot Collateral (0% De-peg)';
+    } else {
+      UI.histSubchartStats.textContent = `Avg: ${analytics.lstDiscountAvg.toFixed(2)}% | Max Shock: ${analytics.lstDiscountMax.toFixed(2)}%`;
+    }
+  }
+
+  if (UI.histSubchartEmpty) {
+    if (analytics.symbol === 'BTC') {
+      UI.histSubchartEmpty.classList.remove('hidden');
+    } else {
+      UI.histSubchartEmpty.classList.add('hidden');
+    }
+  }
 }
 
 export function updateHistoricalTooltip(
@@ -964,6 +1019,91 @@ export function updateHistoricalTooltip(
     const div = Math.abs(point.binanceApr - point.hyperliquidApr);
     UI.histTtDivergence.textContent = `${div.toFixed(2)}%`;
   }
+  if (UI.histTtDepeg && point.lstDiscountPct !== undefined) {
+    UI.histTtDepeg.textContent = `${point.lstDiscountPct.toFixed(2)}%`;
+  }
+}
+
+export function updateDepegControl(
+  UI: UIElements,
+  state: HedgingState,
+  snapshot: MarketDataSnapshot
+): void {
+  // Determine if active instrument is native vanilla spot without LST depeg risk
+  let isNative = false;
+  if (state.mode === 'unified') {
+    isNative = state.activePreset === 'inverse_100' || state.activePreset === 'btc_eth_95';
+  } else {
+    isNative = state.tradedAsset === 'BTC' && state.btcVariant === 'native';
+  }
+
+  if (isNative) {
+    if (UI.inputDepeg) {
+      UI.inputDepeg.disabled = true;
+      UI.inputDepeg.classList.add('opacity-40', 'cursor-not-allowed');
+      UI.inputDepeg.value = '0';
+    }
+    if (UI.badgeDepegNative) UI.badgeDepegNative.classList.remove('hidden');
+    if (UI.containerDepegPills) UI.containerDepegPills.classList.add('hidden');
+    if (UI.valDepeg) UI.valDepeg.textContent = '0.0% (Vanilla Spot)';
+    if (UI.descDepegSource) UI.descDepegSource.textContent = 'Vanilla Spot Collateral (Zero LST Basis Risk)';
+    if (UI.descDepegStatus) UI.descDepegStatus.textContent = 'No depeg risk';
+    return;
+  }
+
+  // LST active
+  if (UI.inputDepeg) {
+    UI.inputDepeg.disabled = false;
+    UI.inputDepeg.classList.remove('opacity-40', 'cursor-not-allowed');
+  }
+  if (UI.badgeDepegNative) UI.badgeDepegNative.classList.add('hidden');
+  if (UI.containerDepegPills) UI.containerDepegPills.classList.remove('hidden');
+
+  let livePct = 0.08;
+  let sourceText = 'Secondary DEX vs Canonical Wrap';
+  let assetLabel = 'wstETH';
+
+  const asset = state.tradedAsset || 'ETH';
+  if (asset === 'ETH') {
+    const info = snapshot.ETH?.lstDiscount;
+    livePct = info?.discountPct ?? 0.08;
+    sourceText = info?.source ?? 'DeFiLlama (wstETH vs Canonical Wrap)';
+    assetLabel = 'wstETH';
+  } else if (asset === 'SOL') {
+    const info = snapshot.SOL?.lstDiscount;
+    livePct = info?.discountPct ?? 0.05;
+    sourceText = info?.source ?? 'Jito Network (Stake Pool Stats)';
+    assetLabel = 'JitoSOL';
+  } else if (asset === 'BTC') {
+    if (state.btcVariant === 'solvbtc') {
+      livePct = snapshot.btcLst?.solvbtc?.discountPct ?? 0.12;
+      sourceText = 'DeFiLlama (SolvBTC.BBN vs BTC)';
+      assetLabel = 'SolvBTC';
+    } else {
+      livePct = snapshot.btcLst?.lbtc?.discountPct ?? 0.08;
+      sourceText = 'DeFiLlama (Lombard LBTC vs BTC)';
+      assetLabel = 'LBTC';
+    }
+  }
+
+  if (UI.labelPillDepegLive) {
+    UI.labelPillDepegLive.textContent = `${livePct.toFixed(2)}% (${assetLabel})`;
+  }
+  if (UI.descDepegSource) {
+    UI.descDepegSource.textContent = `Source: ${sourceText}`;
+  }
+  if (UI.descDepegStatus) {
+    UI.descDepegStatus.textContent = livePct <= 0.20 ? 'Normal peg range' : 'Elevated discount';
+  }
+
+  // Active pill highlight
+  const activeClass = 'text-[10px] px-2 py-0.5 rounded font-bold transition font-mono cursor-pointer bg-rose-950 text-rose-300 border border-rose-700 shadow-sm';
+  const inactiveClass = 'text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition font-mono cursor-pointer';
+
+  if (UI.pillDepeg0) UI.pillDepeg0.className = state.depegPct === 0 ? activeClass : inactiveClass;
+  if (UI.pillDepeg2) UI.pillDepeg2.className = state.depegPct === 2 ? activeClass : inactiveClass;
+  if (UI.pillDepeg5) UI.pillDepeg5.className = state.depegPct === 5 ? activeClass : inactiveClass;
+  if (UI.pillDepeg8) UI.pillDepeg8.className = state.depegPct === 8 ? activeClass : inactiveClass;
 }
 
 export function bindInputListeners(

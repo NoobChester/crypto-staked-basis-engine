@@ -698,13 +698,52 @@
           </div>
 
           <!-- LST Depeg / Basis Discount Slider -->
-          <div class="space-y-1">
+          <div class="space-y-1.5" id="box-depeg-control">
             <div class="flex items-center justify-between text-xs">
-              <label class="font-semibold text-slate-300">LST Basis Discount / De-Peg Shock</label>
+              <div class="flex items-center gap-2">
+                <label class="font-semibold text-slate-300">LST Basis Discount / De-Peg Shock</label>
+                <span id="badge-depeg-native" class="hidden text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">
+                  N/A — Vanilla Spot Collateral
+                </span>
+              </div>
               <span id="val-depeg" class="font-mono text-rose-300 font-bold">0.0% Discount</span>
             </div>
+
+            <!-- Rolling / Scenario Presets for Depeg -->
+            <div class="flex items-center gap-1 flex-wrap py-0.5" id="container-depeg-pills">
+              <span class="text-[9px] text-slate-500 font-mono">APPLY:</span>
+              <button type="button" id="pill-depeg-live" onclick="applyLiveDepeg()"
+                class="text-[10px] px-2 py-0.5 rounded bg-rose-950/60 text-rose-300 border border-rose-800/80 hover:bg-rose-900/60 transition flex items-center gap-1 font-mono cursor-pointer"
+                title="Snap discount to current live secondary market rate">
+                ⚡ Live: <span id="label-pill-depeg-live">0.08%</span>
+              </button>
+              <button type="button" id="pill-depeg-0" onclick="setDepeg(0)"
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition font-mono cursor-pointer"
+                title="Zero depeg: Perfect 1:1 backing / parity">
+                0% (Parity)
+              </button>
+              <button type="button" id="pill-depeg-2" onclick="setDepeg(2)"
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition font-mono cursor-pointer"
+                title="Mild depeg: 2% secondary market discount">
+                2% (Mild)
+              </button>
+              <button type="button" id="pill-depeg-5" onclick="setDepeg(5)"
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition font-mono cursor-pointer"
+                title="Severe depeg: 5% liquidity crunch">
+                5% (Severe)
+              </button>
+              <button type="button" id="pill-depeg-8" onclick="setDepeg(8)"
+                class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition font-mono cursor-pointer"
+                title="Black swan: 8% tail risk liquidation cascade">
+                8% (Black Swan)
+              </button>
+            </div>
+
             <input type="range" id="input-depeg" min="0" max="15" step="0.5" value="0" class="w-full">
-            <p class="text-[10px] text-slate-500 font-mono">Simulates secondary market liquidation discount of LST vs native coin.</p>
+            <div class="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-0.5">
+              <span id="desc-depeg-source">Source: Secondary Market vs Canonical Wrap</span>
+              <span id="desc-depeg-status" class="text-slate-400">Normal peg range</span>
+            </div>
           </div>
 
         </div>
@@ -1066,6 +1105,29 @@
             <div class="flex items-center justify-between gap-3 text-purple-400 border-t border-slate-700/80 pt-1">
               <span>Optimal Net Carry:</span>
               <span id="hist-tt-netcarry" class="font-bold">+13.25%</span>
+            </div>
+            <div id="hist-tt-depeg-row" class="flex items-center justify-between gap-3 text-rose-400 border-t border-slate-700/80 pt-1">
+              <span>LST Basis Discount:</span>
+              <span id="hist-tt-depeg" class="font-bold">0.08%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- LST Basis Discount Sub-Chart Panel -->
+        <div id="hist-subchart-wrapper" class="space-y-1.5 pt-1">
+          <div class="flex items-center justify-between text-xs font-mono px-1">
+            <span class="text-rose-400 font-bold flex items-center gap-1.5 text-[11px]">
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+              Secondary LST Basis Discount (% Peg Shock)
+            </span>
+            <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+              <span id="hist-subchart-stats">Avg: 0.08% | Max Shock: 0.18%</span>
+            </div>
+          </div>
+          <div class="relative w-full h-[95px] sm:h-[110px] bg-brand-dark rounded-xl overflow-hidden border border-slate-800">
+            <canvas id="historicalSubCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+            <div id="hist-subchart-empty" class="hidden absolute inset-0 flex items-center justify-center text-xs font-mono text-slate-500 bg-brand-dark/90">
+              Vanilla Spot Collateral — 0.00% Structural Basis Risk
             </div>
           </div>
         </div>

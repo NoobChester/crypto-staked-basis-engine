@@ -8,7 +8,9 @@ import {
   FALLBACK_MARKET_DATA,
   setFundingVenue,
   getLatestMarketData,
-  computeWindowStats
+  computeWindowStats,
+  computeBasisDiscount,
+  fetchLstLiveDiscount
 } from '../src/services/marketData.js';
 
 describe('Market Data Service & Quantitative Parsers', () => {
@@ -219,6 +221,47 @@ describe('Market Data Service & Quantitative Parsers', () => {
     });
   });
 
+  describe('LST Secondary Basis Discount & De-Peg Parsers', () => {
+    it('accurately calculates discount when secondary market price is below fair canonical backing', () => {
+      // Fair Lido wstETH wrap ratio = 1.1895, Market price ratio = 1.1880
+      const res = computeBasisDiscount(1.1895, 1.1880);
+      // ((1.1895 - 1.1880) / 1.1895) * 100 = 0.126% => 0.13%
+      expect(res.rawBasisPct).toBe(0.13);
+      expect(res.discountPct).toBe(0.13);
+    });
+
+    it('clamps downside risk shock to 0.00% when trading at a secondary market premium', () => {
+      // Market trades at premium: fair = 1.1895, market = 1.1905
+      const res = computeBasisDiscount(1.1895, 1.1905);
+      // rawBasisPct is negative (-0.08%), but discountPct is clamped to 0.00%
+      expect(res.rawBasisPct).toBe(-0.08);
+      expect(res.discountPct).toBe(0.00);
+    });
+
+    it('returns 0.00% for exact parity and gracefully handles zero or invalid ratios', () => {
+      expect(computeBasisDiscount(1.0, 1.0)).toEqual({ discountPct: 0, rawBasisPct: 0 });
+      expect(computeBasisDiscount(0, 1.18)).toEqual({ discountPct: 0, rawBasisPct: 0 });
+      expect(computeBasisDiscount(1.18, -1)).toEqual({ discountPct: 0, rawBasisPct: 0 });
+    });
+
+    it('fetches live or baseline discount profiles for ETH, SOL, and BTC', async () => {
+      const ethDiscount = await fetchLstLiveDiscount('ETH');
+      expect(ethDiscount.assetName).toBe('wstETH');
+      expect(ethDiscount.isNative).toBe(false);
+      expect(ethDiscount.discountPct).toBeGreaterThanOrEqual(0);
+
+      const solDiscount = await fetchLstLiveDiscount('SOL');
+      expect(solDiscount.assetName).toBe('JitoSOL');
+      expect(solDiscount.isNative).toBe(false);
+      expect(solDiscount.discountPct).toBeGreaterThanOrEqual(0);
+
+      const btcDiscount = await fetchLstLiveDiscount('BTC');
+      expect(btcDiscount.assetName).toBe('Native BTC');
+      expect(btcDiscount.isNative).toBe(true);
+      expect(btcDiscount.discountPct).toBe(0.0);
+    });
+  });
+
   describe('Rolling Window Statistics & Mathematical Properties', () => {
     it('computes exact mean, min, max, standard deviation and negative flip frequency', () => {
       // 10 intervals: 6 positive, 4 negative
@@ -290,6 +333,9 @@ describe('Market Data Service & Quantitative Parsers', () => {
       expect(btcAnalytics.symbol).toBe('BTC');
       expect(btcAnalytics.series.length).toBe(30);
       expect(btcAnalytics.binanceAvg).toBeDefined();
+      expect(btcAnalytics.lstDiscountAvg).toBe(0.0);
+      expect(btcAnalytics.lstDiscountMax).toBe(0.0);
+      expect(btcAnalytics.series.every(pt => pt.lstDiscountPct === 0)).toBe(true);
     });
 
     it('allows dynamic switching across all three Triad assets (ETH, BTC, SOL)', async () => {
@@ -329,7 +375,11 @@ describe('Market Data Service & Quantitative Parsers', () => {
         expect(pt30.consensusApr).toBe(pt90.consensusApr);
         expect(pt30.stakingApy).toBe(pt90.stakingApy);
         expect(pt30.netCarryApy).toBe(pt90.netCarryApy);
+        expect(pt30.lstDiscountPct).toBe(pt90.lstDiscountPct);
       }
+
+      expect(a30.lstDiscountAvg).toBeGreaterThan(0);
+      expect(a30.lstDiscountMax).toBeGreaterThanOrEqual(a30.lstDiscountAvg);
     });
   });
 });

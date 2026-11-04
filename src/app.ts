@@ -32,10 +32,11 @@ import {
   renderHistoricalPills,
   renderHistoricalModal,
   updateHistoricalTooltip,
+  updateDepegControl,
   type UIElements
 } from './ui/dom.js';
 import { drawChart, setupChartInteractions } from './ui/chart.js';
-import { drawHistoricalChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
+import { drawHistoricalChart, drawHistoricalSubChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
 
 export type HistoricalHorizon = 'live' | '7d' | '30d' | '90d' | 'custom';
 
@@ -80,6 +81,50 @@ export function updateApp(): void {
   const res = calculateOutcome(state.priceMove, state);
   renderUI(UI, state, res);
   drawChart(UI.canvas, state, res);
+  updateDepegControl(UI, state, getLatestMarketData());
+}
+
+export function setDepeg(pct: number): void {
+  state.depegPct = pct;
+  if (UI?.inputDepeg) {
+    UI.inputDepeg.value = pct.toString();
+  }
+  if (UI?.valDepeg) {
+    UI.valDepeg.textContent = `${pct.toFixed(1)}% Discount`;
+  }
+  updateApp();
+}
+
+export function applyLiveDepeg(): void {
+  const snapshot = getLatestMarketData();
+  const asset = state.tradedAsset || 'ETH';
+  let liveDiscount = 0.08;
+
+  if (state.mode === 'unified') {
+    if (state.activePreset === 'inverse_100' || state.activePreset === 'btc_eth_95') {
+      liveDiscount = 0.0;
+    } else if (state.activePreset === 'sol_lrt_85') {
+      liveDiscount = snapshot.SOL?.lstDiscount?.discountPct ?? 0.05;
+    } else {
+      liveDiscount = snapshot.ETH?.lstDiscount?.discountPct ?? 0.08;
+    }
+  } else {
+    if (asset === 'BTC') {
+      if (state.btcVariant === 'solvbtc') {
+        liveDiscount = snapshot.btcLst?.solvbtc?.discountPct ?? 0.12;
+      } else if (state.btcVariant === 'lbtc') {
+        liveDiscount = snapshot.btcLst?.lbtc?.discountPct ?? 0.08;
+      } else {
+        liveDiscount = 0.0;
+      }
+    } else if (asset === 'SOL') {
+      liveDiscount = snapshot.SOL?.lstDiscount?.discountPct ?? 0.05;
+    } else {
+      liveDiscount = snapshot.ETH?.lstDiscount?.discountPct ?? 0.08;
+    }
+  }
+
+  setDepeg(liveDiscount);
 }
 
 export function applyHistoricalFunding(window: 'live' | '7d' | '30d' | '90d'): void {
@@ -245,6 +290,7 @@ export async function loadAndRenderHistoricalData(): Promise<void> {
 
     renderHistoricalModal(UI, analytics, venue);
     drawHistoricalChart(UI.historicalCanvas, analytics, venue);
+    drawHistoricalSubChart(UI.historicalSubCanvas, analytics);
   } catch (err) {
     console.error('Failed to load historical analytics:', err);
   }
@@ -259,6 +305,7 @@ export function setFundingVenue(venue: FundingVenue): void {
   }
   if (isHistoricalModalOpen && currentHistoricalAnalytics) {
     drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, venue);
+    drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
   }
 }
 
@@ -594,6 +641,8 @@ declare global {
     applyHistoricalFunding: typeof applyHistoricalFunding;
     applyHistoricalStaking: typeof applyHistoricalStaking;
     applyHistoricalWindowToAll: typeof applyHistoricalWindowToAll;
+    applyLiveDepeg: typeof applyLiveDepeg;
+    setDepeg: typeof setDepeg;
     openHistoricalModal: typeof openHistoricalModal;
     closeHistoricalModal: typeof closeHistoricalModal;
     setHistoricalAsset: typeof setHistoricalAsset;
@@ -619,6 +668,8 @@ window.applyLiveStaking = applyLiveStaking;
 window.applyHistoricalFunding = applyHistoricalFunding;
 window.applyHistoricalStaking = applyHistoricalStaking;
 window.applyHistoricalWindowToAll = applyHistoricalWindowToAll;
+window.applyLiveDepeg = applyLiveDepeg;
+window.setDepeg = setDepeg;
 window.openHistoricalModal = openHistoricalModal;
 window.closeHistoricalModal = closeHistoricalModal;
 window.setHistoricalAsset = setHistoricalAsset;
@@ -637,6 +688,7 @@ function init() {
       if (isHistoricalModalOpen && currentHistoricalAnalytics) {
         const venue = getLatestMarketData().selectedVenue;
         drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, venue);
+        drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
       }
     });
     ro.observe(UI.canvas.parentElement);
@@ -660,15 +712,24 @@ function init() {
     });
   }
 
-  // Setup Historical Chart Canvas Hover interactions
+  // Synchronized Historical Chart & Sub-Chart Canvas Hover interactions
+  const handleHistoricalHover = (point: any, index: number | null, mouseX: number, mouseY: number) => {
+    const venue = getLatestMarketData().selectedVenue;
+    drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, venue, index);
+    drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics, index);
+    updateHistoricalTooltip(UI, point, mouseX, mouseY);
+  };
+
   setupHistoricalChartInteractions(
     UI.historicalCanvas,
     () => currentHistoricalAnalytics?.series ?? null,
-    (point, index, mouseX, mouseY) => {
-      const venue = getLatestMarketData().selectedVenue;
-      drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, venue, index);
-      updateHistoricalTooltip(UI, point, mouseX, mouseY);
-    }
+    handleHistoricalHover
+  );
+
+  setupHistoricalChartInteractions(
+    UI.historicalSubCanvas,
+    () => currentHistoricalAnalytics?.series ?? null,
+    handleHistoricalHover
   );
 
   window.addEventListener('keydown', (e) => {
@@ -698,6 +759,7 @@ function init() {
     if (UI) renderHistoricalPills(UI, state, snapshot);
     if (isHistoricalModalOpen && currentHistoricalAnalytics) {
       drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, snapshot.selectedVenue);
+      drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
     }
   });
 
