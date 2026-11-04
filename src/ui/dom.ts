@@ -233,6 +233,17 @@ export interface UIElements {
   scenarioBtnHaircut: HTMLElement | null;
   scenarioBtnFlashCrash: HTMLElement | null;
   scenarioBtnMeme: HTMLElement | null;
+  crisisTrajectoryContainer: HTMLElement | null;
+  crisisTrajectoryCanvas: HTMLCanvasElement | null;
+  btnOpenCrisisAudit: HTMLElement | null;
+  sliderLockBadge: HTMLElement | null;
+  crisisAuditModal: HTMLElement | null;
+  btnCrisisAuditClose: HTMLElement | null;
+  btnCrisisAuditCloseFooter: HTMLElement | null;
+  crisisAuditTitle: HTMLElement | null;
+  crisisAuditSubtitle: HTMLElement | null;
+  crisisAuditTableBody: HTMLElement | null;
+  btnExportCrisisCsv: HTMLElement | null;
 
   // Collateral Intelligence Card
   ciCard: HTMLElement | null;
@@ -487,6 +498,17 @@ export function getUIElements(): UIElements {
     scenarioBtnHaircut: document.getElementById('btn-scenario-haircut'),
     scenarioBtnFlashCrash: document.getElementById('btn-scenario-flash-crash'),
     scenarioBtnMeme: document.getElementById('btn-scenario-meme'),
+    crisisTrajectoryContainer: document.getElementById('crisis-trajectory-container'),
+    crisisTrajectoryCanvas: document.getElementById('crisis-trajectory-canvas') as HTMLCanvasElement | null,
+    btnOpenCrisisAudit: document.getElementById('btn-open-crisis-audit'),
+    sliderLockBadge: document.getElementById('slider-lock-badge'),
+    crisisAuditModal: document.getElementById('crisis-audit-modal'),
+    btnCrisisAuditClose: document.getElementById('btn-crisis-audit-close'),
+    btnCrisisAuditCloseFooter: document.getElementById('btn-crisis-audit-close-footer'),
+    crisisAuditTitle: document.getElementById('crisis-audit-title'),
+    crisisAuditSubtitle: document.getElementById('crisis-audit-subtitle'),
+    crisisAuditTableBody: document.getElementById('crisis-audit-tbody'),
+    btnExportCrisisCsv: document.getElementById('btn-export-crisis-csv'),
 
     // Collateral Intelligence Card
     ciCard: document.getElementById('ci-card'),
@@ -517,3 +539,5 @@ export { updateDepegControl } from './renderers/depegRenderer.js';
 export { renderScenarioMatrix } from './renderers/scenarioRenderer.js';
 
 export { bindSliderListeners as bindInputListeners } from "./events.js";
+
+export { renderCrisisAuditTable, exportCrisisAuditCsv } from './renderers/crisisLedgerRenderer.js';

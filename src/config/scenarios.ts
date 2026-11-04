@@ -32,6 +32,9 @@ export interface CrisisScenario {
   collateralRatio?: number;
   primaryRisk: string;
   accentColor: string;
+  isHistorical: boolean;
+  lockedHorizonDays: number;
+  halfLifeDays?: number;
   getDiagnosis: (state: HedgingState, outcome: HedgingOutcome) => CrisisDiagnosis;
 }
 
@@ -46,6 +49,8 @@ export const CRISIS_SCENARIOS: Record<CrisisScenarioKey, CrisisScenario> = {
     depegPct: 6.5,
     primaryRisk: 'Structural Basis Discount & Negative Funding Bleed',
     accentColor: 'rose',
+    isHistorical: true,
+    lockedHorizonDays: 28,
     getDiagnosis: (state, outcome) => {
       const depegLossStr = outcome.depegLoss > 0 ? `-$${outcome.depegLoss.toFixed(2)}` : '$0.00';
       const netCarry = (state.stakingAPY + state.fundingAPR).toFixed(1);
@@ -69,6 +74,8 @@ export const CRISIS_SCENARIOS: Record<CrisisScenarioKey, CrisisScenario> = {
     depegPct: 2.0,
     primaryRisk: 'Severe Backwardation (Short Pays Long)',
     accentColor: 'amber',
+    isHistorical: true,
+    lockedHorizonDays: 30,
     getDiagnosis: (state, outcome) => {
       const isNetBleed = outcome.netPnL < 0;
       const netCarry = (state.stakingAPY + state.fundingAPR).toFixed(1);
@@ -92,6 +99,9 @@ export const CRISIS_SCENARIOS: Record<CrisisScenarioKey, CrisisScenario> = {
     depegPct: 0.0,
     primaryRisk: 'Isolated Cash Margin Wipeout vs Unified Survival',
     accentColor: 'cyan',
+    isHistorical: false,
+    lockedHorizonDays: 30,
+    halfLifeDays: 7,
     getDiagnosis: (_state, outcome) => {
       if (outcome.isLiquidated) {
         const rLiqPct = (outcome.rLiq * 100).toFixed(1);
@@ -125,6 +135,9 @@ export const CRISIS_SCENARIOS: Record<CrisisScenarioKey, CrisisScenario> = {
     collateralRatio: 0.70, // 30% Haircut
     primaryRisk: 'Contracted Liquidation Distance & Margin Compression',
     accentColor: 'indigo',
+    isHistorical: false,
+    lockedHorizonDays: 30,
+    halfLifeDays: 10,
     getDiagnosis: (_state, outcome) => {
       const buffer = outcome.rLiq === Infinity ? 'Infinite (∞)' : `+${outcome.distanceToLiqPct.toFixed(1)}%`;
       return {
@@ -149,6 +162,8 @@ export const CRISIS_SCENARIOS: Record<CrisisScenarioKey, CrisisScenario> = {
     depegPct: 3.5,
     primaryRisk: 'Violent Intraday Basis Widening & Spot Drawdown',
     accentColor: 'amber',
+    isHistorical: true,
+    lockedHorizonDays: 14,
     getDiagnosis: (_state, outcome) => {
       return {
         status: 'stressed',
@@ -170,6 +185,9 @@ export const CRISIS_SCENARIOS: Record<CrisisScenarioKey, CrisisScenario> = {
     depegPct: 5.0,
     primaryRisk: 'Max Extreme Rally (+200%) vs Windfall Carry',
     accentColor: 'purple',
+    isHistorical: false,
+    lockedHorizonDays: 21,
+    halfLifeDays: 5,
     getDiagnosis: (_state, outcome) => {
       if (outcome.isLiquidated) {
         return {

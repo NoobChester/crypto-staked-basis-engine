@@ -38,6 +38,9 @@ export interface AppActions {
   setFeeTier?: (tier: ExecutionFeeTier) => void;
   applyCrisisScenario?: (key: CrisisScenarioKey) => void;
   restoreLiveMarketFeeds?: () => void;
+  openCrisisAuditModal?: () => void;
+  closeCrisisAuditModal?: () => void;
+  exportCrisisAuditCsv?: () => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -158,10 +161,22 @@ export function setupEventDelegation(actions: AppActions): void {
         }
         break;
       }
-      case 'restore-live-feeds': {
+            case 'restore-live-feeds': {
         if (actions.restoreLiveMarketFeeds) {
           actions.restoreLiveMarketFeeds();
         }
+        break;
+      }
+      case 'open-crisis-audit-modal': {
+        actions.openCrisisAuditModal?.();
+        break;
+      }
+      case 'close-crisis-audit-modal': {
+        actions.closeCrisisAuditModal?.();
+        break;
+      }
+      case 'export-crisis-csv': {
+        actions.exportCrisisAuditCsv?.();
         break;
       }
     }

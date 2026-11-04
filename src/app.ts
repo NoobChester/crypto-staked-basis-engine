@@ -3,7 +3,9 @@
  * @description Main application orchestrator, state store, event dispatcher, and live feed coordinator.
  */
 
-import { calculateOutcome, fmtPct, type HedgingState } from './math/hedging.js';
+import { calculateOutcome, calculateCrisisSimulation, fmtPct, type HedgingState, type CrisisSimulationResult } from './math/hedging.js';
+import { drawCrisisTrajectory } from './ui/renderers/crisisTrajectoryRenderer.js';
+import { renderCrisisAuditTable, exportCrisisAuditCsv } from './ui/dom.js';
 import {
   COLLATERAL_PRESETS,
   BTC_LST_VARIANTS,
@@ -89,10 +91,53 @@ let currentHistoricalAnalytics: AssetHistoricalAnalytics | null = null;
 let currentHistoricalTimeframe: 30 | 90 | 180 = 90;
 let currentHistoricalAsset: TradedAsset = 'ETH';
 let isHistoricalModalOpen = false;
+let currentCrisisResult: CrisisSimulationResult | null = null;
 
 export function updateApp(): void {
   if (!UI) return;
   const res = calculateOutcome(state.priceMove, state);
+
+  // If institutional crisis scenario is active, compute path-dependent audit simulation
+  if (state.activeCrisisScenario && CRISIS_SCENARIOS[state.activeCrisisScenario]) {
+    const key = state.activeCrisisScenario;
+    const scenario = CRISIS_SCENARIOS[key];
+    currentCrisisResult = calculateCrisisSimulation(key, state);
+
+    // Overlay path-dependent simulation outcomes onto res for consistent KPI display
+    res.fundingYieldTotal = currentCrisisResult.totalHarvestedFunding;
+    res.stakingYieldTotal = currentCrisisResult.totalHarvestedStaking;
+    res.depegLoss = currentCrisisResult.depegLoss;
+    res.spotPnL = currentCrisisResult.spotPnL;
+    res.perpPnL = currentCrisisResult.perpPnL;
+    res.totalPortfolioVal = currentCrisisResult.terminalEquity;
+    res.netPnL = currentCrisisResult.netPnL;
+    res.roiPct = state.capital > 0 ? (res.netPnL / state.capital) * 100 : 0;
+    res.netRealizedPnL = parseFloat((res.netPnL - res.netFeeDollarLoss).toFixed(2));
+    res.netRealizedRoiPct = state.capital > 0 ? parseFloat(((res.netRealizedPnL / state.capital) * 100).toFixed(2)) : 0;
+    res.netRealizedAPY = currentCrisisResult.netRealizedAPY;
+    res.isLiquidated = currentCrisisResult.isLiquidated;
+
+    if (UI.sliderLockBadge) {
+      UI.sliderLockBadge.textContent = `LOCKED (${scenario.lockedHorizonDays}D)`;
+      UI.sliderLockBadge.classList.remove('hidden');
+    }
+
+    if (UI.crisisTrajectoryContainer && UI.crisisTrajectoryCanvas) {
+      UI.crisisTrajectoryContainer.classList.remove('hidden');
+      drawCrisisTrajectory(UI.crisisTrajectoryCanvas, currentCrisisResult, {
+        accentColor: scenario.accentColor
+      });
+    }
+  } else {
+    currentCrisisResult = null;
+    if (UI.sliderLockBadge) {
+      UI.sliderLockBadge.classList.add('hidden');
+    }
+    if (UI.crisisTrajectoryContainer) {
+      UI.crisisTrajectoryContainer.classList.add('hidden');
+    }
+  }
+
   renderUI(UI, state, res);
   drawChart(UI.canvas, state, res);
   updateDepegControl(UI, state, getLatestMarketData());
@@ -672,6 +717,12 @@ export function applyCrisisScenario(key: CrisisScenarioKey): void {
   state.fundingWindow = 'custom';
   state.depegPct = scenario.depegPct;
 
+  if (scenario.lockedHorizonDays) {
+    state.days = scenario.lockedHorizonDays;
+    if (UI?.inputDays) UI.inputDays.value = scenario.lockedHorizonDays.toString();
+    if (UI?.valDays) UI.valDays.textContent = `${scenario.lockedHorizonDays} Days`;
+  }
+
   if (scenario.collateralRatio !== undefined) {
     state.collateralRatio = scenario.collateralRatio;
     if (UI?.valCollateralRatio) {
@@ -701,6 +752,9 @@ export function applyCrisisScenario(key: CrisisScenarioKey): void {
 export function restoreLiveMarketFeeds(): void {
   state.activeCrisisScenario = null;
   state.priceMove = 0;
+  if (UI?.sliderLockBadge) UI.sliderLockBadge.classList.add('hidden');
+  if (UI?.crisisTrajectoryContainer) UI.crisisTrajectoryContainer.classList.add('hidden');
+  currentCrisisResult = null;
   if (UI?.inputPriceMove) UI.inputPriceMove.value = '0';
   if (UI?.valPriceMove) UI.valPriceMove.textContent = '+0.0%';
 
@@ -750,6 +804,14 @@ export function resetDefaults(): void {
 }
 
 export function openTriadModal(): void {
+  if (UI.crisisAuditModal) {
+    UI.crisisAuditModal.addEventListener('click', (e) => {
+      if (e.target === UI.crisisAuditModal) {
+        closeCrisisAuditModal();
+      }
+    });
+  }
+
   if (UI.triadModal) {
     UI.triadModal.classList.remove('hidden');
   }
@@ -762,8 +824,40 @@ export function closeTriadModal(): void {
 }
 
 
+export function openCrisisAuditModal(): void {
+  if (!UI?.crisisAuditModal) return;
+  if (!currentCrisisResult && state.activeCrisisScenario) {
+    currentCrisisResult = calculateCrisisSimulation(state.activeCrisisScenario, state);
+  }
+  if (!currentCrisisResult) return;
+
+  if (UI.crisisAuditTitle) {
+    UI.crisisAuditTitle.textContent = `${currentCrisisResult.scenarioTitle.toUpperCase()} - AUDIT LEDGER`;
+  }
+  if (UI.crisisAuditSubtitle) {
+    UI.crisisAuditSubtitle.textContent = `Horizon: ${currentCrisisResult.horizonDays} Days | Status: ${currentCrisisResult.isLiquidated ? 'LIQUIDATED (Day ' + currentCrisisResult.tLiq + ')' : 'SOLVENT'} | Realized PnL: ${currentCrisisResult.netPnL.toFixed(2)}`;
+  }
+  renderCrisisAuditTable(UI.crisisAuditTableBody, currentCrisisResult);
+  UI.crisisAuditModal.classList.remove('hidden');
+}
+
+export function closeCrisisAuditModal(): void {
+  if (!UI?.crisisAuditModal) return;
+  UI.crisisAuditModal.classList.add('hidden');
+}
+
+export function exportCrisisCsv(): void {
+  if (!currentCrisisResult && state.activeCrisisScenario) {
+    currentCrisisResult = calculateCrisisSimulation(state.activeCrisisScenario, state);
+  }
+  if (currentCrisisResult) {
+    exportCrisisAuditCsv(currentCrisisResult);
+  }
+}
+
 function init() {
   UI = getUIElements();
+
   setupEventDelegation({
     setAccountMode,
     setTradedAsset,
@@ -791,7 +885,10 @@ function init() {
     refreshLiveRates,
     setFeeTier,
     applyCrisisScenario,
-    restoreLiveMarketFeeds
+    restoreLiveMarketFeeds,
+    openCrisisAuditModal,
+    closeCrisisAuditModal,
+    exportCrisisAuditCsv: exportCrisisCsv
   });
   bindSliderListeners(UI, state, updateApp);
   setupChartInteractions(UI.canvas, UI, () => state);

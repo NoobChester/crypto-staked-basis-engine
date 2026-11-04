@@ -488,6 +488,26 @@
               <span id="scenario-verdict-pill" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border shrink-0"></span>
             </div>
             <p id="scenario-verdict-text" class="text-slate-300 text-[11px] leading-relaxed"></p>
+
+            <!-- Embedded Trajectory Mini-Chart & Audit Button -->
+            <div id="crisis-trajectory-container" class="mt-3 pt-3 border-t border-slate-700/60 hidden">
+              <div class="flex items-center justify-between gap-2 mb-1.5">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                  Mark-to-Market Equity Trajectory [0..T]
+                </span>
+                <button type="button" id="btn-open-crisis-audit" data-action="open-crisis-audit-modal"
+                  class="px-2 py-0.5 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/80 transition text-[10px] font-mono flex items-center gap-1 cursor-pointer">
+                  <svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span>Audit Ledger</span>
+                </button>
+              </div>
+              <div class="relative w-full h-28 bg-slate-950/80 rounded-lg border border-slate-800/80 overflow-hidden">
+                <canvas id="crisis-trajectory-canvas" class="w-full h-full block"></canvas>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -791,7 +811,10 @@
           <!-- Holding Horizon Controls -->
           <div class="space-y-1">
             <div class="flex items-center justify-between text-xs">
-              <label class="font-semibold text-slate-300">Investment Horizon</label>
+              <div class="flex items-center gap-1.5">
+                <label class="font-semibold text-slate-300">Investment Horizon</label>
+                <span id="slider-lock-badge" class="hidden text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold animate-pulse">LOCKED</span>
+              </div>
               <span id="val-days" class="font-mono text-slate-200 font-bold">90 Days</span>
             </div>
             <input type="range" id="input-days" min="1" max="365" step="1" value="90" class="w-full">
@@ -1508,5 +1531,71 @@
 
   <!-- Application Engine Script (TypeScript + Vite HMR) -->
   <script type="module" src="/src/app.ts"></script>
+  <!-- Crisis Simulation Audit Ledger Modal -->
+  <div id="crisis-audit-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true">
+    <div class="relative w-full max-w-4xl bg-brand-surface border border-brand-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] modal-enter">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-brand-border flex items-center justify-between bg-brand-card/90 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-cyan-950/80 border border-cyan-800/80 text-cyan-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 id="crisis-audit-title" class="text-base font-bold text-white font-mono tracking-tight">CRISIS AUDIT LEDGER</h3>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700">COMPLIANCE GRADE</span>
+            </div>
+            <p id="crisis-audit-subtitle" class="text-xs text-slate-400 mt-0.5 font-mono">Granular Day-by-Day Mark-to-Market & Liquidation State</p>
+          </div>
+        </div>
+        <button type="button" data-action="close-crisis-audit-modal" id="btn-crisis-audit-close" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer" aria-label="Close Modal">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Table Body (Scrollable) -->
+      <div class="p-4 overflow-y-auto flex-1 min-h-0">
+        <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60">
+          <table class="w-full text-left text-xs font-mono border-collapse">
+            <thead class="sticky top-0 bg-slate-900 border-b border-slate-800 text-[11px] text-slate-400 uppercase tracking-wider select-none">
+              <tr>
+                <th class="py-2.5 px-3">Day</th>
+                <th class="py-2.5 px-3">Date</th>
+                <th class="py-2.5 px-3">Spot Shock</th>
+                <th class="py-2.5 px-3">Funding APR</th>
+                <th class="py-2.5 px-3">Depeg %</th>
+                <th class="py-2.5 px-3">Equity</th>
+                <th class="py-2.5 px-3">Margin Ratio</th>
+                <th class="py-2.5 px-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="crisis-audit-tbody" class="divide-y divide-slate-800/60"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 border-t border-brand-border bg-brand-card/90 flex items-center justify-between gap-3 shrink-0">
+        <div class="text-[11px] font-mono text-slate-400">
+          Engine: <span class="text-cyan-400 font-semibold">DELTA-Q Audited Hybrid Replay</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btn-export-crisis-csv" data-action="export-crisis-csv" class="px-3.5 py-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 hover:text-white border border-cyan-700/80 transition text-xs font-mono flex items-center gap-1.5 cursor-pointer font-semibold shadow-sm">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Export Audit CSV
+          </button>
+          <button type="button" data-action="close-crisis-audit-modal" id="btn-crisis-audit-close-footer" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs transition cursor-pointer">
+            Close
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </body>
 </html>

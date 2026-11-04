@@ -89,3 +89,18 @@ input[type=range]::-webkit-slider-thumb:hover {
   animation: modal-scale-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+
+/* Crisis Trajectory and Audit Modal */
+@keyframes beacon-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(244, 63, 94, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(244, 63, 94, 0.9);
+    transform: scale(1.08);
+  }
+}
+.beacon-pulse {
+  animation: beacon-glow 1.5s infinite ease-in-out;
+}
