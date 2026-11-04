@@ -45,7 +45,8 @@ import {
   type UIElements
 } from './ui/dom.js';
 import { setupEventDelegation, bindSliderListeners } from './ui/events.js';
-import { drawChart, setupChartInteractions } from './ui/chart.js';
+import { drawChart, setupChartInteractions, type ChartConfidenceStats } from './ui/chart.js';
+import { getCustomStatisticalCarry, type StatisticalCarrySnapshot } from './services/marketData.js';
 import { drawHistoricalChart, drawHistoricalStakingSubChart, drawHistoricalSubChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
 
 export type HistoricalHorizon = 'live' | '7d' | '30d' | '90d' | 'custom';
@@ -61,6 +62,8 @@ export const state: HedgingState & {
   fundingWindow: HistoricalHorizon;
   feeTier: ExecutionFeeTier;
   activeCrisisScenario: CrisisScenarioKey | null;
+  activeRegime?: 'conservative' | 'base' | 'bull';
+  lookbackDays?: number;
 } = {
   mode: 'unified',
   capital: 10000,
@@ -83,7 +86,9 @@ export const state: HedgingState & {
   isLiveStaking: true,
   stakingWindow: 'live',
   fundingWindow: 'live',
-  activeCrisisScenario: null
+  activeCrisisScenario: null,
+  activeRegime: 'base' as 'conservative' | 'base' | 'bull',
+  lookbackDays: 30
 };
 
 let UI: UIElements;
@@ -92,6 +97,16 @@ let currentHistoricalTimeframe: 30 | 90 | 180 = 90;
 let currentHistoricalAsset: TradedAsset = 'ETH';
 let isHistoricalModalOpen = false;
 let currentCrisisResult: CrisisSimulationResult | null = null;
+let latestStatisticalCarry: StatisticalCarrySnapshot | null = null;
+
+export function getConfidenceStats(): ChartConfidenceStats | undefined {
+  if (!latestStatisticalCarry) return undefined;
+  return {
+    sigmaFunding: latestStatisticalCarry.funding.stdDev,
+    sigmaStaking: latestStatisticalCarry.staking.stdDev,
+    showConfidenceFan: true
+  };
+}
 
 export function updateApp(): void {
   if (!UI) return;
@@ -139,7 +154,7 @@ export function updateApp(): void {
   }
 
   renderUI(UI, state, res);
-  drawChart(UI.canvas, state, res);
+  drawChart(UI.canvas, state, res, getConfidenceStats());
   updateDepegControl(UI, state, getLatestMarketData());
 }
 
@@ -152,6 +167,7 @@ export function setDepeg(pct: number): void {
     UI.valDepeg.textContent = `${pct.toFixed(1)}% Discount`;
   }
   updateApp();
+  updateStatisticalCarry(30);
 }
 
 export function applyLiveDepeg(): void {
@@ -492,6 +508,7 @@ export function setAccountMode(mode: MarginMode): void {
 
 export function setTradedAsset(asset: TradedAsset): void {
   state.tradedAsset = asset;
+  updateStatisticalCarry((state as any).lookbackDays || 30);
   currentHistoricalAsset = asset;
   const data = getLatestMarketData();
 
@@ -855,6 +872,98 @@ export function exportCrisisCsv(): void {
   }
 }
 
+export async function updateStatisticalCarry(lookbackDays?: number): Promise<void> {
+  const days = lookbackDays ?? (state as any).lookbackDays ?? 30;
+  (state as any).lookbackDays = days;
+  try {
+    const asset = state.tradedAsset || 'ETH';
+    const stats = await getCustomStatisticalCarry(asset, days, state.solYieldType);
+    latestStatisticalCarry = stats;
+
+    if (UI?.labelVolatilityDispersion) {
+      UI.labelVolatilityDispersion.textContent = `Funding σ: ±${stats.funding.stdDev.toFixed(2)}% | Staking σ: ±${stats.staking.stdDev.toFixed(2)}%`;
+    }
+    if (UI?.labelRegimeConservativeVal) {
+      UI.labelRegimeConservativeVal.textContent = `${stats.conservativeFundingApr >= 0 ? '+' : ''}${stats.conservativeFundingApr.toFixed(1)}% / ${stats.conservativeStakingApy.toFixed(1)}%`;
+    }
+    if (UI?.labelRegimeBaseVal) {
+      UI.labelRegimeBaseVal.textContent = `${stats.baseFundingApr >= 0 ? '+' : ''}${stats.baseFundingApr.toFixed(1)}% / ${stats.baseStakingApy.toFixed(1)}%`;
+    }
+    if (UI?.labelRegimeBullVal) {
+      UI.labelRegimeBullVal.textContent = `${stats.bullFundingApr >= 0 ? '+' : ''}${stats.bullFundingApr.toFixed(1)}% / ${stats.bullStakingApy.toFixed(1)}%`;
+    }
+
+    applyActiveRegimeRates();
+  } catch {
+    // fallback
+  }
+}
+
+export function applyActiveRegimeRates(): void {
+  if (!latestStatisticalCarry) return;
+  const regime = (state as any).activeRegime || 'base';
+
+  if (regime === 'conservative') {
+    state.fundingAPR = latestStatisticalCarry.conservativeFundingApr;
+    state.stakingAPY = latestStatisticalCarry.conservativeStakingApy;
+  } else if (regime === 'bull') {
+    state.fundingAPR = latestStatisticalCarry.bullFundingApr;
+    state.stakingAPY = latestStatisticalCarry.bullStakingApy;
+  } else {
+    state.fundingAPR = latestStatisticalCarry.baseFundingApr;
+    state.stakingAPY = latestStatisticalCarry.baseStakingApy;
+  }
+
+  state.isLiveFunding = false;
+  state.isLiveStaking = false;
+  (state as any).fundingWindow = 'custom';
+  (state as any).stakingWindow = 'custom';
+
+  if (UI?.inputFunding) UI.inputFunding.value = state.fundingAPR.toString();
+  if (UI?.valFunding) {
+    UI.valFunding.textContent = fmtPct(state.fundingAPR) + ' APR';
+    UI.valFunding.className = `font-mono font-bold ${state.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  if (UI?.inputStaking) UI.inputStaking.value = state.stakingAPY.toString();
+  if (UI?.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
+
+  renderRegimeButtonStyles();
+  updateApp();
+}
+
+export function renderRegimeButtonStyles(): void {
+  const regime = (state as any).activeRegime || 'base';
+  const baseInactive = 'py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 transition text-left font-mono cursor-pointer flex flex-col group';
+
+  if (UI?.btnRegimeConservative) {
+    UI.btnRegimeConservative.className = regime === 'conservative'
+      ? 'py-1.5 px-2 rounded-lg bg-amber-950/80 border-amber-500 shadow-lg shadow-amber-950/30 ring-1 ring-amber-400/50 transition text-left font-mono cursor-pointer flex flex-col group'
+      : baseInactive;
+  }
+  if (UI?.btnRegimeBase) {
+    UI.btnRegimeBase.className = regime === 'base'
+      ? 'py-1.5 px-2 rounded-lg bg-cyan-950/90 border-cyan-500 shadow-lg shadow-cyan-950/30 ring-1 ring-cyan-400/50 transition text-left font-mono cursor-pointer flex flex-col group'
+      : baseInactive;
+  }
+  if (UI?.btnRegimeBull) {
+    UI.btnRegimeBull.className = regime === 'bull'
+      ? 'py-1.5 px-2 rounded-lg bg-purple-950/80 border-purple-500 shadow-lg shadow-purple-950/30 ring-1 ring-purple-400/50 transition text-left font-mono cursor-pointer flex flex-col group'
+      : baseInactive;
+  }
+}
+
+export function setRegime(regime: 'conservative' | 'base' | 'bull'): void {
+  (state as any).activeRegime = regime;
+  applyActiveRegimeRates();
+}
+
+export function setLookback(days: number): void {
+  (state as any).lookbackDays = days;
+  if (UI?.inputLookbackDays) UI.inputLookbackDays.value = days.toString();
+  if (UI?.valLookbackDays) UI.valLookbackDays.textContent = `${days} Days`;
+  updateStatisticalCarry(days);
+}
+
 function init() {
   UI = getUIElements();
 
@@ -888,10 +997,12 @@ function init() {
     restoreLiveMarketFeeds,
     openCrisisAuditModal,
     closeCrisisAuditModal,
-    exportCrisisAuditCsv: exportCrisisCsv
+    exportCrisisAuditCsv: exportCrisisCsv,
+    setRegime,
+    setLookback
   });
-  bindSliderListeners(UI, state, updateApp);
-  setupChartInteractions(UI.canvas, UI, () => state);
+  bindSliderListeners(UI, state, updateApp, (days) => setLookback(days));
+  setupChartInteractions(UI.canvas, UI, () => state, getConfidenceStats);
 
   if (UI.canvas && UI.canvas.parentElement) {
     const ro = new ResizeObserver(() => {

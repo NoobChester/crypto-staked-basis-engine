@@ -7,11 +7,13 @@ import {
   type AssetHistoricalAnalytics,
   type HistoricalWindowStats,
   type HistoricalRatePoint,
+  type StatisticalCarrySnapshot,
   POOL_IDS
 } from './types.js';
 import { fetchWithTimeout } from './fundingApi.js';
 
 const analyticsCache: Map<string, AssetHistoricalAnalytics> = new Map();
+export const customStatsCache: Map<string, StatisticalCarrySnapshot> = new Map();
 
 export function computeWindowStats(values: number[]): HistoricalWindowStats {
   if (!values || values.length === 0) {
@@ -280,4 +282,58 @@ export async function fetchAssetHistoricalAnalytics(
 
   analyticsCache.set(cacheKey, analytics);
   return analytics;
+}
+
+/**
+ * Calculates rolling standard deviation and confidence interval bounds for carry metrics
+ * across a customizable lookback window clamped to Institutional horizon limits (7 to 180 days).
+ */
+export async function getCustomStatisticalCarry(
+  symbol: 'ETH' | 'BTC' | 'SOL',
+  lookbackDays: number,
+  solYieldType: 'nominal' | 'real' = 'real'
+): Promise<StatisticalCarrySnapshot> {
+  const days = Number.isFinite(lookbackDays) ? lookbackDays : 90;
+  const clampedDays = Math.max(7, Math.min(180, Math.round(days)));
+
+  const cacheKey = `${symbol}_${clampedDays}_${solYieldType}`;
+  const cached = customStatsCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const analytics = await fetchAssetHistoricalAnalytics(symbol, 180, solYieldType);
+  const seriesSlice = analytics.series.slice(-clampedDays);
+
+  const fundingStats = computeWindowStats(seriesSlice.map(p => p.bestFundingApr));
+  const stakingStats = computeWindowStats(seriesSlice.map(p => p.stakingApy));
+  const netCarryStats = computeWindowStats(seriesSlice.map(p => p.netCarryApy));
+
+  const baseFundingApr = fundingStats.avg;
+  const conservativeFundingApr = parseFloat((fundingStats.avg - 2 * fundingStats.stdDev).toFixed(2));
+  const bullFundingApr = parseFloat((fundingStats.avg + 2 * fundingStats.stdDev).toFixed(2));
+
+  const baseStakingApy = stakingStats.avg;
+  const conservativeStakingApy = Math.max(
+    0.1,
+    parseFloat((stakingStats.avg - 2 * stakingStats.stdDev).toFixed(2))
+  );
+  const bullStakingApy = parseFloat((stakingStats.avg + 2 * stakingStats.stdDev).toFixed(2));
+
+  const snapshot: StatisticalCarrySnapshot = {
+    lookbackDays: clampedDays,
+    symbol,
+    funding: fundingStats,
+    staking: stakingStats,
+    netCarry: netCarryStats,
+    baseFundingApr,
+    conservativeFundingApr,
+    bullFundingApr,
+    baseStakingApy,
+    conservativeStakingApy,
+    bullStakingApy
+  };
+
+  customStatsCache.set(cacheKey, snapshot);
+  return snapshot;
 }

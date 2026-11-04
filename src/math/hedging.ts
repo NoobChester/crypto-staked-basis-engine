@@ -280,6 +280,63 @@ export function calculateOutcome(
   }
 }
 
+export interface HedgingConfidenceBounds {
+  priceShockPct: number;
+  baseEquity: number;
+  upperEquity: number; // +2σ
+  lowerEquity: number; // -2σ
+  sigmaDollarSpan: number;
+}
+
+/**
+ * Computes ±2σ statistical carry confidence bounds for a given price shock.
+ * Evaluates upper outcome with (+2σ funding, +2σ staking) and lower outcome with (-2σ funding, -2σ staking clamped >= 0.1).
+ */
+export function calculateConfidenceBounds(
+  priceChangePct: number,
+  state: HedgingState,
+  sigmas?: { sigmaFunding?: number; sigmaStaking?: number }
+): HedgingConfidenceBounds {
+  const baseFunding = state.fundingAPR ?? 10.0;
+  const baseStaking = state.stakingAPY ?? 3.2;
+
+  const sigmaFunding = Math.abs(sigmas?.sigmaFunding ?? 0);
+  const sigmaStaking = Math.abs(sigmas?.sigmaStaking ?? 0);
+
+  const upperFunding = baseFunding + 2 * sigmaFunding;
+  const upperStaking = baseStaking + 2 * sigmaStaking;
+
+  const lowerFunding = baseFunding - 2 * sigmaFunding;
+  const lowerStaking = baseStaking <= 0
+    ? 0
+    : Math.min(baseStaking, Math.max(0.1, baseStaking - 2 * sigmaStaking));
+
+  const baseOutcome = calculateOutcome(priceChangePct, state);
+  const upperOutcome = calculateOutcome(priceChangePct, {
+    ...state,
+    fundingAPR: upperFunding,
+    stakingAPY: upperStaking
+  });
+  const lowerOutcome = calculateOutcome(priceChangePct, {
+    ...state,
+    fundingAPR: lowerFunding,
+    stakingAPY: lowerStaking
+  });
+
+  const baseEquity = parseFloat(baseOutcome.totalPortfolioVal.toFixed(2));
+  const upperEquity = parseFloat(upperOutcome.totalPortfolioVal.toFixed(2));
+  const lowerEquity = parseFloat(lowerOutcome.totalPortfolioVal.toFixed(2));
+  const sigmaDollarSpan = parseFloat(Math.max(0, upperEquity - lowerEquity).toFixed(2));
+
+  return {
+    priceShockPct: priceChangePct,
+    baseEquity,
+    upperEquity,
+    lowerEquity,
+    sigmaDollarSpan
+  };
+}
+
 /**
  * Executes a path-dependent daily crisis simulation across historical time series or mean-reverting shocks.
  * Models day-by-day margin ratio progression, liquidation breaches, cessation of perp carry, and terminal PnL.

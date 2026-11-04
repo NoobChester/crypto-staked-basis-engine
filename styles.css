@@ -104,3 +104,23 @@ input[type=range]::-webkit-slider-thumb:hover {
 .beacon-pulse {
   animation: beacon-glow 1.5s infinite ease-in-out;
 }
+
+/* Statistical Regime Button Active States */
+.regime-active-conservative {
+  background-color: rgba(69, 26, 3, 0.6) !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.35) !important;
+  color: #fef3c7 !important;
+}
+.regime-active-base {
+  background-color: rgba(8, 51, 68, 0.7) !important;
+  border-color: #06b6d4 !important;
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.4) !important;
+  color: #cffafe !important;
+}
+.regime-active-bull {
+  background-color: rgba(59, 7, 100, 0.6) !important;
+  border-color: #a855f7 !important;
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.35) !important;
+  color: #f3e8ff !important;
+}

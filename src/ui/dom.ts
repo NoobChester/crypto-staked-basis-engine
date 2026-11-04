@@ -244,6 +244,16 @@ export interface UIElements {
   crisisAuditSubtitle: HTMLElement | null;
   crisisAuditTableBody: HTMLElement | null;
   btnExportCrisisCsv: HTMLElement | null;
+  statisticalCarryPanel: HTMLElement | null;
+  labelVolatilityDispersion: HTMLElement | null;
+  btnRegimeConservative: HTMLElement | null;
+  btnRegimeBase: HTMLElement | null;
+  btnRegimeBull: HTMLElement | null;
+  labelRegimeConservativeVal: HTMLElement | null;
+  labelRegimeBaseVal: HTMLElement | null;
+  labelRegimeBullVal: HTMLElement | null;
+  inputLookbackDays: HTMLInputElement | null;
+  valLookbackDays: HTMLElement | null;
 
   // Collateral Intelligence Card
   ciCard: HTMLElement | null;
@@ -509,6 +519,16 @@ export function getUIElements(): UIElements {
     crisisAuditSubtitle: document.getElementById('crisis-audit-subtitle'),
     crisisAuditTableBody: document.getElementById('crisis-audit-tbody'),
     btnExportCrisisCsv: document.getElementById('btn-export-crisis-csv'),
+    statisticalCarryPanel: document.getElementById('statistical-carry-panel'),
+    labelVolatilityDispersion: document.getElementById('label-volatility-dispersion'),
+    btnRegimeConservative: document.getElementById('btn-regime-conservative'),
+    btnRegimeBase: document.getElementById('btn-regime-base'),
+    btnRegimeBull: document.getElementById('btn-regime-bull'),
+    labelRegimeConservativeVal: document.getElementById('label-regime-conservative-val'),
+    labelRegimeBaseVal: document.getElementById('label-regime-base-val'),
+    labelRegimeBullVal: document.getElementById('label-regime-bull-val'),
+    inputLookbackDays: document.getElementById('input-lookback-days') as HTMLInputElement | null,
+    valLookbackDays: document.getElementById('val-lookback-days'),
 
     // Collateral Intelligence Card
     ciCard: document.getElementById('ci-card'),

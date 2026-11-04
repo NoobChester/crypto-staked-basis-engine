@@ -858,6 +858,69 @@
             </div>
           </div>
 
+          <!-- Statistical Carry & Volatility Regime Panel -->
+          <div id="statistical-carry-panel" class="p-3 bg-brand-surface/70 rounded-xl border border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                Statistical Carry Regimes (±2σ 95% CI)
+              </span>
+              <span id="label-volatility-dispersion" class="text-[10px] font-mono text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-800/80">
+                Funding σ: ±0.0% | Staking σ: ±0.0%
+              </span>
+            </div>
+
+            <!-- Regime Selectors (Segmented Buttons) -->
+            <div class="grid grid-cols-3 gap-1.5">
+              <button type="button" id="btn-regime-conservative" data-action="set-regime" data-regime="conservative"
+                class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-amber-300 border border-slate-800 hover:border-amber-700/60 transition text-left font-mono cursor-pointer flex flex-col group"
+                title="Stress Test / Conservative: μ - 2σ downside carry compression">
+                <span class="text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                  <span>Conservative</span>
+                  <span class="text-[8px] px-1 rounded bg-amber-950 border border-amber-800">-2σ</span>
+                </span>
+                <span class="text-[9px] text-slate-400 mt-0.5" id="label-regime-conservative-val">--</span>
+              </button>
+
+              <button type="button" id="btn-regime-base" data-action="set-regime" data-regime="base"
+                class="py-1.5 px-2 rounded-lg bg-cyan-950/90 text-cyan-300 border border-cyan-700 shadow-sm transition text-left font-mono cursor-pointer flex flex-col group ring-1 ring-cyan-500/50"
+                title="Base Case: Rolling historical mean (μ)">
+                <span class="text-[10px] font-bold text-cyan-300 flex items-center gap-1">
+                  <span>Base Case</span>
+                  <span class="text-[8px] px-1 rounded bg-cyan-900 border border-cyan-700">μ Mean</span>
+                </span>
+                <span class="text-[9px] text-slate-400 mt-0.5" id="label-regime-base-val">--</span>
+              </button>
+
+              <button type="button" id="btn-regime-bull" data-action="set-regime" data-regime="bull"
+                class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-purple-300 border border-slate-800 hover:border-purple-700/60 transition text-left font-mono cursor-pointer flex flex-col group"
+                title="Bull / Contango Windfall: μ + 2σ euphoric carry">
+                <span class="text-[10px] font-bold text-purple-400 flex items-center gap-1">
+                  <span>Bull</span>
+                  <span class="text-[8px] px-1 rounded bg-purple-950 border border-purple-800">+2σ</span>
+                </span>
+                <span class="text-[9px] text-slate-400 mt-0.5" id="label-regime-bull-val">--</span>
+              </button>
+            </div>
+
+            <!-- Statistical Lookback Window Slider -->
+            <div class="space-y-1 pt-1">
+              <div class="flex items-center justify-between text-xs">
+                <label class="text-[11px] font-semibold text-slate-300">Statistical Lookback Window</label>
+                <span id="val-lookback-days" class="font-mono text-cyan-300 font-bold text-[11px]">30 Days</span>
+              </div>
+              <input type="range" id="input-lookback-days" min="7" max="180" step="1" value="30" class="w-full">
+              <div class="flex justify-between gap-1 pt-0.5">
+                <button type="button" data-action="set-lookback" data-days="7" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">7d</button>
+                <button type="button" data-action="set-lookback" data-days="14" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">14d</button>
+                <button type="button" data-action="set-lookback" data-days="30" class="w-full py-0.5 text-[9px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800 transition">30d</button>
+                <button type="button" data-action="set-lookback" data-days="60" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">60d</button>
+                <button type="button" data-action="set-lookback" data-days="90" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">90d</button>
+                <button type="button" data-action="set-lookback" data-days="180" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">180d</button>
+              </div>
+            </div>
+          </div>
+
           <!-- Spot Staking APY Slider -->
           <div class="space-y-1">
             <div class="flex items-center justify-between text-xs">

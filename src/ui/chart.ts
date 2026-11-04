@@ -1,10 +1,17 @@
 /**
  * @file chart.ts
  * @description HTML5 Canvas 2D rendering engine for PnL curves, liquidation cliffs,
- * entry reference baselines, and interactive tooltip tracking.
+ * entry reference baselines, statistical carry confidence fans (±2σ corridors),
+ * and interactive tooltip tracking.
  */
 
 import { calculateOutcome, fmtUSD, fmtPct, type HedgingState, type HedgingOutcome } from '../math/hedging.js';
+
+export interface ChartConfidenceStats {
+  sigmaFunding?: number;
+  sigmaStaking?: number;
+  showConfidenceFan?: boolean;
+}
 
 export interface TooltipElements {
   tooltip: HTMLElement | null;
@@ -12,27 +19,85 @@ export interface TooltipElements {
   ttVal: HTMLElement | null;
   ttRoi: HTMLElement | null;
   ttStatus: HTMLElement | null;
+  ttCi?: HTMLElement | null;
+  getConfidenceStats?: () => ChartConfidenceStats | undefined;
+  confidenceStats?: ChartConfidenceStats;
+}
+
+export interface ConfidenceEnvelopeResult {
+  pnlPoints: Array<{ x: number; y: number; isLiq: boolean }>;
+  upperPoints: Array<{ x: number; y: number }>;
+  lowerPoints: Array<{ x: number; y: number }>;
+}
+
+/**
+ * Pure calculation helper to evaluate base curve along with ±2σ confidence envelope corridor.
+ */
+export function calculateConfidenceEnvelope(
+  state: HedgingState,
+  confidenceStats?: ChartConfidenceStats,
+  xMin = -100,
+  xMax = 100,
+  stepCount = 140
+): ConfidenceEnvelopeResult {
+  const xSpan = xMax - xMin;
+  const pnlPoints: Array<{ x: number; y: number; isLiq: boolean }> = [];
+  const upperPoints: Array<{ x: number; y: number }> = [];
+  const lowerPoints: Array<{ x: number; y: number }> = [];
+
+  const shouldRenderFan = confidenceStats?.showConfidenceFan !== false && confidenceStats?.sigmaFunding !== undefined;
+
+  for (let i = 0; i <= stepCount; i++) {
+    const pMove = xMin + (xSpan * i / stepCount);
+    const outcome = calculateOutcome(pMove, state);
+    pnlPoints.push({ x: pMove, y: outcome.totalPortfolioVal, isLiq: outcome.isLiquidated });
+
+    if (shouldRenderFan && confidenceStats?.sigmaFunding !== undefined) {
+      const upperRes = calculateOutcome(pMove, {
+        ...state,
+        fundingAPR: state.fundingAPR + 2 * confidenceStats.sigmaFunding,
+        stakingAPY: state.stakingAPY + 2 * (confidenceStats.sigmaStaking ?? 0)
+      });
+      const lowerRes = calculateOutcome(pMove, {
+        ...state,
+        fundingAPR: state.fundingAPR - 2 * confidenceStats.sigmaFunding,
+        stakingAPY: Math.max(0.1, state.stakingAPY - 2 * (confidenceStats.sigmaStaking ?? 0))
+      });
+
+      upperPoints.push({ x: pMove, y: upperRes.totalPortfolioVal });
+      lowerPoints.push({ x: pMove, y: lowerRes.totalPortfolioVal });
+    }
+  }
+
+  return { pnlPoints, upperPoints, lowerPoints };
 }
 
 export function drawChart(
   canvas: HTMLCanvasElement | null,
   state: HedgingState,
-  currentRes: HedgingOutcome
+  currentRes: HedgingOutcome,
+  confidenceStats?: ChartConfidenceStats
 ): void {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
-  const rect = canvas.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
+  const rect = typeof canvas.getBoundingClientRect === 'function'
+    ? canvas.getBoundingClientRect()
+    : { width: canvas.width || 800, height: canvas.height || 400 };
+  const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
 
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.resetTransform();
-  ctx.scale(dpr, dpr);
+  const W = rect.width || canvas.width || 800;
+  const H = rect.height || canvas.height || 400;
 
-  const W = rect.width;
-  const H = rect.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  if (typeof ctx.resetTransform === 'function') {
+    ctx.resetTransform();
+  }
+  if (typeof ctx.scale === 'function') {
+    ctx.scale(dpr, dpr);
+  }
 
   const pad = { top: 25, right: 30, bottom: 45, left: 65 };
   const plotW = W - pad.left - pad.right;
@@ -43,7 +108,13 @@ export function drawChart(
   const xSpan = xMax - xMin;
 
   const stepCount = 140;
-  const pnlPoints: Array<{ x: number; y: number; isLiq: boolean }> = [];
+  const { pnlPoints, upperPoints, lowerPoints } = calculateConfidenceEnvelope(
+    state,
+    confidenceStats,
+    xMin,
+    xMax,
+    stepCount
+  );
   const spotPoints: Array<{ x: number; y: number }> = [];
 
   let minVal = Infinity;
@@ -51,14 +122,16 @@ export function drawChart(
 
   for (let i = 0; i <= stepCount; i++) {
     const pMove = xMin + (xSpan * i / stepCount);
-    const outcome = calculateOutcome(pMove, state);
-    pnlPoints.push({ x: pMove, y: outcome.totalPortfolioVal, isLiq: outcome.isLiquidated });
-
     const unhedged = state.capital * (1 + (pMove / 100));
     spotPoints.push({ x: pMove, y: unhedged });
 
-    minVal = Math.min(minVal, outcome.totalPortfolioVal, unhedged);
-    maxVal = Math.max(maxVal, outcome.totalPortfolioVal, unhedged);
+    minVal = Math.min(minVal, pnlPoints[i].y, unhedged);
+    maxVal = Math.max(maxVal, pnlPoints[i].y, unhedged);
+
+    if (upperPoints.length > 0 && lowerPoints.length > 0) {
+      minVal = Math.min(minVal, lowerPoints[i].y);
+      maxVal = Math.max(maxVal, upperPoints[i].y);
+    }
   }
 
   const yMin = Math.max(0, Math.floor(minVal * 0.85 / 1000) * 1000);
@@ -115,12 +188,16 @@ export function drawChart(
   // Initial Capital Entry Line (dashed reference)
   const yBase = toCanvasY(state.capital);
   ctx.strokeStyle = '#334155';
-  ctx.setLineDash([4, 4]);
+  if (typeof ctx.setLineDash === 'function') {
+    ctx.setLineDash([4, 4]);
+  }
   ctx.beginPath();
   ctx.moveTo(pad.left, yBase);
   ctx.lineTo(pad.left + plotW, yBase);
   ctx.stroke();
-  ctx.setLineDash([]);
+  if (typeof ctx.setLineDash === 'function') {
+    ctx.setLineDash([]);
+  }
   ctx.fillStyle = '#94a3b8';
   ctx.textAlign = 'left';
   ctx.fillText('ENTRY BASE: $' + state.capital.toLocaleString(), pad.left + 8, yBase - 8);
@@ -135,12 +212,16 @@ export function drawChart(
 
     ctx.strokeStyle = '#f43f5e';
     ctx.lineWidth = 1.5;
-    ctx.setLineDash([5, 4]);
+    if (typeof ctx.setLineDash === 'function') {
+      ctx.setLineDash([5, 4]);
+    }
     ctx.beginPath();
     ctx.moveTo(liqX, pad.top);
     ctx.lineTo(liqX, pad.top + plotH);
     ctx.stroke();
-    ctx.setLineDash([]);
+    if (typeof ctx.setLineDash === 'function') {
+      ctx.setLineDash([]);
+    }
 
     ctx.fillStyle = '#fb7185';
     ctx.font = 'bold 9px "JetBrains Mono", monospace';
@@ -151,7 +232,9 @@ export function drawChart(
   // Draw Benchmark Spot Line
   ctx.strokeStyle = '#475569';
   ctx.lineWidth = 1.5;
-  ctx.setLineDash([3, 3]);
+  if (typeof ctx.setLineDash === 'function') {
+    ctx.setLineDash([3, 3]);
+  }
   ctx.beginPath();
   for (let i = 0; i < spotPoints.length; i++) {
     const pt = spotPoints[i];
@@ -161,14 +244,98 @@ export function drawChart(
     else ctx.lineTo(x, y);
   }
   ctx.stroke();
-  ctx.setLineDash([]);
+  if (typeof ctx.setLineDash === 'function') {
+    ctx.setLineDash([]);
+  }
+
+  // Draw Confidence Fan Corridor (if enabled and points available)
+  if (upperPoints.length > 0 && lowerPoints.length > 0) {
+    if (typeof ctx.save === 'function') ctx.save();
+
+    // 1. Shaded corridor polygon
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(upperPoints[0].x), toCanvasY(upperPoints[0].y));
+    for (let i = 1; i < upperPoints.length; i++) {
+      ctx.lineTo(toCanvasX(upperPoints[i].x), toCanvasY(upperPoints[i].y));
+    }
+    const lastLower = lowerPoints[lowerPoints.length - 1];
+    ctx.lineTo(toCanvasX(lastLower.x), toCanvasY(lastLower.y));
+    for (let i = lowerPoints.length - 2; i >= 0; i--) {
+      ctx.lineTo(toCanvasX(lowerPoints[i].x), toCanvasY(lowerPoints[i].y));
+    }
+    ctx.closePath();
+
+    const fanGradient = typeof ctx.createLinearGradient === 'function'
+      ? ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH)
+      : null;
+    if (fanGradient && typeof fanGradient.addColorStop === 'function') {
+      fanGradient.addColorStop(0, 'rgba(6, 182, 212, 0.08)');
+      fanGradient.addColorStop(1, 'rgba(6, 182, 212, 0.02)');
+      ctx.fillStyle = fanGradient;
+    } else {
+      ctx.fillStyle = 'rgba(6, 182, 212, 0.05)';
+    }
+    ctx.fill();
+
+    // 2. Upper boundary dashed line (#0891b2, lineDash [3, 3], lineWidth 1)
+    ctx.strokeStyle = '#0891b2';
+    ctx.lineWidth = 1;
+    if (typeof ctx.setLineDash === 'function') {
+      ctx.setLineDash([3, 3]);
+    }
+    ctx.beginPath();
+    for (let i = 0; i < upperPoints.length; i++) {
+      const x = toCanvasX(upperPoints[i].x);
+      const y = toCanvasY(upperPoints[i].y);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // 3. Lower boundary dashed line (#0891b2, lineDash [3, 3], lineWidth 1)
+    ctx.beginPath();
+    for (let i = 0; i < lowerPoints.length; i++) {
+      const x = toCanvasX(lowerPoints[i].x);
+      const y = toCanvasY(lowerPoints[i].y);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    if (typeof ctx.setLineDash === 'function') {
+      ctx.setLineDash([]);
+    }
+
+    // 4. Subtle label annotations near right plot edge
+    const lastUpper = upperPoints[upperPoints.length - 1];
+    const upperY = toCanvasY(lastUpper.y);
+    const lowerY = toCanvasY(lastLower.y);
+
+    ctx.font = '9px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#0891b2';
+    ctx.textAlign = 'right';
+
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('+2σ Bull', pad.left + plotW - 4, Math.max(pad.top + 10, upperY - 2));
+
+    ctx.textBaseline = 'top';
+    ctx.fillText('-2σ Stress', pad.left + plotW - 4, Math.min(pad.top + plotH - 10, lowerY + 2));
+
+    if (typeof ctx.restore === 'function') ctx.restore();
+  }
 
   // Draw Strategy Fill Gradient
-  const areaGradient = ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH);
-  areaGradient.addColorStop(0, 'rgba(6, 182, 212, 0.22)');
-  areaGradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+  const areaGradient = typeof ctx.createLinearGradient === 'function'
+    ? ctx.createLinearGradient(0, pad.top, 0, pad.top + plotH)
+    : null;
+  if (areaGradient && typeof areaGradient.addColorStop === 'function') {
+    areaGradient.addColorStop(0, 'rgba(6, 182, 212, 0.22)');
+    areaGradient.addColorStop(1, 'rgba(6, 182, 212, 0.0)');
+    ctx.fillStyle = areaGradient;
+  } else {
+    ctx.fillStyle = 'rgba(6, 182, 212, 0.1)';
+  }
 
-  ctx.fillStyle = areaGradient;
+  ctx.fillStyle = areaGradient || 'rgba(6, 182, 212, 0.1)';
   ctx.beginPath();
   ctx.moveTo(toCanvasX(-100), pad.top + plotH);
   for (let i = 0; i < pnlPoints.length; i++) {
@@ -202,12 +369,16 @@ export function drawChart(
 
   ctx.strokeStyle = currentRes.isLiquidated ? 'rgba(244, 63, 94, 0.7)' : 'rgba(6, 182, 212, 0.7)';
   ctx.lineWidth = 1;
-  ctx.setLineDash([2, 2]);
+  if (typeof ctx.setLineDash === 'function') {
+    ctx.setLineDash([2, 2]);
+  }
   ctx.beginPath();
   ctx.moveTo(curX, pad.top);
   ctx.lineTo(curX, pad.top + plotH);
   ctx.stroke();
-  ctx.setLineDash([]);
+  if (typeof ctx.setLineDash === 'function') {
+    ctx.setLineDash([]);
+  }
 
   ctx.shadowColor = currentRes.isLiquidated ? '#f43f5e' : '#06b6d4';
   ctx.shadowBlur = 12;
@@ -225,7 +396,7 @@ export function drawChart(
   // Tooltip Callout on Pin
   const badgeText = fmtUSD(currentRes.totalPortfolioVal);
   ctx.font = 'bold 10px "JetBrains Mono", monospace';
-  const badgeW = ctx.measureText(badgeText).width + 12;
+  const badgeW = (typeof ctx.measureText === 'function' ? ctx.measureText(badgeText).width : 60) + 12;
   const badgeH = 20;
   const badgeY = Math.max(pad.top + 8, curY - 26);
   const badgeX = Math.min(Math.max(pad.left + badgeW / 2, curX), pad.left + plotW - badgeW / 2);
@@ -251,11 +422,12 @@ export function drawChart(
 export function setupChartInteractions(
   canvas: HTMLCanvasElement | null,
   tooltipEls: TooltipElements,
-  getState: () => HedgingState
-): void {
+  getState: () => HedgingState,
+  getConfidenceStats?: (() => ChartConfidenceStats | undefined) | ChartConfidenceStats
+): (() => void) | void {
   if (!canvas || !tooltipEls.tooltip) return;
 
-  canvas.addEventListener('mousemove', (e: MouseEvent) => {
+  const onMouseMove = (e: MouseEvent) => {
     const rect = canvas.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
@@ -288,10 +460,74 @@ export function setupChartInteractions(
         : (currentState.mode === 'unified' ? 'Status: Cross-Margin Protected' : 'Status: Isolated Hedged');
       tooltipEls.ttStatus.className = res.isLiquidated ? 'text-[10px] text-rose-400 font-bold' : 'text-[10px] text-cyan-400';
     }
-  });
 
-  canvas.addEventListener('mouseleave', () => {
+    const confStats = typeof getConfidenceStats === 'function'
+      ? getConfidenceStats()
+      : (getConfidenceStats ??
+         (typeof tooltipEls.getConfidenceStats === 'function'
+           ? tooltipEls.getConfidenceStats()
+           : tooltipEls.confidenceStats));
+
+    if (confStats && confStats.showConfidenceFan !== false && confStats.sigmaFunding !== undefined) {
+      const upperRes = calculateOutcome(hoverPriceMove, {
+        ...currentState,
+        fundingAPR: currentState.fundingAPR + 2 * confStats.sigmaFunding,
+        stakingAPY: currentState.stakingAPY + 2 * (confStats.sigmaStaking ?? 0)
+      });
+      const lowerRes = calculateOutcome(hoverPriceMove, {
+        ...currentState,
+        fundingAPR: currentState.fundingAPR - 2 * confStats.sigmaFunding,
+        stakingAPY: Math.max(0.1, currentState.stakingAPY - 2 * (confStats.sigmaStaking ?? 0))
+      });
+
+      const ciText = `95% CI: ${fmtUSD(lowerRes.totalPortfolioVal)} \u2013 ${fmtUSD(upperRes.totalPortfolioVal)}`;
+
+      let ciEl = tooltipEls.ttCi;
+      if (!ciEl && tooltipEls.tooltip) {
+        if (typeof tooltipEls.tooltip.querySelector === 'function') {
+          ciEl = tooltipEls.tooltip.querySelector('#tt-ci') as HTMLElement | null;
+        }
+        if (!ciEl && typeof document !== 'undefined' && typeof document.createElement === 'function') {
+          ciEl = document.createElement('div');
+          ciEl.id = 'tt-ci';
+          ciEl.className = 'text-[10px] text-cyan-400 font-mono';
+          if (tooltipEls.ttStatus && tooltipEls.ttStatus.parentNode === tooltipEls.tooltip && typeof tooltipEls.tooltip.insertBefore === 'function') {
+            tooltipEls.tooltip.insertBefore(ciEl, tooltipEls.ttStatus);
+          } else if (typeof tooltipEls.tooltip.appendChild === 'function') {
+            tooltipEls.tooltip.appendChild(ciEl);
+          }
+        }
+      }
+
+      if (ciEl) {
+        ciEl.textContent = ciText;
+        if (ciEl.classList && typeof ciEl.classList.remove === 'function') {
+          ciEl.classList.remove('hidden');
+        }
+      }
+    } else {
+      let ciEl = tooltipEls.ttCi;
+      if (!ciEl && tooltipEls.tooltip && typeof tooltipEls.tooltip.querySelector === 'function') {
+        ciEl = tooltipEls.tooltip.querySelector('#tt-ci') as HTMLElement | null;
+      }
+      if (ciEl) {
+        if (ciEl.classList && typeof ciEl.classList.add === 'function') {
+          ciEl.classList.add('hidden');
+        }
+        ciEl.textContent = '';
+      }
+    }
+  };
+
+  const onMouseLeave = () => {
     tooltipEls.tooltip?.classList.add('hidden');
-  });
-}
+  };
 
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('mouseleave', onMouseLeave);
+
+  return () => {
+    canvas.removeEventListener('mousemove', onMouseMove);
+    canvas.removeEventListener('mouseleave', onMouseLeave);
+  };
+}

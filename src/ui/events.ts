@@ -41,6 +41,8 @@ export interface AppActions {
   openCrisisAuditModal?: () => void;
   closeCrisisAuditModal?: () => void;
   exportCrisisAuditCsv?: () => void;
+  setRegime?: (regime: 'conservative' | 'base' | 'bull') => void;
+  setLookback?: (days: number) => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -167,6 +169,16 @@ export function setupEventDelegation(actions: AppActions): void {
         }
         break;
       }
+            case 'set-regime': {
+        const regime = target.getAttribute('data-regime') as 'conservative' | 'base' | 'bull';
+        if (regime && actions.setRegime) actions.setRegime(regime);
+        break;
+      }
+      case 'set-lookback': {
+        const days = parseInt(target.getAttribute('data-days') || '30', 10);
+        if (actions.setLookback) actions.setLookback(days);
+        break;
+      }
       case 'open-crisis-audit-modal': {
         actions.openCrisisAuditModal?.();
         break;
@@ -186,7 +198,8 @@ export function setupEventDelegation(actions: AppActions): void {
 export function bindSliderListeners(
   UI: UIElements,
   state: HedgingState,
-  onUpdate: () => void
+  onUpdate: () => void,
+  onLookback?: (days: number) => void
 ): void {
   if (UI.inputPriceMove) {
     UI.inputPriceMove.addEventListener('input', (e) => {
@@ -260,6 +273,13 @@ export function bindSliderListeners(
         UI.splitHelperText.textContent = `Effective Short Leverage: ${lev.toFixed(2)}x (Liquidation buffer: +${rLiq.toFixed(1)}%)`;
       }
       onUpdate();
+    });
+  }
+  if (UI.inputLookbackDays) {
+    UI.inputLookbackDays.addEventListener('input', (e) => {
+      const days = parseInt((e.target as HTMLInputElement).value, 10);
+      if (UI.valLookbackDays) UI.valLookbackDays.textContent = `${days} Days`;
+      if (onLookback) onLookback(days);
     });
   }
 }

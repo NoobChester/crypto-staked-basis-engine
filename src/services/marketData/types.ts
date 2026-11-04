@@ -79,6 +79,20 @@ export interface HistoricalWindowStats {
   intervalCount: number;
 }
 
+export interface StatisticalCarrySnapshot {
+  lookbackDays: number;
+  symbol: 'ETH' | 'BTC' | 'SOL';
+  funding: HistoricalWindowStats;
+  staking: HistoricalWindowStats;
+  netCarry: HistoricalWindowStats;
+  baseFundingApr: number;
+  conservativeFundingApr: number; // mu - 2*sigma
+  bullFundingApr: number;         // mu + 2*sigma
+  baseStakingApy: number;
+  conservativeStakingApy: number; // max(0.1, mu - 2*sigma)
+  bullStakingApy: number;         // mu + 2*sigma
+}
+
 export interface AssetHistoricalAnalytics {
   symbol: 'ETH' | 'BTC' | 'SOL';
   rangeDays: 30 | 90 | 180;
