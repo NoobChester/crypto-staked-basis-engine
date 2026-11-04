@@ -347,8 +347,9 @@ export function setFundingVenue(venue: FundingVenue): void {
 
   syncHyperliquidMarginLock(venue);
 
-  if (state.isLiveFunding) {
-    applyLiveFunding();
+  if (state.fundingWindow !== 'custom') {
+    const win = (state.fundingWindow === '7d' || state.fundingWindow === '30d' || state.fundingWindow === '90d') ? state.fundingWindow : 'live';
+    applyHistoricalFunding(win);
   } else {
     updateApp();
   }
@@ -443,14 +444,11 @@ export function setTradedAsset(asset: TradedAsset): void {
   currentHistoricalAsset = asset;
   const data = getLatestMarketData();
 
-  if (state.isLiveFunding) {
-    const liveRate = data[asset]?.perpFundingAPR ?? 10.0;
-    state.fundingAPR = liveRate;
-    if (UI.inputFunding) UI.inputFunding.value = liveRate.toString();
-    if (UI.valFunding) {
-      UI.valFunding.textContent = fmtPct(liveRate) + ' APR';
-      UI.valFunding.className = `font-mono font-bold ${liveRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-    }
+  if (state.fundingWindow !== 'custom') {
+    const win = (state.fundingWindow === '7d' || state.fundingWindow === '30d' || state.fundingWindow === '90d') ? state.fundingWindow : 'live';
+    applyHistoricalFunding(win);
+  } else {
+    updateApp();
   }
 
   if (state.mode === 'unified') {

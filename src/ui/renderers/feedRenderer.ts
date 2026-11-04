@@ -84,7 +84,11 @@ export function renderMarketData(UI: UIElements, state: HedgingState): void {
   }
   if (UI.feedFundingSource) {
     const srcShort = assetRates.fundingSource.includes('Binance') ? 'Binance' : (assetRates.fundingSource.includes('Hyperliquid') ? 'Hyperliquid' : 'Preset');
-    UI.feedFundingSource.textContent = `(${srcShort})`;
+    const isClamped = Math.abs(assetRates.perpFundingAPR - 10.95) < 0.05;
+    UI.feedFundingSource.textContent = isClamped ? `(${srcShort} • Clamped)` : `(${srcShort})`;
+    UI.feedFundingSource.title = isClamped
+      ? 'Current 8h settlement clamped at exchange protocol baseline (0.01%/8h = 10.95% APR). Click 7d/30d/90d pills below to use realized trailing averages.'
+      : `Live perpetual funding rate from ${assetRates.fundingSource}`;
   }
 
   // Update Venue Switcher Buttons
