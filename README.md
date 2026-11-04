@@ -138,3 +138,4 @@ This repository is optimized for autonomous AI coding agents (Antigravity, Gemin
 ## License
 
 MIT © NoobChester
+

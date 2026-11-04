@@ -1,5 +1,5 @@
 {
-  "name": "crypto-staked-basis",
+  "name": "crypto-staked-basis-engine",
   "version": "1.0.0",
   "description": "Institutional Quantitative Simulation, Risk Modeling & Backtesting Engine for Crypto Staked Basis Trades",
   "type": "module",
@@ -14,9 +14,9 @@
     "delta-neutral",
     "liquidation",
     "cross-margin",
-    "isolated-margin"
+    "isolated-margin",
+    "staked-basis"
   ],
   "author": "NoobChester",
   "license": "MIT"
 }
-
