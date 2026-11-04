@@ -8,6 +8,7 @@ import { fmtUSD, fmtPct, type HedgingState } from '../math/hedging.js';
 import type { UIElements } from './dom.js';
 import type { MarginMode, TradedAsset, BtcVariant, CollateralPresetKey, SolYieldType } from '../config/presets.js';
 import type { FundingVenue, ExecutionFeeTier } from '../services/marketData.js';
+import type { CrisisScenarioKey } from '../config/scenarios.js';
 
 export interface AppActions {
   setAccountMode: (mode: MarginMode) => void;
@@ -35,6 +36,8 @@ export interface AppActions {
   setFundingVenue: (venue: FundingVenue) => void;
   refreshLiveRates: () => void;
   setFeeTier?: (tier: ExecutionFeeTier) => void;
+  applyCrisisScenario?: (key: CrisisScenarioKey) => void;
+  restoreLiveMarketFeeds?: () => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -148,6 +151,19 @@ export function setupEventDelegation(actions: AppActions): void {
         actions.applyHistoricalWindowToAll(win);
         break;
       }
+      case 'apply-crisis-scenario': {
+        const scenarioKey = target.getAttribute('data-scenario') as CrisisScenarioKey;
+        if (scenarioKey && actions.applyCrisisScenario) {
+          actions.applyCrisisScenario(scenarioKey);
+        }
+        break;
+      }
+      case 'restore-live-feeds': {
+        if (actions.restoreLiveMarketFeeds) {
+          actions.restoreLiveMarketFeeds();
+        }
+        break;
+      }
     }
   });
 }
@@ -160,6 +176,7 @@ export function bindSliderListeners(
   if (UI.inputPriceMove) {
     UI.inputPriceMove.addEventListener('input', (e) => {
       state.priceMove = parseFloat((e.target as HTMLInputElement).value);
+      (state as any).activeCrisisScenario = null;
       if (UI.valPriceMove) UI.valPriceMove.textContent = fmtPct(state.priceMove);
       onUpdate();
     });
@@ -187,6 +204,7 @@ export function bindSliderListeners(
       state.fundingAPR = parseFloat((e.target as HTMLInputElement).value);
       state.isLiveFunding = false;
       (state as any).fundingWindow = 'custom';
+      (state as any).activeCrisisScenario = null;
       if (UI.valFunding) {
         UI.valFunding.textContent = fmtPct(state.fundingAPR) + ' APR';
         UI.valFunding.className = `font-mono font-bold ${state.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
@@ -208,6 +226,7 @@ export function bindSliderListeners(
   if (UI.inputDepeg) {
     UI.inputDepeg.addEventListener('input', (e) => {
       state.depegPct = parseFloat((e.target as HTMLInputElement).value);
+      (state as any).activeCrisisScenario = null;
       if (UI.valDepeg) UI.valDepeg.textContent = state.depegPct.toFixed(1) + '% Discount';
       onUpdate();
     });

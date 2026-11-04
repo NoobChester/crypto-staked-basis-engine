@@ -289,7 +289,7 @@
               </div>
             </div>
 
-            <input type="range" id="input-price-move" min="-100" max="100" step="0.5" value="0" class="w-full cursor-pointer">
+            <input type="range" id="input-price-move" min="-100" max="200" step="0.5" value="0" class="w-full cursor-pointer">
 
             <div class="flex justify-between text-[11px] font-mono text-slate-400 select-none">
               <button type="button" data-action="set-price-change" data-pct="-100" class="hover:text-rose-400 transition cursor-pointer text-left">-100% (Capitulation)</button>
@@ -298,7 +298,8 @@
               <button type="button" data-action="set-price-change" data-pct="0" class="hover:text-cyan-300 font-bold transition cursor-pointer">0% (Entry)</button>
               <button type="button" data-action="set-price-change" data-pct="20" class="hover:text-slate-300 transition cursor-pointer">+20%</button>
               <button type="button" data-action="set-price-change" data-pct="50" class="hover:text-slate-300 transition cursor-pointer hidden sm:inline">+50%</button>
-              <button type="button" data-action="set-price-change" data-pct="100" class="hover:text-emerald-400 transition cursor-pointer text-right">+100% (2x Rally)</button>
+              <button type="button" data-action="set-price-change" data-pct="100" class="hover:text-slate-300 transition cursor-pointer">+100% (2x)</button>
+              <button type="button" data-action="set-price-change" data-pct="200" class="hover:text-purple-400 transition cursor-pointer text-right">+200% (3x)</button>
             </div>
           </div>
         </div>
@@ -358,6 +359,135 @@
               <div id="breakdown-excess-dollar-carry" class="text-sm font-bold text-indigo-300 mt-0.5">+$208.23</div>
               <div class="text-[10px] text-slate-400 mt-0.5 font-mono">Alpha vs 4.35% Cash</div>
             </div>
+          </div>
+        </div>
+
+        <!-- Macro Stress-Test & Institutional Crisis Scenarios Matrix -->
+        <div id="scenario-matrix-panel" class="bg-brand-card rounded-2xl border border-brand-border p-4 sm:p-5 space-y-3.5">
+          <div class="flex items-center justify-between border-b border-brand-border pb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-amber-400"></div>
+              <h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Institutional Crisis &amp; Stress-Test Matrix
+              </h3>
+            </div>
+            <button type="button" id="btn-restore-live-feeds" data-action="restore-live-feeds" class="hidden items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono text-cyan-300 bg-cyan-950/70 border border-cyan-700/60 hover:bg-cyan-900/60 rounded-lg transition-all cursor-pointer">
+              <svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              ↺ Restore Live Feeds
+            </button>
+          </div>
+
+          <!-- Scenario Cards Grid (6 Scenarios) -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            <!-- 1. Celsius 2022 LST De-Peg -->
+            <button type="button" id="btn-scenario-celsius" data-action="apply-crisis-scenario" data-scenario="celsius_depeg_2022" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                  <span class="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-900/60 font-semibold">JUN 2022</span>
+                  <span class="text-rose-400 font-bold">-40% Crash</span>
+                </div>
+                <div class="font-bold text-xs text-white group-hover:text-rose-300 transition-colors">Celsius LST De-Peg</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Liquidity Freeze &amp; Inverted Funding</div>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+                <span class="text-slate-400">Funding: <strong class="text-rose-400">-8.0%</strong></span>
+                <span class="text-slate-400">Depeg: <strong class="text-rose-400">6.5%</strong></span>
+              </div>
+            </button>
+
+            <!-- 2. Post-FTX Inverted Carry -->
+            <button type="button" id="btn-scenario-ftx" data-action="apply-crisis-scenario" data-scenario="ftx_carry_winter" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                  <span class="px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-900/60 font-semibold">NOV 2022</span>
+                  <span class="text-amber-400 font-bold">-25% Bear</span>
+                </div>
+                <div class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">Post-FTX Inverted Carry</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Prolonged Short Payment Bleed</div>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+                <span class="text-slate-400">Funding: <strong class="text-amber-400">-12.0%</strong></span>
+                <span class="text-slate-400">Depeg: <strong class="text-slate-300">2.0%</strong></span>
+              </div>
+            </button>
+
+            <!-- 3. Parabolic Bull Squeeze (2x) -->
+            <button type="button" id="btn-scenario-parabolic" data-action="apply-crisis-scenario" data-scenario="parabolic_squeeze_2x" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                  <span class="px-1.5 py-0.5 rounded bg-cyan-950/60 text-cyan-400 border border-cyan-900/60 font-semibold">Q1 2024</span>
+                  <span class="text-emerald-400 font-bold">+100% Rally</span>
+                </div>
+                <div class="font-bold text-xs text-white group-hover:text-cyan-300 transition-colors">Parabolic Squeeze (2x)</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Isolated Wipe vs Unified Buffer</div>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+                <span class="text-slate-400">Funding: <strong class="text-emerald-400">+45.0%</strong></span>
+                <span class="text-slate-400">Depeg: <strong class="text-slate-300">0.0%</strong></span>
+              </div>
+            </button>
+
+            <!-- 4. Exchange Haircut Slash -->
+            <button type="button" id="btn-scenario-haircut" data-action="apply-crisis-scenario" data-scenario="haircut_compression" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                  <span class="px-1.5 py-0.5 rounded bg-indigo-950/60 text-indigo-400 border border-indigo-900/60 font-semibold">BLACK SWAN</span>
+                  <span class="text-indigo-400 font-bold">+50% Rally</span>
+                </div>
+                <div class="font-bold text-xs text-white group-hover:text-indigo-300 transition-colors">Haircut Compression</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Exchange De-risking (30% Haircut)</div>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+                <span class="text-slate-400">Valuation: <strong class="text-indigo-400">70%</strong></span>
+                <span class="text-slate-400">Depeg: <strong class="text-amber-400">4.0%</strong></span>
+              </div>
+            </button>
+
+            <!-- 5. Macro Flash Crash -->
+            <button type="button" id="btn-scenario-flash-crash" data-action="apply-crisis-scenario" data-scenario="flash_crash_yen" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                  <span class="px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-900/60 font-semibold">AUG 2024</span>
+                  <span class="text-rose-400 font-bold">-30% Crash</span>
+                </div>
+                <div class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">Macro Flash Crash</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Yen Carry Unwind / Basis Drop</div>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+                <span class="text-slate-400">Funding: <strong class="text-slate-300">0.0%</strong></span>
+                <span class="text-slate-400">Depeg: <strong class="text-amber-400">3.5%</strong></span>
+              </div>
+            </button>
+
+            <!-- 6. Altcoin Meme Mania (3x) -->
+            <button type="button" id="btn-scenario-meme" data-action="apply-crisis-scenario" data-scenario="meme_mania_rally" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                  <span class="px-1.5 py-0.5 rounded bg-purple-950/60 text-purple-400 border border-purple-900/60 font-semibold">PARABOLIC</span>
+                  <span class="text-emerald-400 font-bold">+200% Surge</span>
+                </div>
+                <div class="font-bold text-xs text-white group-hover:text-purple-300 transition-colors">Altcoin Meme Mania</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Extreme Contango &amp; Cashflow Harvest</div>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+                <span class="text-slate-400">Funding: <strong class="text-emerald-400">+80.0%</strong></span>
+                <span class="text-slate-400">Depeg: <strong class="text-amber-400">5.0%</strong></span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Dynamic Risk Diagnosis Verdict Box -->
+          <div id="scenario-verdict-box" class="hidden p-3.5 rounded-xl border transition-all text-xs">
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+              <div id="scenario-verdict-title" class="font-bold font-mono tracking-wide"></div>
+              <span id="scenario-verdict-pill" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border shrink-0"></span>
+            </div>
+            <p id="scenario-verdict-text" class="text-slate-300 text-[11px] leading-relaxed"></p>
           </div>
         </div>
       </div>

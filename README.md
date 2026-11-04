@@ -1,7 +1,7 @@
 # Crypto Staked Basis (DELTA-Q Quant Engine)
 
 [![Live Demo](https://img.shields.io/badge/Live%20Terminal-Online%20Simulation-06b6d4?style=flat-square&logo=googlechrome&logoColor=white)](https://noobchester.github.io/crypto-staked-basis-engine/)
-[![Tests](https://img.shields.io/badge/tests-45%2F45%20passing-emerald?style=flat-square&logo=vitest)](tests/hedging.test.ts)
+[![Tests](https://img.shields.io/badge/tests-53%2F53%20passing-emerald?style=flat-square&logo=vitest)](tests/hedging.test.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x%20strict-blue?style=flat-square&logo=typescript)](tsconfig.json)
 [![Vite](https://img.shields.io/badge/Vite-HMR%20active-646CFF?style=flat-square&logo=vite)](vite.config.ts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-amber.svg?style=flat-square)](LICENSE)
@@ -56,6 +56,7 @@ Spot is custodied in Web3 or cold storage, while the short perp is margined in c
 
 ## Institutional Domain Features
 
+- **Macro Stress-Test & Crisis Scenario Matrix**: 1-click institutional simulation of 6 historical and extreme market regimes (Celsius 2022 LST De-Peg freeze, Post-FTX Inverted Carry, Parabolic Bull Squeeze 2x, Exchange Haircut Slash, Macro Flash Crash, and Altcoin Meme Mania) with live margin risk diagnostic verdicts.
 - **Babylon Bitcoin LST Routing**: Centralized derivatives desks do not whitelist restaked BTC (LBTC, SolvBTC) for cross-margin collateral. The engine models them under Isolated Margin (held in Web3 custody to harvest ~3.2% yield, hedged with USDC on-exchange).
 - **Nominal vs. Real Yield Modeling**: Solana's ~5.4% annual network token inflation dilutes USD-hedged purchasing power. The platform models both Nominal APY (~7.2%) and Real Economic Yield (~1.8%).
 - **LST Depeg Stress Testing**: Simulates liquidity crisis discounts ($d$) and their direct contraction of the liquidation safety cushion.

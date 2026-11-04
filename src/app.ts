@@ -15,6 +15,10 @@ import {
   type SolYieldType
 } from './config/presets.js';
 import {
+  CRISIS_SCENARIOS,
+  type CrisisScenarioKey
+} from './config/scenarios.js';
+import {
   fetchLiveMarketData,
   fetchAssetHistoricalAnalytics,
   getLatestMarketData,
@@ -54,6 +58,7 @@ export const state: HedgingState & {
   stakingWindow: HistoricalHorizon;
   fundingWindow: HistoricalHorizon;
   feeTier: ExecutionFeeTier;
+  activeCrisisScenario: CrisisScenarioKey | null;
 } = {
   mode: 'unified',
   capital: 10000,
@@ -75,7 +80,8 @@ export const state: HedgingState & {
   isLiveFunding: true,
   isLiveStaking: true,
   stakingWindow: 'live',
-  fundingWindow: 'live'
+  fundingWindow: 'live',
+  activeCrisisScenario: null
 };
 
 let UI: UIElements;
@@ -626,6 +632,7 @@ export function setSolYieldType(yieldType: SolYieldType): void {
 
 export function setPriceChange(pct: number): void {
   state.priceMove = pct;
+  state.activeCrisisScenario = null;
   if (UI.inputPriceMove) UI.inputPriceMove.value = pct.toString();
   if (UI.valPriceMove) UI.valPriceMove.textContent = fmtPct(pct);
   updateApp();
@@ -654,12 +661,76 @@ export function setSplit(splitSpot: number): void {
   updateApp();
 }
 
+export function applyCrisisScenario(key: CrisisScenarioKey): void {
+  const scenario = CRISIS_SCENARIOS[key];
+  if (!scenario) return;
+
+  state.activeCrisisScenario = key;
+  state.priceMove = scenario.priceMove;
+  state.fundingAPR = scenario.fundingAPR;
+  state.isLiveFunding = false;
+  state.fundingWindow = 'custom';
+  state.depegPct = scenario.depegPct;
+
+  if (scenario.collateralRatio !== undefined) {
+    state.collateralRatio = scenario.collateralRatio;
+    if (UI?.valCollateralRatio) {
+      UI.valCollateralRatio.textContent = (scenario.collateralRatio * 100).toFixed(0) + '%';
+    }
+    if (UI?.collateralRatioExplainer) {
+      UI.collateralRatioExplainer.textContent = `Exchange slashed collateral valuation to ${(scenario.collateralRatio * 100).toFixed(0)}% (${((1 - scenario.collateralRatio) * 100).toFixed(0)}% Haircut) in emergency de-risking.`;
+    }
+  }
+
+  // Update DOM inputs to match scenario parameters
+  if (UI?.inputPriceMove) UI.inputPriceMove.value = scenario.priceMove.toString();
+  if (UI?.valPriceMove) UI.valPriceMove.textContent = fmtPct(scenario.priceMove);
+
+  if (UI?.inputFunding) UI.inputFunding.value = scenario.fundingAPR.toString();
+  if (UI?.valFunding) {
+    UI.valFunding.textContent = fmtPct(scenario.fundingAPR) + ' APR';
+    UI.valFunding.className = `font-mono font-bold ${scenario.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+
+  if (UI?.inputDepeg) UI.inputDepeg.value = scenario.depegPct.toString();
+  if (UI?.valDepeg) UI.valDepeg.textContent = `${scenario.depegPct.toFixed(1)}% Discount`;
+
+  updateApp();
+}
+
+export function restoreLiveMarketFeeds(): void {
+  state.activeCrisisScenario = null;
+  state.priceMove = 0;
+  if (UI?.inputPriceMove) UI.inputPriceMove.value = '0';
+  if (UI?.valPriceMove) UI.valPriceMove.textContent = '+0.0%';
+
+  // Restore preset collateral ratio if it was modified
+  if (state.mode === 'unified') {
+    const p = COLLATERAL_PRESETS[state.activePreset];
+    if (p) {
+      state.collateralRatio = p.collateralRatio;
+      if (UI?.valCollateralRatio) {
+        UI.valCollateralRatio.textContent = (p.collateralRatio * 100).toFixed(0) + '%';
+      }
+      if (UI?.collateralRatioExplainer) {
+        UI.collateralRatioExplainer.textContent = p.getExplainer ? p.getExplainer(state.solYieldType) : (p.explainer ?? '');
+      }
+    }
+  }
+
+  applyLiveFunding();
+  applyLiveStaking();
+  applyLiveDepeg();
+  updateApp();
+}
+
 export function resetDefaults(): void {
   state.priceMove = 0;
   state.days = 90;
   state.depegPct = 0.0;
   state.capital = 10000;
   state.splitSpot = 50;
+  state.activeCrisisScenario = null;
 
   if (UI.inputPriceMove) UI.inputPriceMove.value = '0';
   if (UI.valPriceMove) UI.valPriceMove.textContent = '0.0%';
@@ -718,7 +789,9 @@ function init() {
     setHistoricalTimeframe,
     setFundingVenue,
     refreshLiveRates,
-    setFeeTier
+    setFeeTier,
+    applyCrisisScenario,
+    restoreLiveMarketFeeds
   });
   bindSliderListeners(UI, state, updateApp);
   setupChartInteractions(UI.canvas, UI, () => state);

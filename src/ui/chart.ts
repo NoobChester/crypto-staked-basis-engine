@@ -38,6 +38,10 @@ export function drawChart(
   const plotW = W - pad.left - pad.right;
   const plotH = H - pad.top - pad.bottom;
 
+  const xMin = -100;
+  const xMax = state.priceMove > 100 ? Math.max(100, Math.ceil(state.priceMove / 50) * 50) : 100;
+  const xSpan = xMax - xMin;
+
   const stepCount = 140;
   const pnlPoints: Array<{ x: number; y: number; isLiq: boolean }> = [];
   const spotPoints: Array<{ x: number; y: number }> = [];
@@ -46,7 +50,7 @@ export function drawChart(
   let maxVal = -Infinity;
 
   for (let i = 0; i <= stepCount; i++) {
-    const pMove = -100 + (200 * i / stepCount);
+    const pMove = xMin + (xSpan * i / stepCount);
     const outcome = calculateOutcome(pMove, state);
     pnlPoints.push({ x: pMove, y: outcome.totalPortfolioVal, isLiq: outcome.isLiquidated });
 
@@ -61,7 +65,7 @@ export function drawChart(
   const yMax = Math.ceil(maxVal * 1.15 / 1000) * 1000;
 
   function toCanvasX(pMove: number) {
-    return pad.left + ((pMove - (-100)) / 200) * plotW;
+    return pad.left + ((pMove - xMin) / xSpan) * plotW;
   }
   function toCanvasY(val: number) {
     return pad.top + plotH - ((val - yMin) / (yMax - yMin)) * plotH;
@@ -92,8 +96,8 @@ export function drawChart(
     ctx.fillText('$' + Math.round(v).toLocaleString(), pad.left - 8, y);
   }
 
-  // Grid Lines - X Axis (-100%, -50%, 0%, 50%, 100%)
-  const xTicks = [-100, -50, 0, 50, 100];
+  // Grid Lines - X Axis (-100%, -50%, 0%, 50%, 100%, 150%, 200%)
+  const xTicks = xMax > 100 ? [-100, -50, 0, 50, 100, 150, 200] : [-100, -50, 0, 50, 100];
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
   for (const xt of xTicks) {
@@ -121,9 +125,9 @@ export function drawChart(
   ctx.textAlign = 'left';
   ctx.fillText('ENTRY BASE: $' + state.capital.toLocaleString(), pad.left + 8, yBase - 8);
 
-  // Draw Liquidation Cliff (if it falls within the [-100%, +100%] window)
+  // Draw Liquidation Cliff (if it falls within the [xMin, xMax] window)
   const rLiqPct = currentRes.rLiq * 100;
-  if (rLiqPct <= 100 && rLiqPct > -100) {
+  if (rLiqPct <= xMax && rLiqPct > -100) {
     const liqX = toCanvasX(rLiqPct);
 
     ctx.fillStyle = 'rgba(244, 63, 94, 0.08)';
@@ -264,8 +268,9 @@ export function setupChartInteractions(
       return;
     }
 
-    const hoverPriceMove = -100 + ((mouseX - pad.left) / plotW) * 200;
     const currentState = getState();
+    const xMax = currentState.priceMove > 100 ? Math.max(100, Math.ceil(currentState.priceMove / 50) * 50) : 100;
+    const hoverPriceMove = -100 + ((mouseX - pad.left) / plotW) * (xMax - (-100));
     const res = calculateOutcome(hoverPriceMove, currentState);
 
     if (tooltipEls.tooltip) {

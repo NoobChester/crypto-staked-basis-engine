@@ -220,6 +220,20 @@ export interface UIElements {
   labelActiveFeeTier: HTMLElement | null;
   badgeForwardCarry: HTMLElement | null;
 
+  // Crisis Scenarios Matrix Elements
+  scenarioMatrixPanel: HTMLElement | null;
+  btnRestoreLiveFeeds: HTMLElement | null;
+  scenarioVerdictBox: HTMLElement | null;
+  scenarioVerdictTitle: HTMLElement | null;
+  scenarioVerdictText: HTMLElement | null;
+  scenarioVerdictPill: HTMLElement | null;
+  scenarioBtnCelsius: HTMLElement | null;
+  scenarioBtnFtx: HTMLElement | null;
+  scenarioBtnParabolic: HTMLElement | null;
+  scenarioBtnHaircut: HTMLElement | null;
+  scenarioBtnFlashCrash: HTMLElement | null;
+  scenarioBtnMeme: HTMLElement | null;
+
   // Collateral Intelligence Card
   ciCard: HTMLElement | null;
   ciRankBadge: HTMLElement | null;
@@ -460,6 +474,20 @@ export function getUIElements(): UIElements {
     labelActiveFeeTier: document.getElementById('label-active-fee-tier'),
     badgeForwardCarry: document.getElementById('badge-forward-carry'),
 
+    // Crisis Scenarios Matrix Elements
+    scenarioMatrixPanel: document.getElementById('scenario-matrix-panel'),
+    btnRestoreLiveFeeds: document.getElementById('btn-restore-live-feeds'),
+    scenarioVerdictBox: document.getElementById('scenario-verdict-box'),
+    scenarioVerdictTitle: document.getElementById('scenario-verdict-title'),
+    scenarioVerdictText: document.getElementById('scenario-verdict-text'),
+    scenarioVerdictPill: document.getElementById('scenario-verdict-pill'),
+    scenarioBtnCelsius: document.getElementById('btn-scenario-celsius'),
+    scenarioBtnFtx: document.getElementById('btn-scenario-ftx'),
+    scenarioBtnParabolic: document.getElementById('btn-scenario-parabolic'),
+    scenarioBtnHaircut: document.getElementById('btn-scenario-haircut'),
+    scenarioBtnFlashCrash: document.getElementById('btn-scenario-flash-crash'),
+    scenarioBtnMeme: document.getElementById('btn-scenario-meme'),
+
     // Collateral Intelligence Card
     ciCard: document.getElementById('ci-card'),
     ciRankBadge: document.getElementById('ci-rank-badge'),
@@ -486,5 +514,6 @@ export { renderUI } from './renderers/kpiRenderer.js';
 export { renderMarketData, renderHistoricalPills } from './renderers/feedRenderer.js';
 export { renderHistoricalModal, updateHistoricalTooltip } from './renderers/historicalModalRenderer.js';
 export { updateDepegControl } from './renderers/depegRenderer.js';
+export { renderScenarioMatrix } from './renderers/scenarioRenderer.js';
 
 export { bindSliderListeners as bindInputListeners } from "./events.js";
