@@ -97,20 +97,25 @@ describe('Market Data Service & Quantitative Parsers', () => {
     });
   });
 
-  describe('Venue Selection & Consensus Calculations', () => {
-    it('switches active funding venue between Binance, Hyperliquid, and Average', () => {
+  describe('Binary Venue Selection (Binance & Hyperliquid)', () => {
+    it('switches active funding venue between Binance and Hyperliquid', () => {
       setFundingVenue('hyperliquid');
       let data = getLatestMarketData();
       expect(data.selectedVenue).toBe('hyperliquid');
       expect(data.ETH.selectedVenue).toBe('hyperliquid');
 
-      setFundingVenue('average');
-      data = getLatestMarketData();
-      expect(data.selectedVenue).toBe('average');
-
       setFundingVenue('binance');
       data = getLatestMarketData();
       expect(data.selectedVenue).toBe('binance');
+      expect(data.ETH.selectedVenue).toBe('binance');
+    });
+
+    it('restricts venue universe strictly to Binance and Hyperliquid', async () => {
+      const { VENUE_EXECUTION_FEES, DEFAULT_VENUE_RATES } = await import('../src/services/marketData.js');
+      expect(Object.keys(VENUE_EXECUTION_FEES).sort()).toEqual(['binance', 'hyperliquid']);
+      expect((VENUE_EXECUTION_FEES as any).average).toBeUndefined();
+      expect(Object.keys(DEFAULT_VENUE_RATES.ETH).sort()).toEqual(['binance', 'hyperliquid']);
+      expect((DEFAULT_VENUE_RATES.ETH as any).average).toBeUndefined();
     });
   });
 
@@ -189,7 +194,6 @@ describe('Market Data Service & Quantitative Parsers', () => {
     it('provides valid institutional presets for ETH, BTC, SOL across all venues', () => {
       expect(FALLBACK_MARKET_DATA.ETH.venues.binance.apr).toBe(10.0);
       expect(FALLBACK_MARKET_DATA.ETH.venues.hyperliquid.apr).toBe(10.0);
-      expect(FALLBACK_MARKET_DATA.ETH.venues.average.apr).toBe(10.0);
       expect(FALLBACK_MARKET_DATA.ETH.stakingAPY).toBe(3.2);
       expect(FALLBACK_MARKET_DATA.BTC.stakingAPY).toBe(0.0);
       expect(FALLBACK_MARKET_DATA.SOL.stakingAPY).toBe(1.8);
@@ -346,7 +350,8 @@ describe('Market Data Service & Quantitative Parsers', () => {
         const res = await fetchAssetHistoricalAnalytics(asset, 30, 'real');
         expect(res.symbol).toBe(asset);
         expect(res.series.length).toBe(30);
-        expect(res.consensusAvg).toBeDefined();
+        expect(res.venueSpreadAvg).toBeGreaterThanOrEqual(0);
+        expect(['Binance', 'Hyperliquid', 'Tied']).toContain(res.leadingVenue);
         expect(res.stakingAvg).toBeGreaterThanOrEqual(0);
       }
     });
@@ -372,7 +377,7 @@ describe('Market Data Service & Quantitative Parsers', () => {
         expect(pt30.date).toBe(pt90.date);
         expect(pt30.binanceApr).toBe(pt90.binanceApr);
         expect(pt30.hyperliquidApr).toBe(pt90.hyperliquidApr);
-        expect(pt30.consensusApr).toBe(pt90.consensusApr);
+        expect(pt30.venueSpread).toBe(pt90.venueSpread);
         expect(pt30.stakingApy).toBe(pt90.stakingApy);
         expect(pt30.netCarryApy).toBe(pt90.netCarryApy);
         expect(pt30.lstDiscountPct).toBe(pt90.lstDiscountPct);

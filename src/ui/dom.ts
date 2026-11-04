@@ -127,10 +127,8 @@ export interface UIElements {
   subtextPreset85: HTMLElement | null;
   feedVenueBtnBinance: HTMLElement | null;
   feedVenueBtnHyperliquid: HTMLElement | null;
-  feedVenueBtnAverage: HTMLElement | null;
   sliderVenueBtnBinance: HTMLElement | null;
   sliderVenueBtnHyperliquid: HTMLElement | null;
-  sliderVenueBtnAverage: HTMLElement | null;
 
   // Rolling Trailing Horizon Pills
   pillStakeLive: HTMLElement | null;
@@ -196,8 +194,8 @@ export interface UIElements {
   histStatBinanceSub: HTMLElement | null;
   histStatHlAvg: HTMLElement | null;
   histStatHlSub: HTMLElement | null;
-  histStatConsensusAvg: HTMLElement | null;
-  histStatConsensusSub: HTMLElement | null;
+  histStatSpreadVal: HTMLElement | null;
+  histStatSpreadSub: HTMLElement | null;
   histStatDivergence: HTMLElement | null;
   histStatDivergenceSub: HTMLElement | null;
   histStatStakingAvg: HTMLElement | null;
@@ -269,10 +267,8 @@ export function getUIElements(): UIElements {
     subtextPreset85: document.getElementById('subtext-preset-85'),
     feedVenueBtnBinance: document.getElementById('feed-venue-btn-binance'),
     feedVenueBtnHyperliquid: document.getElementById('feed-venue-btn-hyperliquid'),
-    feedVenueBtnAverage: document.getElementById('feed-venue-btn-average'),
     sliderVenueBtnBinance: document.getElementById('slider-venue-btn-binance'),
     sliderVenueBtnHyperliquid: document.getElementById('slider-venue-btn-hyperliquid'),
-    sliderVenueBtnAverage: document.getElementById('slider-venue-btn-average'),
 
     modeUnifiedBtn: document.getElementById('mode-btn-unified'),
     modeIsolatedBtn: document.getElementById('mode-btn-isolated'),
@@ -440,8 +436,8 @@ export function getUIElements(): UIElements {
     histStatBinanceSub: document.getElementById('hist-stat-binance-sub'),
     histStatHlAvg: document.getElementById('hist-stat-hl-avg'),
     histStatHlSub: document.getElementById('hist-stat-hl-sub'),
-    histStatConsensusAvg: document.getElementById('hist-stat-consensus-avg'),
-    histStatConsensusSub: document.getElementById('hist-stat-consensus-sub'),
+    histStatSpreadVal: document.getElementById('hist-stat-spread-val'),
+    histStatSpreadSub: document.getElementById('hist-stat-spread-sub'),
     histStatDivergence: document.getElementById('hist-stat-divergence'),
     histStatDivergenceSub: document.getElementById('hist-stat-divergence-sub'),
     histStatStakingAvg: document.getElementById('hist-stat-staking-avg'),

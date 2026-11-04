@@ -71,20 +71,9 @@ export async function fetchLiveMarketData(): Promise<MarketDataSnapshot> {
     ]);
 
     const buildVenues = (b: VenueRateInfo, hl: VenueRateInfo): Record<FundingVenue, VenueRateInfo> => {
-      const avgApr = parseFloat(((b.apr + hl.apr) / 2).toFixed(2));
-      const avgMark = parseFloat(((b.markPrice + hl.markPrice) / 2).toFixed(2));
-      const avgStatus = (b.status === 'live' || hl.status === 'live') ? 'live' : 'fallback';
       return {
         binance: b,
-        hyperliquid: hl,
-        average: {
-          apr: avgApr,
-          rateInterval: (b.rateInterval + hl.rateInterval) / 2,
-          markPrice: avgMark > 0 ? avgMark : (b.markPrice || hl.markPrice),
-          nextFundingTime: b.nextFundingTime || hl.nextFundingTime,
-          status: avgStatus,
-          venueName: 'Consensus Average (Binance + Hyperliquid)'
-        }
+        hyperliquid: hl
       };
     };
 

@@ -192,7 +192,7 @@ export async function fetchAssetHistoricalAnalytics(
     }
 
     const bestFundingApr = parseFloat(Math.max(bApr, hlApr).toFixed(2));
-    const consensusApr = parseFloat(((bApr + hlApr) / 2).toFixed(2));
+    const venueSpread = parseFloat(Math.abs(bApr - hlApr).toFixed(2));
 
     // Net Carry Yield uses highest of the two venues (optimal venue execution)
     const netCarryApy = parseFloat((sApy + bestFundingApr).toFixed(2));
@@ -214,7 +214,7 @@ export async function fetchAssetHistoricalAnalytics(
       timestamp: dateObj.getTime(),
       binanceApr: bApr,
       hyperliquidApr: hlApr,
-      consensusApr,
+      venueSpread,
       bestFundingApr,
       stakingApy: sApy,
       netCarryApy,
@@ -241,9 +241,11 @@ export async function fetchAssetHistoricalAnalytics(
   const hyperliquidAvg = parseFloat(
     (series.map(s => s.hyperliquidApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
   );
-  const consensusAvg = parseFloat(
-    (series.map(s => s.consensusApr ?? ((s.binanceApr + s.hyperliquidApr) / 2)).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+  const venueSpreadAvg = parseFloat(
+    (series.map(s => s.venueSpread ?? Math.abs(s.binanceApr - s.hyperliquidApr)).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
   );
+  const leadingVenue: 'Binance' | 'Hyperliquid' | 'Tied' =
+    binanceAvg > hyperliquidAvg ? 'Binance' : hyperliquidAvg > binanceAvg ? 'Hyperliquid' : 'Tied';
   const stakingAvg = parseFloat(
     (series.map(s => s.stakingApy).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
   );
@@ -265,7 +267,8 @@ export async function fetchAssetHistoricalAnalytics(
     series,
     binanceAvg,
     hyperliquidAvg,
-    consensusAvg,
+    venueSpreadAvg,
+    leadingVenue,
     bestFundingAvg,
     stakingAvg,
     netCarryAvg,

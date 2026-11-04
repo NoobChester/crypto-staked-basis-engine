@@ -83,7 +83,7 @@ export function renderMarketData(UI: UIElements, state: HedgingState): void {
     UI.feedLiveFundingVal.className = `font-bold font-mono ${assetRates.perpFundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
   }
   if (UI.feedFundingSource) {
-    const srcShort = assetRates.fundingSource.includes('Binance') ? 'Binance' : (assetRates.fundingSource.includes('Hyperliquid') ? 'Hyperliquid' : (assetRates.fundingSource.includes('Consensus') ? 'Average' : 'Preset'));
+    const srcShort = assetRates.fundingSource.includes('Binance') ? 'Binance' : (assetRates.fundingSource.includes('Hyperliquid') ? 'Hyperliquid' : 'Preset');
     UI.feedFundingSource.textContent = `(${srcShort})`;
   }
 
@@ -91,8 +91,7 @@ export function renderMarketData(UI: UIElements, state: HedgingState): void {
   const activeVenue = data.selectedVenue || 'binance';
   const venueKeys = [
     { key: 'binance', feedBtn: UI.feedVenueBtnBinance, sliderBtn: UI.sliderVenueBtnBinance },
-    { key: 'hyperliquid', feedBtn: UI.feedVenueBtnHyperliquid, sliderBtn: UI.sliderVenueBtnHyperliquid },
-    { key: 'average', feedBtn: UI.feedVenueBtnAverage, sliderBtn: UI.sliderVenueBtnAverage }
+    { key: 'hyperliquid', feedBtn: UI.feedVenueBtnHyperliquid, sliderBtn: UI.sliderVenueBtnHyperliquid }
   ] as const;
 
   venueKeys.forEach(({ key, feedBtn, sliderBtn }) => {

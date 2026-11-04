@@ -3,7 +3,7 @@
  * @description Data interfaces, types, and fallback baselines for institutional market data feeds.
  */
 
-export type FundingVenue = 'binance' | 'hyperliquid' | 'average';
+export type FundingVenue = 'binance' | 'hyperliquid';
 
 export interface VenueRateInfo {
   apr: number;
@@ -63,7 +63,7 @@ export interface HistoricalRatePoint {
   timestamp: number;
   binanceApr: number;
   hyperliquidApr: number;
-  consensusApr?: number;
+  venueSpread?: number;
   bestFundingApr: number; // Highest of Binance and Hyperliquid
   stakingApy: number;
   netCarryApy: number; // Staking APY + bestFundingApr
@@ -91,7 +91,8 @@ export interface AssetHistoricalAnalytics {
   series: HistoricalRatePoint[];
   binanceAvg: number;
   hyperliquidAvg: number;
-  consensusAvg?: number;
+  venueSpreadAvg: number;
+  leadingVenue: 'Binance' | 'Hyperliquid' | 'Tied';
   bestFundingAvg: number; // max(binanceAvg, hyperliquidAvg)
   stakingAvg: number;
   netCarryAvg: number; // stakingAvg + bestFundingAvg
@@ -117,8 +118,7 @@ export const DEFAULT_TBILL_RATE = 4.35; // 3-Month US Treasury Bill Yield (% APY
 
 export const VENUE_EXECUTION_FEES: Record<FundingVenue, { roundtripPct: number; label: string }> = {
   binance: { roundtripPct: 0.10, label: 'Binance (10 bps roundtrip)' },
-  hyperliquid: { roundtripPct: 0.07, label: 'Hyperliquid (7 bps roundtrip)' },
-  average: { roundtripPct: 0.085, label: 'Consensus Blend (8.5 bps)' }
+  hyperliquid: { roundtripPct: 0.07, label: 'Hyperliquid (7 bps roundtrip)' }
 };
 
 export type ExecutionFeeTier = 'vip' | 'retail' | 'mm';
@@ -132,18 +132,15 @@ export const FEE_TIERS: Record<ExecutionFeeTier, { feePct: number; label: string
 export const DEFAULT_VENUE_RATES: Record<'ETH' | 'BTC' | 'SOL', Record<FundingVenue, VenueRateInfo>> = {
   ETH: {
     binance: { apr: 10.0, rateInterval: 0.00009132, markPrice: 2315.0, nextFundingTime: 0, status: 'fallback', venueName: 'Binance (ETHUSDT)' },
-    hyperliquid: { apr: 10.0, rateInterval: 0.00001141, markPrice: 2315.0, nextFundingTime: 0, status: 'fallback', venueName: 'Hyperliquid (ETH-PERP)' },
-    average: { apr: 10.0, rateInterval: 0.00009132, markPrice: 2315.0, nextFundingTime: 0, status: 'fallback', venueName: 'Consensus Average' }
+    hyperliquid: { apr: 10.0, rateInterval: 0.00001141, markPrice: 2315.0, nextFundingTime: 0, status: 'fallback', venueName: 'Hyperliquid (ETH-PERP)' }
   },
   BTC: {
     binance: { apr: 10.0, rateInterval: 0.00009132, markPrice: 78500.0, nextFundingTime: 0, status: 'fallback', venueName: 'Binance (BTCUSDT)' },
-    hyperliquid: { apr: 10.0, rateInterval: 0.00001141, markPrice: 78500.0, nextFundingTime: 0, status: 'fallback', venueName: 'Hyperliquid (BTC-PERP)' },
-    average: { apr: 10.0, rateInterval: 0.00009132, markPrice: 78500.0, nextFundingTime: 0, status: 'fallback', venueName: 'Consensus Average' }
+    hyperliquid: { apr: 10.0, rateInterval: 0.00001141, markPrice: 78500.0, nextFundingTime: 0, status: 'fallback', venueName: 'Hyperliquid (BTC-PERP)' }
   },
   SOL: {
     binance: { apr: 10.0, rateInterval: 0.00009132, markPrice: 93.5, nextFundingTime: 0, status: 'fallback', venueName: 'Binance (SOLUSDT)' },
-    hyperliquid: { apr: 10.0, rateInterval: 0.00001141, markPrice: 93.5, nextFundingTime: 0, status: 'fallback', venueName: 'Hyperliquid (SOL-PERP)' },
-    average: { apr: 10.0, rateInterval: 0.00009132, markPrice: 93.5, nextFundingTime: 0, status: 'fallback', venueName: 'Consensus Average' }
+    hyperliquid: { apr: 10.0, rateInterval: 0.00001141, markPrice: 93.5, nextFundingTime: 0, status: 'fallback', venueName: 'Hyperliquid (SOL-PERP)' }
   }
 };
 

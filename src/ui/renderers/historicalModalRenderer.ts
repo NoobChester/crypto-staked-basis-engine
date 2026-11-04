@@ -14,7 +14,7 @@ import type { UIElements } from '../dom.js';
 export function renderHistoricalModal(
   UI: UIElements,
   analytics: AssetHistoricalAnalytics,
-  _activeVenue: FundingVenue
+  activeVenue: FundingVenue = 'binance'
 ): void {
   if (UI.histModalSymbolBadge) {
     UI.histModalSymbolBadge.textContent = analytics.symbol;
@@ -49,11 +49,17 @@ export function renderHistoricalModal(
   if (UI.histStatHlSub) {
     UI.histStatHlSub.textContent = `${analytics.rangeDays}d avg (1h)`;
   }
-  if (UI.histStatConsensusAvg && analytics.consensusAvg !== undefined) {
-    UI.histStatConsensusAvg.textContent = fmtPct(analytics.consensusAvg);
+  if (UI.histStatSpreadVal && analytics.venueSpreadAvg !== undefined) {
+    UI.histStatSpreadVal.textContent = `+${analytics.venueSpreadAvg.toFixed(2)}%`;
   }
-  if (UI.histStatConsensusSub) {
-    UI.histStatConsensusSub.textContent = `${analytics.rangeDays}d blend`;
+  if (UI.histStatSpreadSub) {
+    if (analytics.leadingVenue === 'Binance') {
+      UI.histStatSpreadSub.innerHTML = '<span class="text-amber-400 font-bold">Binance Leading</span> (+Carry)';
+    } else if (analytics.leadingVenue === 'Hyperliquid') {
+      UI.histStatSpreadSub.innerHTML = '<span class="text-cyan-400 font-bold">Hyperliquid Leading</span> (+Carry)';
+    } else {
+      UI.histStatSpreadSub.textContent = 'Venues Parity (0.00%)';
+    }
   }
   if (UI.histStatDivergence && analytics.fundingDivergence !== undefined) {
     UI.histStatDivergence.textContent = `${analytics.fundingDivergence.toFixed(2)}%`;
@@ -68,11 +74,13 @@ export function renderHistoricalModal(
     UI.histStatStakingSub.textContent = `${analytics.rangeDays}d protocol avg`;
   }
   if (UI.histStatNetcarryAvg) {
-    UI.histStatNetcarryAvg.textContent = fmtPct(analytics.netCarryAvg) + ' APY';
+    const activeFundingAvg = activeVenue === 'binance' ? analytics.binanceAvg : analytics.hyperliquidAvg;
+    const activeNetCarry = parseFloat((activeFundingAvg + analytics.stakingAvg).toFixed(2));
+    UI.histStatNetcarryAvg.textContent = fmtPct(activeNetCarry) + ' APY';
   }
   if (UI.histStatNetcarrySub) {
-    const higherVenue = analytics.binanceAvg >= analytics.hyperliquidAvg ? 'Binance' : 'Hyperliquid';
-    UI.histStatNetcarrySub.textContent = `${analytics.rangeDays}d max (${higherVenue}) + Stake`;
+    const venueName = activeVenue === 'binance' ? 'Binance' : 'Hyperliquid';
+    UI.histStatNetcarrySub.textContent = `${analytics.rangeDays}d ${venueName} + Stake`;
   }
 
   // Regime frequency stats

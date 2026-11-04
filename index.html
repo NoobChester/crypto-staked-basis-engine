@@ -101,8 +101,6 @@
             class="px-2 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer">Binance</button>
           <button type="button" data-action="set-venue" data-venue="hyperliquid" id="feed-venue-btn-hyperliquid"
             class="px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Hyperliquid</button>
-          <button type="button" data-action="set-venue" data-venue="average" id="feed-venue-btn-average"
-            class="px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Average</button>
         </div>
 
         <!-- Live Ticker for Active Asset / Pair -->
@@ -762,8 +760,6 @@
                     class="px-1.5 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer">Binance</button>
                   <button type="button" data-action="set-venue" data-venue="hyperliquid" id="slider-venue-btn-hyperliquid"
                     class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Hyperliquid</button>
-                  <button type="button" data-action="set-venue" data-venue="average" id="slider-venue-btn-average"
-                    class="px-1.5 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Average</button>
                 </div>
               </div>
               <span id="val-funding" class="font-mono text-emerald-400 font-bold">+10.00% APR</span>
@@ -1166,8 +1162,8 @@
       <!-- Modal Body (Scrollable) -->
       <div class="p-5 overflow-y-auto space-y-4">
 
-        <!-- Top Statistical Metric Summary Cards (4 Core Institutional Metrics) -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+        <!-- Top Statistical Metric Summary Cards (5 Core Institutional Metrics) -->
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 text-xs font-mono">
           <div class="p-3 bg-brand-dark/90 rounded-xl border border-slate-800/80">
             <div class="text-slate-400 text-[10px]">Binance Avg</div>
             <div id="hist-stat-binance-avg" class="text-sm sm:text-base font-bold text-amber-400 mt-0.5">+10.42%</div>
@@ -1181,15 +1177,21 @@
           </div>
 
           <div class="p-3 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+            <div class="text-slate-400 text-[10px]">Inter-Exchange Spread</div>
+            <div id="hist-stat-spread-val" class="text-sm sm:text-base font-bold text-white mt-0.5">+0.54%</div>
+            <div class="text-[9px] text-slate-500 mt-0.5" id="hist-stat-spread-sub">|Binance - HL|</div>
+          </div>
+
+          <div class="p-3 bg-brand-dark/90 rounded-xl border border-slate-800/80">
             <div class="text-slate-400 text-[10px]">Spot Staking Avg</div>
             <div id="hist-stat-staking-avg" class="text-sm sm:text-base font-bold text-emerald-400 mt-0.5">+2.31%</div>
             <div class="text-[9px] text-slate-500 mt-0.5" id="hist-stat-staking-sub">Protocol yield</div>
           </div>
 
           <div class="p-3 bg-brand-dark/90 rounded-xl border border-purple-900/40 bg-purple-950/10">
-            <div class="text-purple-300 text-[10px] font-bold">Net Carry Yield (Optimal Venue)</div>
-            <div id="hist-stat-netcarry-avg" class="text-sm sm:text-base font-bold text-purple-400 mt-0.5">+13.25%</div>
-            <div class="text-[9px] text-purple-300/80 mt-0.5" id="hist-stat-netcarry-sub">max(Binance, HL) + Stake</div>
+            <div class="text-purple-300 text-[10px] font-bold">Net Carry APY</div>
+            <div id="hist-stat-netcarry-avg" class="text-sm sm:text-base font-bold text-purple-400 mt-0.5">+12.73%</div>
+            <div class="text-[9px] text-purple-300/80 mt-0.5" id="hist-stat-netcarry-sub">Selected Venue + Stake</div>
           </div>
         </div>
 

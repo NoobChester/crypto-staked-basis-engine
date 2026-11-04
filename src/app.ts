@@ -315,6 +315,26 @@ export async function loadAndRenderHistoricalData(): Promise<void> {
   }
 }
 
+export function syncHyperliquidMarginLock(venue: FundingVenue): void {
+  if (!UI?.modeUnifiedBtn) return;
+  if (venue === 'hyperliquid') {
+    if (state.mode === 'unified') {
+      setAccountMode('isolated');
+    }
+    UI.modeUnifiedBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-500 bg-slate-900 border border-slate-800 transition flex items-center gap-1.5 opacity-40 cursor-not-allowed pointer-events-none select-none';
+    UI.modeUnifiedBtn.title = '🔒 Locked (Hyperliquid requires USDC cash collateral — Unified Margin not supported)';
+    UI.modeUnifiedBtn.setAttribute('aria-disabled', 'true');
+  } else {
+    UI.modeUnifiedBtn.removeAttribute('aria-disabled');
+    UI.modeUnifiedBtn.title = 'Unified Margin (Cross-Collateral)';
+    if (state.mode === 'unified') {
+      UI.modeUnifiedBtn.className = 'px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow cursor-pointer';
+    } else {
+      UI.modeUnifiedBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer';
+    }
+  }
+}
+
 export function setFundingVenue(venue: FundingVenue): void {
   setServiceFundingVenue(venue);
   if (venue === 'binance') {
@@ -323,10 +343,9 @@ export function setFundingVenue(venue: FundingVenue): void {
   } else if (venue === 'hyperliquid') {
     state.roundtripFeePct = VENUE_EXECUTION_FEES.hyperliquid.roundtripPct;
     state.feeTier = 'mm';
-  } else {
-    state.roundtripFeePct = VENUE_EXECUTION_FEES.average.roundtripPct;
-    state.feeTier = 'vip';
   }
+
+  syncHyperliquidMarginLock(venue);
 
   if (state.isLiveFunding) {
     applyLiveFunding();
@@ -334,6 +353,7 @@ export function setFundingVenue(venue: FundingVenue): void {
     updateApp();
   }
   if (isHistoricalModalOpen && currentHistoricalAnalytics) {
+    renderHistoricalModal(UI, currentHistoricalAnalytics, venue);
     drawHistoricalChart(UI.historicalCanvas, currentHistoricalAnalytics, venue);
     drawHistoricalStakingSubChart(UI.historicalStakingSubCanvas, currentHistoricalAnalytics);
     drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
@@ -372,10 +392,14 @@ export async function refreshLiveRates(): Promise<void> {
 }
 
 export function setAccountMode(mode: MarginMode): void {
+  const currentVenue = getLatestMarketData().selectedVenue;
+  if (mode === 'unified' && currentVenue === 'hyperliquid') {
+    return;
+  }
   state.mode = mode;
   if (mode === 'unified') {
-    if (UI.modeUnifiedBtn) UI.modeUnifiedBtn.className = 'px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow';
-    if (UI.modeIsolatedBtn) UI.modeIsolatedBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5';
+    if (UI.modeUnifiedBtn) UI.modeUnifiedBtn.className = 'px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow cursor-pointer';
+    if (UI.modeIsolatedBtn) UI.modeIsolatedBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer';
     if (UI.panelUnifiedPresets) UI.panelUnifiedPresets.classList.remove('hidden');
     if (UI.panelIsolatedSplit) UI.panelIsolatedSplit.classList.add('hidden');
     if (UI.chartSubCaption) UI.chartSubCaption.textContent = 'Cross-collateralized: Spot collateral appreciation cushions perp losses';
@@ -386,8 +410,14 @@ export function setAccountMode(mode: MarginMode): void {
     }
     applyCollateralPreset(state.activePreset || 'wsteth_90');
   } else {
-    if (UI.modeIsolatedBtn) UI.modeIsolatedBtn.className = 'px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow';
-    if (UI.modeUnifiedBtn) UI.modeUnifiedBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5';
+    if (UI.modeIsolatedBtn) UI.modeIsolatedBtn.className = 'px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow cursor-pointer';
+    if (UI.modeUnifiedBtn) {
+      if (currentVenue === 'hyperliquid') {
+        UI.modeUnifiedBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-500 bg-slate-900 border border-slate-800 transition flex items-center gap-1.5 opacity-40 cursor-not-allowed pointer-events-none select-none';
+      } else {
+        UI.modeUnifiedBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer';
+      }
+    }
     if (UI.panelUnifiedPresets) UI.panelUnifiedPresets.classList.add('hidden');
     if (UI.panelIsolatedSplit) UI.panelIsolatedSplit.classList.remove('hidden');
     if (UI.chartSubCaption) UI.chartSubCaption.textContent = 'Isolated cash margin: Sharp rallies can deplete collateral and trigger liquidation';
@@ -646,6 +676,7 @@ export function resetDefaults(): void {
   applyHistoricalStaking('live');
   applyCollateralPreset('wsteth_90');
   setSplit(50);
+  syncHyperliquidMarginLock(getLatestMarketData().selectedVenue);
   updateApp();
 }
 

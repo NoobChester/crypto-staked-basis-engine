@@ -22,7 +22,7 @@ const SUB_PAD = { top: 18, right: 28, bottom: 18, left: 58 };
 export function drawHistoricalChart(
   canvas: HTMLCanvasElement | null,
   analytics: AssetHistoricalAnalytics | null,
-  activeVenue: FundingVenue = 'average',
+  activeVenue: FundingVenue = 'binance',
   hoverIndex: number | null = null
 ): void {
   if (!canvas) return;
@@ -60,13 +60,18 @@ export function drawHistoricalChart(
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
 
+  // Dynamic Net Carry helper based on active venue
+  const getNetCarry = (pt: HistoricalRatePoint): number =>
+    parseFloat(((activeVenue === 'binance' ? pt.binanceApr : pt.hyperliquidApr) + pt.stakingApy).toFixed(2));
+
   // Compute min and max across perp funding & net carry (Staking moved to dedicated sub-chart)
   let minVal = 0;
   let maxVal = 10;
 
   for (const pt of series) {
-    minVal = Math.min(minVal, pt.binanceApr, pt.hyperliquidApr, pt.netCarryApy);
-    maxVal = Math.max(maxVal, pt.binanceApr, pt.hyperliquidApr, pt.netCarryApy);
+    const carry = getNetCarry(pt);
+    minVal = Math.min(minVal, pt.binanceApr, pt.hyperliquidApr, carry);
+    maxVal = Math.max(maxVal, pt.binanceApr, pt.hyperliquidApr, carry);
   }
 
   // Add 15% padding above and below
@@ -157,7 +162,7 @@ export function drawHistoricalChart(
   context.beginPath();
   context.moveTo(toX(0), toY(0));
   for (let i = 0; i < count; i++) {
-    context.lineTo(toX(i), toY(series[i].netCarryApy));
+    context.lineTo(toX(i), toY(getNetCarry(series[i])));
   }
   context.lineTo(toX(count - 1), toY(0));
   context.closePath();
@@ -191,14 +196,14 @@ export function drawHistoricalChart(
   // Curve 2: Hyperliquid Annualized APR (#06b6d4 cyan)
   drawCurve('#06b6d4', activeVenue === 'hyperliquid' ? 2.5 : 1.5, pt => pt.hyperliquidApr);
 
-  // Curve 3: Net Carry APY (#a855f7 purple dashed)
-  drawCurve('#a855f7', 1.8, pt => pt.netCarryApy, [4, 3]);
+  // Curve 3: Net Carry APY (#a855f7 purple dashed, dynamically bound to active venue)
+  drawCurve('#a855f7', 1.8, pt => getNetCarry(pt), [4, 3]);
 
   // Legend at Top Left of Plot
   const legendItems = [
     { label: 'Binance APR', color: '#f59e0b' },
     { label: 'Hyperliquid APR', color: '#06b6d4' },
-    { label: 'Net Carry APY', color: '#a855f7' }
+    { label: `Net Carry APY (${activeVenue === 'binance' ? 'Binance' : 'Hyperliquid'})`, color: '#a855f7' }
   ];
 
   context.font = '9px "JetBrains Mono", monospace';
@@ -235,7 +240,7 @@ export function drawHistoricalChart(
     const dots = [
       { yVal: pt.binanceApr, color: '#f59e0b' },
       { yVal: pt.hyperliquidApr, color: '#06b6d4' },
-      { yVal: pt.netCarryApy, color: '#a855f7' }
+      { yVal: getNetCarry(pt), color: '#a855f7' }
     ];
 
     for (const dot of dots) {
