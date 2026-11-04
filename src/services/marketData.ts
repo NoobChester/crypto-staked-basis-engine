@@ -60,9 +60,10 @@ export interface HistoricalRatePoint {
   timestamp: number;
   binanceApr: number;
   hyperliquidApr: number;
-  consensusApr: number;
+  consensusApr?: number;
+  bestFundingApr: number; // Highest of Binance and Hyperliquid
   stakingApy: number;
-  netCarryApy: number;
+  netCarryApy: number; // Staking APY + bestFundingApr
 }
 
 export interface HistoricalWindowStats {
@@ -86,10 +87,11 @@ export interface AssetHistoricalAnalytics {
   series: HistoricalRatePoint[];
   binanceAvg: number;
   hyperliquidAvg: number;
-  consensusAvg: number;
+  consensusAvg?: number;
+  bestFundingAvg: number; // max(binanceAvg, hyperliquidAvg)
   stakingAvg: number;
-  netCarryAvg: number;
-  fundingDivergence: number; // abs(binance - hyperliquid)
+  netCarryAvg: number; // stakingAvg + bestFundingAvg
+  fundingDivergence?: number; // abs(binance - hyperliquid)
   lastFetched: number;
 }
 
@@ -635,8 +637,6 @@ export async function fetchAssetHistoricalAnalytics(
       hlApr = bApr;
     }
 
-    const consensusApr = parseFloat(((bApr + hlApr) / 2).toFixed(2));
-
     // Staking APY for day
     let sApy = stakingByDate[dStr];
     if (sApy === undefined) {
@@ -649,7 +649,11 @@ export async function fetchAssetHistoricalAnalytics(
       }
     }
 
-    const netCarryApy = parseFloat((sApy + consensusApr).toFixed(2));
+    const bestFundingApr = parseFloat(Math.max(bApr, hlApr).toFixed(2));
+    const consensusApr = parseFloat(((bApr + hlApr) / 2).toFixed(2));
+
+    // Net Carry Yield uses highest of the two venues (optimal venue execution)
+    const netCarryApy = parseFloat((sApy + bestFundingApr).toFixed(2));
 
     series.push({
       date: dStr,
@@ -657,13 +661,14 @@ export async function fetchAssetHistoricalAnalytics(
       binanceApr: bApr,
       hyperliquidApr: hlApr,
       consensusApr,
+      bestFundingApr,
       stakingApy: sApy,
       netCarryApy
     });
   }
 
-  // Calculate Rolling Window Statistics
-  const fundingValues = series.map(s => s.consensusApr);
+  // Calculate Rolling Window Statistics (using optimal best funding rate)
+  const fundingValues = series.map(s => s.bestFundingApr);
   const stakingValues = series.map(s => s.stakingApy);
 
   const funding7d = computeWindowStats(fundingValues.slice(-7));
@@ -681,12 +686,13 @@ export async function fetchAssetHistoricalAnalytics(
     (series.map(s => s.hyperliquidApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
   );
   const consensusAvg = parseFloat(
-    (series.map(s => s.consensusApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+    (series.map(s => s.consensusApr ?? ((s.binanceApr + s.hyperliquidApr) / 2)).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
   );
   const stakingAvg = parseFloat(
     (series.map(s => s.stakingApy).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
   );
-  const netCarryAvg = parseFloat((stakingAvg + consensusAvg).toFixed(2));
+  const bestFundingAvg = parseFloat(Math.max(binanceAvg, hyperliquidAvg).toFixed(2));
+  const netCarryAvg = parseFloat((stakingAvg + bestFundingAvg).toFixed(2));
   const fundingDivergence = parseFloat(Math.abs(binanceAvg - hyperliquidAvg).toFixed(2));
 
   const analytics: AssetHistoricalAnalytics = {
@@ -702,6 +708,7 @@ export async function fetchAssetHistoricalAnalytics(
     binanceAvg,
     hyperliquidAvg,
     consensusAvg,
+    bestFundingAvg,
     stakingAvg,
     netCarryAvg,
     fundingDivergence,

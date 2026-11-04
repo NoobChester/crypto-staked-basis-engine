@@ -896,13 +896,13 @@ export function renderHistoricalModal(
   if (UI.histStatHlSub) {
     UI.histStatHlSub.textContent = `${analytics.rangeDays}d avg (1h)`;
   }
-  if (UI.histStatConsensusAvg) {
+  if (UI.histStatConsensusAvg && analytics.consensusAvg !== undefined) {
     UI.histStatConsensusAvg.textContent = fmtPct(analytics.consensusAvg);
   }
   if (UI.histStatConsensusSub) {
     UI.histStatConsensusSub.textContent = `${analytics.rangeDays}d blend`;
   }
-  if (UI.histStatDivergence) {
+  if (UI.histStatDivergence && analytics.fundingDivergence !== undefined) {
     UI.histStatDivergence.textContent = `${analytics.fundingDivergence.toFixed(2)}%`;
   }
   if (UI.histStatDivergenceSub) {
@@ -918,7 +918,8 @@ export function renderHistoricalModal(
     UI.histStatNetcarryAvg.textContent = fmtPct(analytics.netCarryAvg) + ' APY';
   }
   if (UI.histStatNetcarrySub) {
-    UI.histStatNetcarrySub.textContent = `${analytics.rangeDays}d net carry`;
+    const higherVenue = analytics.binanceAvg >= analytics.hyperliquidAvg ? 'Binance' : 'Hyperliquid';
+    UI.histStatNetcarrySub.textContent = `${analytics.rangeDays}d max (${higherVenue}) + Stake`;
   }
 
   // Regime frequency stats

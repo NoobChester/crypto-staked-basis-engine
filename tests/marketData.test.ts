@@ -263,12 +263,14 @@ describe('Market Data Service & Quantitative Parsers', () => {
       expect(analytics30.rangeDays).toBe(30);
       expect(analytics30.series.length).toBe(30);
 
-      // Verify net carry formula: consensusApr + stakingApy
+      // Verify net carry formula: highest of the two venues (Math.max) + stakingApy
       const lastPoint = analytics30.series[analytics30.series.length - 1];
-      expect(lastPoint.netCarryApy).toBeCloseTo(lastPoint.consensusApr + lastPoint.stakingApy, 1);
+      const expectedBestFunding = Math.max(lastPoint.binanceApr, lastPoint.hyperliquidApr);
+      expect(lastPoint.netCarryApy).toBeCloseTo(expectedBestFunding + lastPoint.stakingApy, 1);
       expect(analytics30.binanceAvg).toBeDefined();
       expect(analytics30.hyperliquidAvg).toBeDefined();
-      expect(analytics30.fundingDivergence).toBeGreaterThanOrEqual(0);
+      expect(analytics30.bestFundingAvg).toBe(Math.max(analytics30.binanceAvg, analytics30.hyperliquidAvg));
+      expect(analytics30.netCarryAvg).toBeCloseTo(analytics30.stakingAvg + analytics30.bestFundingAvg, 1);
     });
 
     it('respects SOL Real vs Nominal Staking Yield modes', async () => {

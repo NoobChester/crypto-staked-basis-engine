@@ -1017,42 +1017,30 @@
       <!-- Modal Body (Scrollable) -->
       <div class="p-5 overflow-y-auto space-y-4">
 
-        <!-- Top Statistical Metric Summary Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs font-mono">
-          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+        <!-- Top Statistical Metric Summary Cards (4 Core Institutional Metrics) -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono">
+          <div class="p-3 bg-brand-dark/90 rounded-xl border border-slate-800/80">
             <div class="text-slate-400 text-[10px]">Binance Avg</div>
-            <div id="hist-stat-binance-avg" class="text-sm font-bold text-amber-400 mt-0.5">+10.42%</div>
-            <div class="text-[9px] text-slate-500" id="hist-stat-binance-sub">8h settlements</div>
+            <div id="hist-stat-binance-avg" class="text-sm sm:text-base font-bold text-amber-400 mt-0.5">+10.42%</div>
+            <div class="text-[9px] text-slate-500 mt-0.5" id="hist-stat-binance-sub">8h settlements</div>
           </div>
 
-          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+          <div class="p-3 bg-brand-dark/90 rounded-xl border border-slate-800/80">
             <div class="text-slate-400 text-[10px]">Hyperliquid Avg</div>
-            <div id="hist-stat-hl-avg" class="text-sm font-bold text-cyan-400 mt-0.5">+9.88%</div>
-            <div class="text-[9px] text-slate-500" id="hist-stat-hl-sub">1h settlements</div>
+            <div id="hist-stat-hl-avg" class="text-sm sm:text-base font-bold text-cyan-400 mt-0.5">+9.88%</div>
+            <div class="text-[9px] text-slate-500 mt-0.5" id="hist-stat-hl-sub">1h settlements</div>
           </div>
 
-          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
-            <div class="text-slate-400 text-[10px]">Consensus Funding</div>
-            <div id="hist-stat-consensus-avg" class="text-sm font-bold text-white mt-0.5">+10.15%</div>
-            <div class="text-[9px] text-slate-500" id="hist-stat-consensus-sub">50/50 blend</div>
-          </div>
-
-          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
-            <div class="text-slate-400 text-[10px]">Basis Divergence</div>
-            <div id="hist-stat-divergence" class="text-sm font-bold text-indigo-300 mt-0.5">0.54%</div>
-            <div class="text-[9px] text-slate-500" id="hist-stat-divergence-sub">|Binance - HL|</div>
-          </div>
-
-          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
+          <div class="p-3 bg-brand-dark/90 rounded-xl border border-slate-800/80">
             <div class="text-slate-400 text-[10px]">Spot Staking Avg</div>
-            <div id="hist-stat-staking-avg" class="text-sm font-bold text-emerald-400 mt-0.5">+2.31%</div>
-            <div class="text-[9px] text-slate-500" id="hist-stat-staking-sub">Protocol yield</div>
+            <div id="hist-stat-staking-avg" class="text-sm sm:text-base font-bold text-emerald-400 mt-0.5">+2.31%</div>
+            <div class="text-[9px] text-slate-500 mt-0.5" id="hist-stat-staking-sub">Protocol yield</div>
           </div>
 
-          <div class="p-2.5 bg-brand-dark/90 rounded-xl border border-slate-800/80">
-            <div class="text-slate-400 text-[10px]">Net Carry Yield</div>
-            <div id="hist-stat-netcarry-avg" class="text-sm font-bold text-purple-400 mt-0.5">+12.46%</div>
-            <div class="text-[9px] text-slate-500" id="hist-stat-netcarry-sub">Funding + Staking</div>
+          <div class="p-3 bg-brand-dark/90 rounded-xl border border-purple-900/40 bg-purple-950/10">
+            <div class="text-purple-300 text-[10px] font-bold">Net Carry Yield (Optimal Venue)</div>
+            <div id="hist-stat-netcarry-avg" class="text-sm sm:text-base font-bold text-purple-400 mt-0.5">+13.25%</div>
+            <div class="text-[9px] text-purple-300/80 mt-0.5" id="hist-stat-netcarry-sub">max(Binance, HL) + Stake</div>
           </div>
         </div>
 
@@ -1076,12 +1064,8 @@
               <span id="hist-tt-staking" class="font-bold">+2.30%</span>
             </div>
             <div class="flex items-center justify-between gap-3 text-purple-400 border-t border-slate-700/80 pt-1">
-              <span>Net Carry Total:</span>
-              <span id="hist-tt-netcarry" class="font-bold">+12.45%</span>
-            </div>
-            <div class="flex items-center justify-between gap-3 text-slate-400 text-[10px]">
-              <span>Basis Divergence:</span>
-              <span id="hist-tt-divergence">1.10%</span>
+              <span>Optimal Net Carry:</span>
+              <span id="hist-tt-netcarry" class="font-bold">+13.25%</span>
             </div>
           </div>
         </div>
