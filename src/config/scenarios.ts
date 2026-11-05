@@ -53,11 +53,13 @@ export const CRISIS_SCENARIOS: Record<CrisisScenarioKey, CrisisScenario> = {
     lockedHorizonDays: 28,
     getDiagnosis: (state, outcome) => {
       const depegLossStr = outcome.depegLoss > 0 ? `-$${outcome.depegLoss.toFixed(2)}` : '$0.00';
-      const netCarry = (state.stakingAPY + state.fundingAPR).toFixed(1);
+      const staking = state.stakingAPY ?? 3.2;
+      const funding = state.fundingAPR ?? -8.0;
+      const netCarry = (staking + funding).toFixed(1);
       return {
         status: 'stressed',
         verdictTitle: 'Secondary Basis Freeze & Negative Drag',
-        verdictText: `Spot de-pegged by 6.5% creating a ${depegLossStr} basis discount loss. Inverted funding (-8.0% APR) flips net strategy carry to ${netCarry}% APY, though position remains safely unliquidated due to downside cushion.`,
+        verdictText: `Spot de-pegged by 6.5% creating a ${depegLossStr} basis discount loss. Inverted funding (${funding.toFixed(1)}% APR) flips net strategy carry to ${netCarry}% APY, though position remains safely unliquidated due to downside cushion.`,
         riskPill: 'DE-PEG IMPAIRMENT',
         badgeClass: 'bg-rose-950/80 text-rose-300 border-rose-700/80'
       };
@@ -78,11 +80,13 @@ export const CRISIS_SCENARIOS: Record<CrisisScenarioKey, CrisisScenario> = {
     lockedHorizonDays: 30,
     getDiagnosis: (state, outcome) => {
       const isNetBleed = outcome.netPnL < 0;
-      const netCarry = (state.stakingAPY + state.fundingAPR).toFixed(1);
+      const staking = state.stakingAPY ?? 3.2;
+      const funding = state.fundingAPR ?? -12.0;
+      const netCarry = (staking + funding).toFixed(1);
       return {
         status: 'inverted',
         verdictTitle: 'Severe Backwardation Carry Bleed',
-        verdictText: `Prolonged short funding payments (-12.0% APR) heavily exceed spot staking (+${state.stakingAPY.toFixed(1)}% APY). Net carry runs inverted at ${netCarry}% APY, generating a net cash bleed of $${Math.abs(outcome.fundingYieldTotal).toFixed(2)} over the horizon.`,
+        verdictText: `Prolonged short funding payments (${funding.toFixed(1)}% APR) heavily exceed spot staking (+${staking.toFixed(1)}% APY). Net carry runs inverted at ${netCarry}% APY, generating a net cash bleed of $${Math.abs(outcome.fundingYieldTotal).toFixed(2)} over the horizon.`,
         riskPill: isNetBleed ? 'NEGATIVE CARRY DRAIN' : 'CARRY COMPRESSION',
         badgeClass: 'bg-amber-950/80 text-amber-300 border-amber-700/80'
       };

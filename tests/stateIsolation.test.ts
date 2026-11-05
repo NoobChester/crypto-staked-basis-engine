@@ -5,8 +5,11 @@ import {
   applyCrisisScenario,
   setStressCapital,
   setStressMode,
-  setStressAsset
+  setStressAsset,
+  getStressLabScenarioState
 } from '../src/app.js';
+import { calculateCrisisSimulation } from '../src/math/hedging.js';
+import { CRISIS_HISTORICAL_SERIES } from '../src/data/crisisHistoricalSeries.js';
 
 describe('State Isolation: Live Terminal vs Institutional Stress Lab', () => {
   beforeEach(() => {
@@ -85,5 +88,39 @@ describe('State Isolation: Live Terminal vs Institutional Stress Lab', () => {
     setStressAsset('ETH');
     expect(stressLabState.tradedAsset).toBe('ETH');
     expect(stressLabState.collateralRatio).toBe(0.90);
+  });
+
+  it('guarantees switching to Post-FTX Inverted Carry renders 30-day FTX series without being overwritten by Celsius', () => {
+    // 1. Initial state is Celsius (28 days)
+    applyCrisisScenario('celsius_depeg_2022');
+    expect(stressLabState.activeScenario).toBe('celsius_depeg_2022');
+
+    // 2. Switch to Post-FTX Inverted Carry (30 days)
+    applyCrisisScenario('ftx_carry_winter');
+    expect(stressLabState.activeScenario).toBe('ftx_carry_winter');
+
+    // 3. Verify scenario state formulation
+    const ftxScenarioState = getStressLabScenarioState('ftx_carry_winter');
+    expect(ftxScenarioState.priceMove).toBe(-25.0);
+    expect(ftxScenarioState.fundingAPR).toBe(-12.0);
+    expect(ftxScenarioState.depegPct).toBe(2.0);
+    expect(ftxScenarioState.days).toBe(30);
+
+    // 4. Verify calculated simulation matches 30-day FTX trajectory and NOT 28-day Celsius
+    const simRes = calculateCrisisSimulation('ftx_carry_winter', ftxScenarioState);
+    expect(simRes.horizonDays).toBe(30);
+    expect(simRes.dailyTrajectory).toHaveLength(30);
+    expect(simRes.scenarioKey).toBe('ftx_carry_winter');
+    expect(simRes.scenarioTitle).toBe('Post-FTX Inverted Carry');
+
+    // First day of FTX is 2022-11-01 (NOT June 2022 Celsius)
+    expect(simRes.dailyTrajectory[0].dateStr).toBe('2022-11-01');
+    expect(simRes.dailyTrajectory[29].dateStr).toBe('2022-11-30');
+    expect(simRes.dailyTrajectory[0].fundingAPR).toBe(CRISIS_HISTORICAL_SERIES.ftx_carry_winter[0].fundingAPR);
+
+    // Peak depeg in FTX is ~2.20% (NOT 6.50% from Celsius)
+    const peakDepeg = Math.max(...simRes.dailyTrajectory.map(s => s.depegPct));
+    expect(peakDepeg).toBeLessThan(3.0);
+    expect(peakDepeg).toBeGreaterThan(1.5);
   });
 });

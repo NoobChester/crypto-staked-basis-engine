@@ -64,6 +64,13 @@ describe('Crisis & Stress-Test Scenarios Matrix', () => {
       expect(diagnosis.riskPill).toBe('DE-PEG IMPAIRMENT');
       expect(diagnosis.verdictTitle).toContain('Secondary Basis Freeze');
     });
+
+    it('safely handles partial state without NaN in net carry formulation', () => {
+      const outcome = calculateOutcome(sc.priceMove, { capital: 10000 });
+      const diagnosis = sc.getDiagnosis({} as any, outcome);
+      expect(diagnosis.verdictText).not.toContain('NaN');
+      expect(diagnosis.status).toBe('stressed');
+    });
   });
 
   describe('2. Post-FTX Inverted Carry Scenario', () => {
@@ -91,6 +98,18 @@ describe('Crisis & Stress-Test Scenarios Matrix', () => {
       const diagnosis = sc.getDiagnosis(baseState, outcome);
       expect(diagnosis.status).toBe('inverted');
       expect(diagnosis.verdictTitle).toContain('Severe Backwardation Carry Bleed');
+    });
+
+    it('safely handles partial state without throwing TypeError (resilient defaults)', () => {
+      const outcome = calculateOutcome(sc.priceMove, { capital: 10000 });
+      // Calling getDiagnosis with empty object must NOT throw Cannot read properties of undefined (reading 'toFixed')
+      expect(() => {
+        const diagnosis = sc.getDiagnosis({} as any, outcome);
+        expect(diagnosis.status).toBe('inverted');
+        expect(diagnosis.verdictText).not.toContain('NaN');
+        expect(diagnosis.verdictText).toContain('-12.0% APR');
+        expect(diagnosis.verdictText).toContain('+3.2% APY');
+      }).not.toThrow();
     });
   });
 

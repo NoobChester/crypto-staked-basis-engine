@@ -9,7 +9,6 @@ import { getInstrumentDetails, COLLATERAL_INTELLIGENCE, type CollateralPresetKey
 import { FEE_TIERS, type ExecutionFeeTier } from '../../services/marketData.js';
 import type { UIElements } from '../dom.js';
 import { renderMarketData } from './feedRenderer.js';
-import { renderScenarioMatrix } from './scenarioRenderer.js';
 
 export function renderCollateralIntelligence(UI: UIElements, state: HedgingState): void {
   const presetKey = (state.activePreset || 'wsteth_90') as CollateralPresetKey;
@@ -316,7 +315,4 @@ export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcom
 
   // Render Live Market Ticker Ribbon
   renderMarketData(UI, state);
-
-  // Render Crisis Scenarios Matrix & Risk Verdicts
-  renderScenarioMatrix(UI, state, res, (state as any).activeCrisisScenario ?? null);
 }

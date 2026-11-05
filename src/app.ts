@@ -140,22 +140,42 @@ export const stressLabState: StressLabState = {
   solYieldType: 'real'
 };
 
+export function getStressLabScenarioState(key: CrisisScenarioKey = stressLabState.activeScenario): HedgingState {
+  const scenario = CRISIS_SCENARIOS[key];
+  const effectiveStakingAPY = stressLabState.tradedAsset === 'SOL'
+    ? (stressLabState.solYieldType === 'nominal' ? 7.2 : 1.8)
+    : stressLabState.tradedAsset === 'BTC' ? 0.0 : 3.2;
+
+  return {
+    capital: stressLabState.capital,
+    mode: stressLabState.mode,
+    tradedAsset: stressLabState.tradedAsset,
+    collateralRatio: scenario?.collateralRatio ?? stressLabState.collateralRatio,
+    splitSpot: stressLabState.splitSpot,
+    solYieldType: stressLabState.solYieldType,
+    priceMove: scenario?.priceMove ?? 0,
+    fundingAPR: scenario?.fundingAPR ?? 10.0,
+    depegPct: scenario?.depegPct ?? 0,
+    stakingAPY: effectiveStakingAPY,
+    days: scenario?.lockedHorizonDays ?? 30,
+    mmr: 0.005,
+    roundtripFeePct: 0.10,
+    tbillRate: 4.35
+  };
+}
+
 export function updateStressLab(): void {
   if (!UI) return;
   const key = stressLabState.activeScenario;
   const scenario = CRISIS_SCENARIOS[key];
   if (!scenario) return;
 
-  currentCrisisResult = calculateCrisisSimulation(key, stressLabState);
+  const scenarioState = getStressLabScenarioState(key);
+  currentCrisisResult = calculateCrisisSimulation(key, scenarioState);
 
   // Dynamic Risk Diagnosis Verdict Box & Scenario Buttons styling
-  const dummyOutcome = calculateOutcome(scenario.priceMove, {
-    capital: stressLabState.capital,
-    mode: stressLabState.mode,
-    collateralRatio: stressLabState.collateralRatio,
-    splitSpot: stressLabState.splitSpot
-  });
-  renderScenarioMatrix(UI, stressLabState as any, dummyOutcome, key);
+  const dummyOutcome = calculateOutcome(scenario.priceMove, scenarioState);
+  renderScenarioMatrix(UI, scenarioState, dummyOutcome, key);
 
   // Render Two-Tier Summary Card into stress lab summary container
   const summaryEl = UI.stressAuditTwoTierSummary || document.getElementById('stress-audit-two-tier-summary');
@@ -207,6 +227,16 @@ export function updateStressLab(): void {
     } else {
       btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white cursor-pointer';
     }
+  }
+
+  // Desktop ledger title and badge updates
+  const desktopTitle = document.getElementById('stress-audit-desktop-title');
+  if (desktopTitle) {
+    desktopTitle.textContent = `${scenario.title.toUpperCase()} — AUDIT LEDGER`;
+  }
+  const scenarioBadge = document.getElementById('stress-audit-scenario-badge');
+  if (scenarioBadge) {
+    scenarioBadge.textContent = `${currentCrisisResult.horizonDays} DAYS AUDITED`;
   }
 
   // Mobile days badge
@@ -1085,8 +1115,9 @@ export function closeTriadModal(): void {
 
 export function openCrisisAuditModal(): void {
   if (!UI?.crisisAuditModal) return;
-  if (!currentCrisisResult) {
-    currentCrisisResult = calculateCrisisSimulation(stressLabState.activeScenario, stressLabState);
+  const key = stressLabState.activeScenario;
+  if (!currentCrisisResult || currentCrisisResult.scenarioKey !== key) {
+    currentCrisisResult = calculateCrisisSimulation(key, getStressLabScenarioState(key));
   }
   if (!currentCrisisResult) return;
 
@@ -1106,8 +1137,9 @@ export function closeCrisisAuditModal(): void {
 }
 
 export function exportCrisisCsv(): void {
-  if (!currentCrisisResult) {
-    currentCrisisResult = calculateCrisisSimulation(stressLabState.activeScenario, stressLabState);
+  const key = stressLabState.activeScenario;
+  if (!currentCrisisResult || currentCrisisResult.scenarioKey !== key) {
+    currentCrisisResult = calculateCrisisSimulation(key, getStressLabScenarioState(key));
   }
   if (currentCrisisResult) {
     exportCrisisAuditCsv(currentCrisisResult);
