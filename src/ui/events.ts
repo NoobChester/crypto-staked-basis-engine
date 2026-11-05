@@ -45,10 +45,16 @@ export interface AppActions {
   setLookback?: (days: number) => void;
   openRateLabModal?: () => void;
   setForwardEngine?: (engine: 'sqmc' | 'dated_basis') => void;
-  setView?: (view: 'terminal' | 'stress-lab') => void;
+  setView?: (view: 'terminal' | 'stress-lab' | 'backtest') => void;
   setStressCapital?: (capital: number) => void;
   setStressMode?: (mode: MarginMode) => void;
   setStressAsset?: (asset: TradedAsset) => void;
+  setBacktestAsset?: (asset: TradedAsset) => void;
+  setBacktestCapital?: (capital: number) => void;
+  setBacktestMode?: (mode: MarginMode) => void;
+  setBacktestEpoch?: (epoch: string) => void;
+  setBacktestDates?: (startDate: string, endDate: string) => void;
+  exportBacktestCsv?: () => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -206,7 +212,7 @@ export function setupEventDelegation(actions: AppActions): void {
         break;
       }
       case 'set-view': {
-        const view = target.getAttribute('data-view') as 'terminal' | 'stress-lab';
+        const view = target.getAttribute('data-view') as 'terminal' | 'stress-lab' | 'backtest';
         if (view && actions.setView) actions.setView(view);
         break;
       }
@@ -229,6 +235,33 @@ export function setupEventDelegation(actions: AppActions): void {
         if (asset && actions.setStressAsset) actions.setStressAsset(asset);
         break;
       }
+      case 'set-backtest-asset': {
+        const asset = target.getAttribute('data-asset') as TradedAsset;
+        if (asset && actions.setBacktestAsset) actions.setBacktestAsset(asset);
+        break;
+      }
+      case 'set-backtest-mode': {
+        const mode = target.getAttribute('data-mode') as MarginMode;
+        if (mode && actions.setBacktestMode) actions.setBacktestMode(mode);
+        break;
+      }
+      case 'set-backtest-epoch': {
+        const epoch = target.getAttribute('data-epoch');
+        if (epoch && actions.setBacktestEpoch) actions.setBacktestEpoch(epoch);
+        break;
+      }
+      case 'apply-backtest-dates': {
+        const startEl = document.getElementById('backtest-start-date') as HTMLInputElement | null;
+        const endEl = document.getElementById('backtest-end-date') as HTMLInputElement | null;
+        if (startEl && endEl && actions.setBacktestDates) {
+          actions.setBacktestDates(startEl.value, endEl.value);
+        }
+        break;
+      }
+      case 'export-backtest-csv': {
+        actions.exportBacktestCsv?.();
+        break;
+      }
     }
   });
 }
@@ -238,7 +271,8 @@ export function bindSliderListeners(
   state: HedgingState,
   onUpdate: () => void,
   onLookback?: (days: number) => void,
-  onStressCapital?: (capital: number) => void
+  onStressCapital?: (capital: number) => void,
+  onBacktestCapital?: (capital: number) => void
 ): void {
   if (UI.inputPriceMove) {
     UI.inputPriceMove.addEventListener('input', (e) => {
@@ -325,6 +359,12 @@ export function bindSliderListeners(
     UI.stressInputCapital.addEventListener('input', (e) => {
       const val = Math.max(100, parseFloat((e.target as HTMLInputElement).value) || 1000);
       if (onStressCapital) onStressCapital(val);
+    });
+  }
+  if (UI.backtestInputCapital) {
+    UI.backtestInputCapital.addEventListener('input', (e) => {
+      const val = Math.max(100, parseFloat((e.target as HTMLInputElement).value) || 1000);
+      if (onBacktestCapital) onBacktestCapital(val);
     });
   }
 }

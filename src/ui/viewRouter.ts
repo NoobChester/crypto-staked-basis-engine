@@ -4,13 +4,14 @@
  * and Institutional Stress & Crisis Lab, with persistent URL hash synchronization.
  */
 
-export type AppView = 'terminal' | 'stress-lab';
+export type AppView = 'terminal' | 'stress-lab' | 'backtest';
 
 let currentView: AppView = 'terminal';
 let onViewChangeCallback: ((view: AppView) => void) | null = null;
 let isInitialized = false;
 
 const ACTIVE_TAB_CLASSES = 'px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow cursor-pointer';
+const ACTIVE_BACKTEST_TAB_CLASSES = 'px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-purple-500 text-black shadow cursor-pointer';
 const INACTIVE_TAB_CLASSES = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer';
 
 export function getView(): AppView {
@@ -64,7 +65,9 @@ export function initViewRouter(onViewChange?: (view: AppView) => void): void {
 export function syncFromHash(): void {
   if (typeof window === 'undefined' || !window.location || typeof window.location.hash !== 'string') return;
   const hash = window.location.hash.toLowerCase();
-  if (hash === '#stress-lab' || hash === '#stress' || hash === '#crisis') {
+  if (hash === '#backtest' || hash === '#historical') {
+    setView('backtest', false);
+  } else if (hash === '#stress-lab' || hash === '#stress' || hash === '#crisis') {
     setView('stress-lab', false);
   } else {
     setView('terminal', false);
@@ -78,7 +81,7 @@ export function setView(view: AppView, updateHash = true): void {
   currentView = view;
 
   if (updateHash && typeof window !== 'undefined' && window.location && typeof window.location.hash === 'string') {
-    const targetHash = view === 'stress-lab' ? '#stress-lab' : '#terminal';
+    const targetHash = view === 'backtest' ? '#backtest' : view === 'stress-lab' ? '#stress-lab' : '#terminal';
     if (window.location.hash !== targetHash) {
       if (window.history && typeof window.history.replaceState === 'function') {
         window.history.replaceState(null, '', targetHash);
@@ -102,13 +105,20 @@ export function applyViewVisibility(): void {
 
   const viewTerminal = document.getElementById('view-live-terminal');
   const viewStress = document.getElementById('view-stress-lab');
+  const viewBacktest = document.getElementById('view-backtest');
 
   if (currentView === 'terminal') {
     viewTerminal?.classList.remove('hidden');
     viewStress?.classList.add('hidden');
-  } else {
+    viewBacktest?.classList.add('hidden');
+  } else if (currentView === 'stress-lab') {
     viewTerminal?.classList.add('hidden');
     viewStress?.classList.remove('hidden');
+    viewBacktest?.classList.add('hidden');
+  } else if (currentView === 'backtest') {
+    viewTerminal?.classList.add('hidden');
+    viewStress?.classList.add('hidden');
+    viewBacktest?.classList.remove('hidden');
   }
 }
 
@@ -120,14 +130,15 @@ export function updateHeaderNavStyles(): void {
 
   const btnTerminal = document.getElementById('nav-btn-terminal');
   const btnStress = document.getElementById('nav-btn-stress');
+  const btnBacktest = document.getElementById('nav-btn-backtest');
 
-  if (btnTerminal && btnStress) {
-    if (currentView === 'terminal') {
-      btnTerminal.className = ACTIVE_TAB_CLASSES;
-      btnStress.className = INACTIVE_TAB_CLASSES;
-    } else {
-      btnTerminal.className = INACTIVE_TAB_CLASSES;
-      btnStress.className = ACTIVE_TAB_CLASSES;
-    }
+  if (btnTerminal) {
+    btnTerminal.className = currentView === 'terminal' ? ACTIVE_TAB_CLASSES : INACTIVE_TAB_CLASSES;
+  }
+  if (btnStress) {
+    btnStress.className = currentView === 'stress-lab' ? ACTIVE_TAB_CLASSES : INACTIVE_TAB_CLASSES;
+  }
+  if (btnBacktest) {
+    btnBacktest.className = currentView === 'backtest' ? ACTIVE_BACKTEST_TAB_CLASSES : INACTIVE_TAB_CLASSES;
   }
 }

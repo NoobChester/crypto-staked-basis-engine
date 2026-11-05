@@ -288,6 +288,39 @@ export interface UIElements {
   ciBeats: HTMLElement | null;
   ciVerdict: HTMLElement | null;
 
+  // Multi-Year Historical Backtester View
+  viewBacktest: HTMLElement | null;
+  navBtnBacktest: HTMLElement | null;
+  backtestAssetBtnEth: HTMLElement | null;
+  backtestAssetBtnSol: HTMLElement | null;
+  backtestAssetBtnBtc: HTMLElement | null;
+  backtestInputCapital: HTMLInputElement | null;
+  backtestModeBtnUnified: HTMLElement | null;
+  backtestModeBtnIsolated: HTMLElement | null;
+  backtestValCollateralRatio: HTMLElement | null;
+  backtestRangeBadge: HTMLElement | null;
+  backtestStartDate: HTMLInputElement | null;
+  backtestEndDate: HTMLInputElement | null;
+  btnApplyCustomDates: HTMLElement | null;
+  backtestCanvas: HTMLCanvasElement | null;
+  backtestTbody: HTMLElement | null;
+  backtestPaginationContainer: HTMLElement | null;
+  btnBacktestExportCsv: HTMLElement | null;
+  backtestKpiReturn: HTMLElement | null;
+  backtestKpiPnl: HTMLElement | null;
+  backtestKpiCagr: HTMLElement | null;
+  backtestKpiMdd: HTMLElement | null;
+  backtestKpiMddDate: HTMLElement | null;
+  backtestKpiSharpe: HTMLElement | null;
+  backtestKpiSortino: HTMLElement | null;
+  backtestKpiHarvestTotal: HTMLElement | null;
+  backtestKpiStaking: HTMLElement | null;
+  backtestKpiFunding: HTMLElement | null;
+  backtestKpiSolvencyStatus: HTMLElement | null;
+  backtestKpiSolvencyDetails: HTMLElement | null;
+  backtestLegendSpotReturn: HTMLElement | null;
+  backtestLegendTbillReturn: HTMLElement | null;
+
   // Spot Staking Sub-Chart Elements
   historicalStakingSubCanvas: HTMLCanvasElement | null;
   histStakingSubchartWrapper: HTMLElement | null;
@@ -586,6 +619,39 @@ export function getUIElements(): UIElements {
     ciBeats: document.getElementById('ci-beats'),
     ciVerdict: document.getElementById('ci-verdict'),
 
+    // Multi-Year Historical Backtester View
+    viewBacktest: document.getElementById('view-backtest'),
+    navBtnBacktest: document.getElementById('nav-btn-backtest'),
+    backtestAssetBtnEth: document.getElementById('backtest-asset-btn-eth'),
+    backtestAssetBtnSol: document.getElementById('backtest-asset-btn-sol'),
+    backtestAssetBtnBtc: document.getElementById('backtest-asset-btn-btc'),
+    backtestInputCapital: document.getElementById('backtest-input-capital') as HTMLInputElement | null,
+    backtestModeBtnUnified: document.getElementById('backtest-mode-btn-unified'),
+    backtestModeBtnIsolated: document.getElementById('backtest-mode-btn-isolated'),
+    backtestValCollateralRatio: document.getElementById('backtest-val-collateral-ratio'),
+    backtestRangeBadge: document.getElementById('backtest-range-badge'),
+    backtestStartDate: document.getElementById('backtest-start-date') as HTMLInputElement | null,
+    backtestEndDate: document.getElementById('backtest-end-date') as HTMLInputElement | null,
+    btnApplyCustomDates: document.getElementById('btn-apply-custom-dates'),
+    backtestCanvas: document.getElementById('backtest-canvas') as HTMLCanvasElement | null,
+    backtestTbody: document.getElementById('backtest-tbody'),
+    backtestPaginationContainer: document.getElementById('backtest-pagination-container'),
+    btnBacktestExportCsv: document.getElementById('btn-backtest-export-csv'),
+    backtestKpiReturn: document.getElementById('backtest-kpi-return'),
+    backtestKpiPnl: document.getElementById('backtest-kpi-pnl'),
+    backtestKpiCagr: document.getElementById('backtest-kpi-cagr'),
+    backtestKpiMdd: document.getElementById('backtest-kpi-mdd'),
+    backtestKpiMddDate: document.getElementById('backtest-kpi-mdd-date'),
+    backtestKpiSharpe: document.getElementById('backtest-kpi-sharpe'),
+    backtestKpiSortino: document.getElementById('backtest-kpi-sortino'),
+    backtestKpiHarvestTotal: document.getElementById('backtest-kpi-harvest-total'),
+    backtestKpiStaking: document.getElementById('backtest-kpi-staking'),
+    backtestKpiFunding: document.getElementById('backtest-kpi-funding'),
+    backtestKpiSolvencyStatus: document.getElementById('backtest-kpi-solvency-status'),
+    backtestKpiSolvencyDetails: document.getElementById('backtest-kpi-solvency-details'),
+    backtestLegendSpotReturn: document.getElementById('backtest-legend-spot-return'),
+    backtestLegendTbillReturn: document.getElementById('backtest-legend-tbill-return'),
+
     // Spot Staking Sub-Chart Elements
     historicalStakingSubCanvas: document.getElementById('historicalStakingSubCanvas') as HTMLCanvasElement | null,
     histStakingSubchartWrapper: document.getElementById('hist-staking-subchart-wrapper'),
@@ -602,6 +668,8 @@ export { renderMarketData, renderHistoricalPills } from './renderers/feedRendere
 export { renderHistoricalModal, updateHistoricalTooltip } from './renderers/historicalModalRenderer.js';
 export { updateDepegControl } from './renderers/depegRenderer.js';
 export { renderScenarioMatrix } from './renderers/scenarioRenderer.js';
+export { drawBacktestChart } from './renderers/backtestChartRenderer.js';
+export { renderBacktestLedger, renderBacktestPagination, exportBacktestCsv } from './renderers/backtestLedgerRenderer.js';
 
 export { bindSliderListeners as bindInputListeners } from "./events.js";
 

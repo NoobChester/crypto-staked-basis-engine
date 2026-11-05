@@ -3,7 +3,7 @@
  * @description Main application orchestrator, state store, event dispatcher, and live feed coordinator.
  */
 
-import { calculateOutcome, calculateCrisisSimulation, fmtPct, type HedgingState, type CrisisSimulationResult } from './math/hedging.js';
+import { calculateOutcome, calculateCrisisSimulation, fmtPct, fmtUSD, type HedgingState, type CrisisSimulationResult } from './math/hedging.js';
 import { drawCrisisTrajectory } from './ui/renderers/crisisTrajectoryRenderer.js';
 import { renderCrisisAuditTable, exportCrisisAuditCsv, renderCrisisAuditSummary } from './ui/dom.js';
 import { renderScenarioMatrix } from './ui/renderers/scenarioRenderer.js';
@@ -57,6 +57,21 @@ import { bindCanvasTouchScrub } from './ui/touchInteractions.js';
 import { initTapToEdit } from './ui/tapToEdit.js';
 import type { StochasticSimulationResult, OUProcessParams } from './types/rateLab.js';
 import { drawHistoricalChart, drawHistoricalStakingSubChart, drawHistoricalSubChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
+import {
+  getHistoricalBacktestSeries,
+  getAssetInceptionDate,
+  HISTORICAL_EPOCH_PRESETS
+} from './services/marketData/backtestService.js';
+import {
+  runHistoricalBacktest,
+  type BacktestSummaryResult
+} from './math/backtest.js';
+import {
+  drawBacktestChart,
+  renderBacktestLedger,
+  renderBacktestPagination,
+  exportBacktestCsv
+} from './ui/dom.js';
 
 export type HistoricalHorizon = 'live' | '7d' | '30d' | '90d' | 'custom';
 
@@ -243,6 +258,260 @@ export function updateStressLab(): void {
   const mobileDaysBadge = document.getElementById('stress-mobile-days-badge');
   if (mobileDaysBadge) {
     mobileDaysBadge.textContent = `${currentCrisisResult.horizonDays} Days Audited`;
+  }
+}
+
+export interface BacktestState {
+  asset: TradedAsset;
+  capital: number;
+  mode: MarginMode;
+  collateralRatio: number;
+  splitSpot: number;
+  startDate: string;
+  endDate: string;
+  activeEpoch: string;
+  currentPage: number;
+  pageSize: number;
+}
+
+export const backtestState: BacktestState = {
+  asset: 'ETH',
+  capital: 10000,
+  mode: 'unified',
+  collateralRatio: 0.90,
+  splitSpot: 50,
+  startDate: '2020-12-01',
+  endDate: '2026-10-31',
+  activeEpoch: 'all',
+  currentPage: 1,
+  pageSize: 50
+};
+
+let currentBacktestResult: BacktestSummaryResult | null = null;
+
+function renderBacktestPaginationControls(): void {
+  if (!UI || !currentBacktestResult) return;
+  renderBacktestPagination(
+    UI.backtestPaginationContainer,
+    currentBacktestResult.dailyTrajectory.length,
+    backtestState.currentPage,
+    backtestState.pageSize,
+    (newPage: number) => {
+      backtestState.currentPage = newPage;
+      renderBacktestLedger(UI.backtestTbody, currentBacktestResult, backtestState.currentPage, backtestState.pageSize);
+      renderBacktestPaginationControls();
+    }
+  );
+}
+
+export function updateBacktest(): void {
+  if (!UI) return;
+
+  const series = getHistoricalBacktestSeries(backtestState.asset, backtestState.startDate, backtestState.endDate);
+  if (!series || series.length === 0) return;
+
+  currentBacktestResult = runHistoricalBacktest(series, {
+    capital: backtestState.capital,
+    mode: backtestState.mode,
+    collateralRatio: backtestState.collateralRatio,
+    splitSpot: backtestState.splitSpot,
+    mmr: 0.005,
+    tbillRate: 4.35
+  });
+
+  // Controls UI updates
+  if (UI.backtestValCollateralRatio) {
+    UI.backtestValCollateralRatio.textContent = (backtestState.collateralRatio * 100).toFixed(0) + '%';
+  }
+  if (UI.backtestRangeBadge) {
+    UI.backtestRangeBadge.textContent = `${currentBacktestResult.startDate} → ${currentBacktestResult.endDate} (${series.length} Days)`;
+  }
+  if (UI.backtestStartDate) {
+    const inception = getAssetInceptionDate(backtestState.asset);
+    UI.backtestStartDate.min = inception;
+    UI.backtestStartDate.max = '2026-10-31';
+    UI.backtestStartDate.value = backtestState.startDate;
+  }
+  if (UI.backtestEndDate) {
+    const inception = getAssetInceptionDate(backtestState.asset);
+    UI.backtestEndDate.min = inception;
+    UI.backtestEndDate.max = '2026-10-31';
+    UI.backtestEndDate.value = backtestState.endDate;
+  }
+  if (UI.backtestInputCapital && document.activeElement !== UI.backtestInputCapital) {
+    UI.backtestInputCapital.value = backtestState.capital.toString();
+  }
+
+  // Asset Buttons Active Styling
+  const assetBtns: Record<TradedAsset, HTMLElement | null> = {
+    ETH: UI.backtestAssetBtnEth,
+    SOL: UI.backtestAssetBtnSol,
+    BTC: UI.backtestAssetBtnBtc
+  };
+  for (const [asset, btn] of Object.entries(assetBtns) as [TradedAsset, HTMLElement | null][]) {
+    if (!btn) continue;
+    if (backtestState.asset === asset) {
+      btn.className = 'flex-1 py-1 text-center rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold cursor-pointer transition';
+    } else {
+      btn.className = 'flex-1 py-1 text-center rounded text-slate-400 hover:text-white border-transparent cursor-pointer transition';
+    }
+  }
+
+  // Mode Buttons Active Styling
+  if (UI.backtestModeBtnUnified && UI.backtestModeBtnIsolated) {
+    if (backtestState.mode === 'unified') {
+      UI.backtestModeBtnUnified.className = 'px-2.5 py-1 rounded font-bold transition bg-cyan-500 text-black shadow cursor-pointer';
+      UI.backtestModeBtnIsolated.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
+    } else {
+      UI.backtestModeBtnUnified.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
+      UI.backtestModeBtnIsolated.className = 'px-2.5 py-1 rounded font-bold transition bg-cyan-500 text-black shadow cursor-pointer';
+    }
+  }
+
+  // Epoch Buttons Active Styling
+  const epochKeys = ['all', 'bull_2021', 'bear_2022', 'shapella_2023', 'institutional_2024'];
+  for (const ep of epochKeys) {
+    const id = ep === 'all' ? 'btn-epoch-all' : `btn-epoch-${ep.replace('_', '-')}`;
+    const btn = document.getElementById(id);
+    if (!btn) continue;
+    if (backtestState.activeEpoch === ep) {
+      btn.className = 'p-2.5 rounded-xl border border-purple-500 bg-purple-950/40 text-left cursor-pointer transition hover:border-purple-400 group';
+    } else {
+      btn.className = 'p-2.5 rounded-xl border border-slate-800 bg-brand-surface/70 text-left cursor-pointer transition hover:border-slate-700 group';
+    }
+  }
+
+  // 6 KPI Cards Updates
+  const res = currentBacktestResult;
+  if (UI.backtestKpiReturn) {
+    const sign = res.cumulativeReturnPct >= 0 ? '+' : '';
+    UI.backtestKpiReturn.textContent = `${sign}${res.cumulativeReturnPct.toFixed(2)}%`;
+    UI.backtestKpiReturn.className = `text-base sm:text-lg font-bold font-mono ${res.cumulativeReturnPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  if (UI.backtestKpiPnl) {
+    const sign = res.netPnL >= 0 ? '+' : '';
+    UI.backtestKpiPnl.textContent = `${sign}${fmtUSD(res.netPnL)}`;
+    UI.backtestKpiPnl.className = `text-base sm:text-lg font-bold font-mono ${res.netPnL >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  if (UI.backtestKpiCagr) {
+    const sign = res.cagrPct >= 0 ? '+' : '';
+    UI.backtestKpiCagr.textContent = `${sign}${res.cagrPct.toFixed(2)}%`;
+  }
+  if (UI.backtestKpiMdd) {
+    UI.backtestKpiMdd.textContent = `-${res.maxDrawdownPct.toFixed(2)}%`;
+  }
+  if (UI.backtestKpiMddDate) {
+    UI.backtestKpiMddDate.textContent = `Trough: ${res.maxDrawdownTroughDate}`;
+  }
+  if (UI.backtestKpiSharpe) {
+    UI.backtestKpiSharpe.textContent = res.sharpeRatio.toFixed(2);
+  }
+  if (UI.backtestKpiSortino) {
+    UI.backtestKpiSortino.textContent = res.sortinoRatio.toFixed(2);
+  }
+  if (UI.backtestKpiHarvestTotal) {
+    const totalHarvest = res.totalHarvestedFunding + res.totalHarvestedStaking;
+    UI.backtestKpiHarvestTotal.textContent = `+${fmtUSD(totalHarvest)}`;
+  }
+  if (UI.backtestKpiStaking) {
+    UI.backtestKpiStaking.textContent = `Staking: ${fmtUSD(res.totalHarvestedStaking)}`;
+  }
+  if (UI.backtestKpiFunding) {
+    UI.backtestKpiFunding.textContent = `Funding: ${fmtUSD(res.totalHarvestedFunding)}`;
+  }
+  if (UI.backtestKpiSolvencyStatus) {
+    if (res.isLiquidated && res.tLiq) {
+      UI.backtestKpiSolvencyStatus.textContent = `LIQUIDATED (Day ${res.tLiq})`;
+      UI.backtestKpiSolvencyStatus.className = 'text-base sm:text-lg font-bold font-mono text-rose-400';
+    } else {
+      UI.backtestKpiSolvencyStatus.textContent = '100% SOLVENT';
+      UI.backtestKpiSolvencyStatus.className = 'text-base sm:text-lg font-bold font-mono text-emerald-400';
+    }
+  }
+  if (UI.backtestKpiSolvencyDetails) {
+    if (res.isLiquidated && res.tLiq) {
+      UI.backtestKpiSolvencyDetails.textContent = `Margin breached on ${res.liquidationDate ?? ''}`;
+    } else {
+      UI.backtestKpiSolvencyDetails.textContent = `Zero liquidation across ${res.horizonDays} days`;
+    }
+  }
+
+  // Legend benchmarks
+  if (UI.backtestLegendSpotReturn) {
+    const sign = res.spotBenchmarkReturnPct >= 0 ? '+' : '';
+    UI.backtestLegendSpotReturn.textContent = `Buy & Hold Spot (${sign}${res.spotBenchmarkReturnPct.toFixed(1)}%)`;
+  }
+  if (UI.backtestLegendTbillReturn) {
+    const sign = res.tbillBenchmarkReturnPct >= 0 ? '+' : '';
+    UI.backtestLegendTbillReturn.textContent = `Risk-Free T-Bill (${sign}${res.tbillBenchmarkReturnPct.toFixed(1)}%)`;
+  }
+
+  // Render Tri-Curve Chart
+  drawBacktestChart(UI.backtestCanvas, res);
+
+  // Render Ledger & Pagination
+  renderBacktestLedger(UI.backtestTbody, res, backtestState.currentPage, backtestState.pageSize);
+  renderBacktestPaginationControls();
+}
+
+export function setBacktestAsset(asset: TradedAsset): void {
+  backtestState.asset = asset;
+  if (asset === 'ETH') {
+    backtestState.collateralRatio = 0.90;
+  } else if (asset === 'BTC') {
+    backtestState.collateralRatio = 0.85;
+  } else if (asset === 'SOL') {
+    backtestState.collateralRatio = 0.85;
+  }
+
+  const inception = getAssetInceptionDate(asset);
+  if (backtestState.startDate < inception) {
+    backtestState.startDate = inception;
+  }
+  backtestState.currentPage = 1;
+  updateBacktest();
+}
+
+export function setBacktestCapital(capital: number): void {
+  backtestState.capital = capital;
+  updateBacktest();
+}
+
+export function setBacktestMode(mode: MarginMode): void {
+  backtestState.mode = mode;
+  updateBacktest();
+}
+
+export function setBacktestEpoch(epochKey: string): void {
+  backtestState.activeEpoch = epochKey;
+  const inception = getAssetInceptionDate(backtestState.asset);
+
+  if (epochKey === 'all') {
+    backtestState.startDate = inception;
+    backtestState.endDate = '2026-10-31';
+  } else {
+    const preset = HISTORICAL_EPOCH_PRESETS[epochKey];
+    if (preset) {
+      backtestState.startDate = preset.startDate < inception ? inception : preset.startDate;
+      backtestState.endDate = preset.endDate;
+    }
+  }
+  backtestState.currentPage = 1;
+  updateBacktest();
+}
+
+export function setBacktestDates(startDate: string, endDate: string): void {
+  const inception = getAssetInceptionDate(backtestState.asset);
+  backtestState.startDate = (!startDate || startDate < inception) ? inception : startDate;
+  backtestState.endDate = (!endDate || endDate > '2026-10-31') ? '2026-10-31' : endDate;
+  backtestState.activeEpoch = 'custom';
+  backtestState.currentPage = 1;
+  updateBacktest();
+}
+
+export function exportBacktestCsvAction(): void {
+  if (currentBacktestResult) {
+    exportBacktestCsv(currentBacktestResult);
   }
 }
 
@@ -1318,12 +1587,27 @@ function init() {
     setView: (view) => setView(view, true),
     setStressCapital,
     setStressMode,
-    setStressAsset
+    setStressAsset,
+    setBacktestAsset,
+    setBacktestCapital,
+    setBacktestMode,
+    setBacktestEpoch,
+    setBacktestDates,
+    exportBacktestCsv: exportBacktestCsvAction
   });
-  bindSliderListeners(UI, state, updateApp, (days) => setLookback(days), (capital) => setStressCapital(capital));
+  bindSliderListeners(
+    UI,
+    state,
+    updateApp,
+    (days) => setLookback(days),
+    (capital) => setStressCapital(capital),
+    (capital) => setBacktestCapital(capital)
+  );
   initViewRouter((view) => {
     if (view === 'stress-lab') {
       updateStressLab();
+    } else if (view === 'backtest') {
+      updateBacktest();
     } else {
       updateApp();
     }
@@ -1402,8 +1686,14 @@ function init() {
         drawHistoricalStakingSubChart(UI.historicalStakingSubCanvas, currentHistoricalAnalytics);
         drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
       }
+      if (UI.backtestCanvas && currentBacktestResult) {
+        drawBacktestChart(UI.backtestCanvas, currentBacktestResult);
+      }
     });
     ro.observe(UI.canvas.parentElement);
+    if (UI.backtestCanvas && UI.backtestCanvas.parentElement) {
+      ro.observe(UI.backtestCanvas.parentElement);
+    }
   }
 
   // Setup Triad Modal backdrop dismiss
@@ -1480,6 +1770,7 @@ function init() {
   updateStatisticalCarry(30);
   updateApp();
   updateStressLab();
+  updateBacktest();
 }
 
 if (typeof document !== 'undefined') {
