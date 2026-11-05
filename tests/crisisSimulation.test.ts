@@ -110,6 +110,12 @@ describe('Institutional Crisis Simulation Engine', () => {
       // Portfolio protected capital with modest drawdown solely from basis depeg & inverted carry
       expect(res.terminalEquity).toBeGreaterThan(9500);
       expect(res.terminalEquity).toBeLessThan(10000);
+
+      // Post-Resolution Parity State: depeg unwinds to 0.00%
+      expect(res.resolvedDepegPct).toBe(0.0);
+      expect(res.resolvedDepegLoss).toBe(0.0);
+      expect(res.resolvedTerminalEquity).toBeCloseTo(res.terminalEquity + res.depegLoss, 1);
+      expect(res.resolvedNetPnL).toBeCloseTo(res.totalHarvestedFunding + res.totalHarvestedStaking, 1);
     });
   });
 

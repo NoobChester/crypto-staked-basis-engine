@@ -96,6 +96,13 @@ export interface CrisisSimulationResult {
   rLiq: number;
   distanceToLiqPct: number;
   dailyTrajectory: CrisisSimulationStep[];
+
+  // Post-Resolution Parity State (0.00% Depeg)
+  resolvedDepegPct?: number;
+  resolvedDepegLoss?: number;
+  resolvedTerminalEquity?: number;
+  resolvedNetPnL?: number;
+  resolvedRealizedAPY?: number;
 }
 
 /**
@@ -523,6 +530,24 @@ export function calculateCrisisSimulation(
 
   const distanceToLiqPct = (rLiq === Infinity) ? Infinity : parseFloat(((rLiq - terminalR) * 100).toFixed(2));
 
+  // Post-Resolution Parity State (0.00% Depeg)
+  const resolvedDepegPct = 0.0;
+  const resolvedDepegLoss = 0.0;
+  let resolvedTerminalEquity: number;
+
+  if (!isLiquidated) {
+    // In delta-neutral hedge, spot delta (1+r) and perp short delta (-r) cancel out at 0% depeg
+    resolvedTerminalEquity = parseFloat((C + cumulativeFunding + cumulativeStaking).toFixed(2));
+  } else {
+    // If liquidated at trough, position became naked spot; recovering depeg to 0 restores spot discount only
+    const resolvedSpotVal = S0 * (1 + terminalR);
+    const forfeitedMargin = mode === 'isolated' ? M0 : (S0 * V);
+    resolvedTerminalEquity = parseFloat((resolvedSpotVal - forfeitedMargin + cumulativeFunding + cumulativeStaking).toFixed(2));
+  }
+
+  const resolvedNetPnL = parseFloat((resolvedTerminalEquity - C).toFixed(2));
+  const resolvedRealizedAPY = C > 0 ? parseFloat(((resolvedNetPnL / C) * (365 / horizonDays) * 100).toFixed(2)) : 0;
+
   return {
     scenarioKey,
     scenarioTitle: scenario.title,
@@ -539,7 +564,12 @@ export function calculateCrisisSimulation(
     netRealizedAPY,
     rLiq,
     distanceToLiqPct,
-    dailyTrajectory
+    dailyTrajectory,
+    resolvedDepegPct,
+    resolvedDepegLoss,
+    resolvedTerminalEquity,
+    resolvedNetPnL,
+    resolvedRealizedAPY
   };
 }
 

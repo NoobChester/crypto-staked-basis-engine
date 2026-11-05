@@ -282,4 +282,82 @@ describe('Crisis Audit Ledger: Trough vs. Resolved Two-Tier Summary Card', () =>
     expect(mockBody.appendChild).toHaveBeenCalled();
     expect(mockBody.removeChild).toHaveBeenCalled();
   });
+
+  it('guarantees Tier 2 Post-Resolution returns to 0.00% depeg even when daily trajectory ends with residual discount', () => {
+    const residualTrajectoryResult: CrisisSimulationResult = {
+      scenarioKey: 'celsius_depeg_2022' as any,
+      scenarioTitle: 'Celsius 2022 De-Peg Replay',
+      horizonDays: 28,
+      tLiq: null,
+      isLiquidated: false,
+      totalHarvestedFunding: -259.4,
+      totalHarvestedStaking: 115.0,
+      depegLoss: 270.0,
+      spotPnL: -4270.0,
+      perpPnL: 4000.0,
+      terminalEquity: 9585.6,
+      netPnL: -414.4,
+      netRealizedAPY: -5.4,
+      rLiq: 8.52,
+      distanceToLiqPct: 45.2,
+      resolvedDepegPct: 0.0,
+      resolvedDepegLoss: 0.0,
+      resolvedTerminalEquity: 9855.6,
+      resolvedNetPnL: -144.4,
+      resolvedRealizedAPY: -1.88,
+      dailyTrajectory: [
+        {
+          day: 1,
+          dateStr: '2022-06-01',
+          priceShockPct: 0.0,
+          spotPrice: 2000,
+          fundingAPR: -2.1,
+          depegPct: 1.5,
+          equity: 9980,
+          marginRatio: 0.05,
+          isLiquidated: false,
+          fundingAccrued: -2,
+          stakingAccrued: 1
+        },
+        {
+          day: 18,
+          dateStr: '2022-06-18',
+          priceShockPct: -39.5,
+          spotPrice: 1210,
+          fundingAPR: -15.0,
+          depegPct: 6.5,
+          equity: 8850,
+          marginRatio: 0.68,
+          isLiquidated: false,
+          fundingAccrued: -180,
+          stakingAccrued: 70
+        },
+        {
+          day: 28,
+          dateStr: '2022-06-28',
+          priceShockPct: -40.0,
+          spotPrice: 1200,
+          fundingAPR: -7.2,
+          depegPct: 4.5,
+          equity: 9585.6,
+          marginRatio: 0.25,
+          isLiquidated: false,
+          fundingAccrued: -259.4,
+          stakingAccrued: 115
+        }
+      ]
+    };
+
+    renderCrisisAuditSummary(mockSummaryContainer, residualTrajectoryResult);
+    const html = mockSummaryContainer.innerHTML;
+
+    expect(html).toContain('2. Post-Resolution (Terminal State)');
+    expect(html).toContain('0.00% Depeg');
+    expect(html).toContain('0.00% (Parity)');
+    expect(html).toContain('+$270.00 Recovered');
+    expect(html).toContain('$9,855.60');
+    expect(html).toContain('-$144.40 Net PnL');
+    expect(html).toContain('TRANSITORY ($0.00 Permanent Loss)');
+    expect(html).toContain('Mark-to-market dip fully unwound upon re-pegging to parity (0.00% depeg)');
+  });
 });

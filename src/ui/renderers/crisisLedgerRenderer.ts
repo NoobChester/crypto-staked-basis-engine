@@ -35,27 +35,34 @@ export function renderCrisisAuditSummary(
   const peakDepeg = Math.max(...steps.map(s => s.depegPct));
   const minHeadroom = Math.max(0, (1 - peakMarginRatio) * 100);
 
-  // 2. Terminal / Post-Resolution Step
+  // 2. Terminal / Post-Resolution Step (0.00% Depeg Parity)
   const lastStep = steps[steps.length - 1];
-  const terminalEquity = result.terminalEquity;
-  const netPnL = result.netPnL;
-  const apy = result.netRealizedAPY;
   const totalHarvested = (result.totalHarvestedFunding || 0) + (result.totalHarvestedStaking || 0);
+
+  // Post-Resolution values evaluated once secondary depeg resolves to 0.00% parity
+  const resolvedEquity = result.resolvedTerminalEquity !== undefined
+    ? result.resolvedTerminalEquity
+    : (!result.isLiquidated ? parseFloat((C + totalHarvested).toFixed(2)) : result.terminalEquity + result.depegLoss);
+
+  const resolvedNetPnL = result.resolvedNetPnL !== undefined
+    ? result.resolvedNetPnL
+    : parseFloat((resolvedEquity - C).toFixed(2));
+
+  const resolvedApy = result.resolvedRealizedAPY !== undefined
+    ? result.resolvedRealizedAPY
+    : (C > 0 ? parseFloat(((resolvedNetPnL / C) * (365 / result.horizonDays) * 100).toFixed(2)) : 0);
+
+  const mtmDiscountRecovered = result.depegLoss;
 
   // Depeg resolution classification
   let impairmentBadge = '';
   let impairmentDesc = '';
 
   if (!result.isLiquidated) {
-    if (lastStep.depegPct <= 0.1) {
-      impairmentBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">TRANSITORY ($0.00 Permanent Loss)</span>`;
-      impairmentDesc = 'Mark-to-market dip fully unwound upon re-pegging to parity. 100% carry preserved.';
-    } else {
-      impairmentBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-700">RESIDUAL DISCOUNT (-${fmtUSD(result.depegLoss)})</span>`;
-      impairmentDesc = `Residual discount of ${lastStep.depegPct.toFixed(2)}% remaining at horizon conclusion.`;
-    }
+    impairmentBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">TRANSITORY ($0.00 Permanent Loss)</span>`;
+    impairmentDesc = 'Mark-to-market dip fully unwound upon re-pegging to parity (0.00% depeg). 100% carry preserved.';
   } else {
-    impairmentBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-700 animate-pulse">PERMANENT IMPAIRMENT (-${fmtUSD(Math.abs(netPnL))})</span>`;
+    impairmentBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-700 animate-pulse">PERMANENT IMPAIRMENT (-${fmtUSD(Math.abs(resolvedNetPnL))})</span>`;
     impairmentDesc = `Perp short liquidated on Day ${result.tLiq}. Hedge destroyed; position converted to naked spot.`;
   }
 
@@ -63,8 +70,8 @@ export function renderCrisisAuditSummary(
     ? `<span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-600 animate-pulse">BREACH: LIQUIDATED ON DAY ${result.tLiq}</span>`
     : `<span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">SOLVENT (MIN HEADROOM: ${minHeadroom.toFixed(1)}%)</span>`;
 
-  const pnlColor = netPnL >= 0 ? 'text-emerald-400' : 'text-rose-400';
-  const apyColor = apy >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  const resolvedPnlColor = resolvedNetPnL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  const resolvedApyColor = resolvedApy >= 0 ? 'text-emerald-400' : 'text-rose-400';
   const drawdownColor = troughDrawdownPct >= 0 ? 'text-emerald-400' : 'text-rose-400';
 
   container.innerHTML = `
@@ -122,25 +129,33 @@ export function renderCrisisAuditSummary(
               <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
               2. Post-Resolution (Terminal State)
             </span>
-            <span class="text-[10px] font-bold text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">${lastStep.dateStr || 'Day ' + lastStep.day} (Horizon End)</span>
+            <span class="text-[10px] font-bold text-cyan-300 bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800">${lastStep.dateStr || 'Day ' + lastStep.day} · 0.00% Depeg</span>
           </div>
           <div class="grid grid-cols-2 gap-3 text-xs">
             <div>
               <span class="text-[10px] text-slate-400 block">Resolved Final Equity</span>
-              <span class="text-white font-bold text-sm tracking-tight">${fmtUSD(terminalEquity)}</span>
-              <span class="text-[10px] font-bold block ${pnlColor} mt-0.5">${netPnL >= 0 ? '+' : ''}${fmtUSD(netPnL)} Net PnL</span>
+              <span class="text-white font-bold text-sm tracking-tight">${fmtUSD(resolvedEquity)}</span>
+              <span class="text-[10px] font-bold block ${resolvedPnlColor} mt-0.5">${resolvedNetPnL >= 0 ? '+' : ''}${fmtUSD(resolvedNetPnL)} Net PnL</span>
             </div>
             <div>
               <span class="text-[10px] text-slate-400 block">Net Realized APY</span>
-              <span class="${apyColor} font-bold text-sm tracking-tight">${apy >= 0 ? '+' : ''}${apy.toFixed(1)}%</span>
+              <span class="${resolvedApyColor} font-bold text-sm tracking-tight">${resolvedApy >= 0 ? '+' : ''}${resolvedApy.toFixed(1)}%</span>
               <span class="text-[10px] text-slate-400 block mt-0.5">Carry Harvested: +${fmtUSD(totalHarvested)}</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block">Resolved Depeg</span>
+              <span class="text-emerald-400 font-bold">0.00% (Parity)</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block">MTM Discount Unwind</span>
+              <span class="text-cyan-300 font-semibold">+${fmtUSD(mtmDiscountRecovered)} Recovered</span>
             </div>
             <div class="col-span-2 pt-1.5 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-1.5">
               <span class="text-[10px] text-slate-400">Depeg Impairment:</span>
               ${impairmentBadge}
             </div>
           </div>
-          <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60 italic">
+          <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-800/60 italic leading-relaxed">
             ${impairmentDesc}
           </div>
         </div>
@@ -254,6 +269,17 @@ export function exportCrisisAuditCsv(result: CrisisSimulationResult): void {
   const peakMarginRatio = Math.max(...steps.map(s => s.marginRatio));
   const peakDepeg = Math.max(...steps.map(s => s.depegPct));
   const lastStep = steps[steps.length - 1];
+  const C = Math.max(1, result.terminalEquity - result.netPnL);
+  const totalHarvested = (result.totalHarvestedFunding || 0) + (result.totalHarvestedStaking || 0);
+  const resolvedEquity = result.resolvedTerminalEquity !== undefined
+    ? result.resolvedTerminalEquity
+    : (!result.isLiquidated ? parseFloat((C + totalHarvested).toFixed(2)) : result.terminalEquity + result.depegLoss);
+  const resolvedNetPnL = result.resolvedNetPnL !== undefined
+    ? result.resolvedNetPnL
+    : parseFloat((resolvedEquity - C).toFixed(2));
+  const resolvedApy = result.resolvedRealizedAPY !== undefined
+    ? result.resolvedRealizedAPY
+    : (C > 0 ? parseFloat(((resolvedNetPnL / C) * (365 / result.horizonDays) * 100).toFixed(2)) : 0);
 
   const metadata = [
     `# DELTA-Q QUANT TERMINAL - INSTITUTIONAL CRISIS AUDIT PACKET`,
@@ -262,7 +288,7 @@ export function exportCrisisAuditCsv(result: CrisisSimulationResult): void {
     `# Horizon Days: ${result.horizonDays}`,
     `# Liquidation Status: ${result.isLiquidated ? 'BREACHED on Day ' + result.tLiq : 'SURVIVED / FULLY SOLVENT'}`,
     `# 1. Peak Stress (Trough): Day ${troughStep.day} (${troughStep.dateStr || 'D' + troughStep.day}), Min_Equity=$${troughStep.equity.toFixed(2)}, Peak_Margin_Ratio=${(peakMarginRatio * 100).toFixed(2)}%, Peak_Depeg=${peakDepeg.toFixed(2)}%`,
-    `# 2. Post-Resolution (Terminal): Day ${lastStep.day} (${lastStep.dateStr || 'D' + lastStep.day}), Terminal_Equity=$${result.terminalEquity.toFixed(2)}, Net_PnL=$${result.netPnL.toFixed(2)}, Realized_APY=${result.netRealizedAPY.toFixed(2)}%, Depeg_Impairment=${!result.isLiquidated ? (lastStep.depegPct <= 0.1 ? 'TRANSITORY ($0.00)' : 'RESIDUAL_DISCOUNT') : 'PERMANENT_IMPAIRMENT'}`,
+    `# 2. Post-Resolution (Terminal): Day ${lastStep.day} (${lastStep.dateStr || 'D' + lastStep.day}), Depeg=0.00% (Parity Restored), Resolved_Equity=${resolvedEquity.toFixed(2)}, Net_PnL=${resolvedNetPnL.toFixed(2)}, Realized_APY=${resolvedApy.toFixed(2)}%, Depeg_Impairment=${!result.isLiquidated ? 'TRANSITORY ($0.00)' : 'PERMANENT_IMPAIRMENT'}`,
     `# Net Realized PnL: $${result.netPnL.toFixed(2)}`,
     `# Net Realized APY: ${result.netRealizedAPY.toFixed(2)}%`,
     `# Export Timestamp: ${new Date().toISOString()}`,
