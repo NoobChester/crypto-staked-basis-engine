@@ -167,7 +167,6 @@ export function setDepeg(pct: number): void {
     UI.valDepeg.textContent = `${pct.toFixed(1)}% Discount`;
   }
   updateApp();
-  updateStatisticalCarry(30);
 }
 
 export function applyLiveDepeg(): void {
@@ -503,6 +502,7 @@ export function setAccountMode(mode: MarginMode): void {
       if (UI.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
     }
   }
+  updateStatisticalCarry((state as any).lookbackDays || 30);
   updateApp();
 }
 
@@ -605,6 +605,7 @@ export function setBtcVariant(variant: BtcVariant): void {
     }
   });
 
+  updateStatisticalCarry((state as any).lookbackDays || 30);
   updateApp();
 }
 
@@ -657,6 +658,7 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
     loadAndRenderHistoricalData();
   }
 
+  updateStatisticalCarry((state as any).lookbackDays || 30);
   updateApp();
 }
 
@@ -689,6 +691,7 @@ export function setSolYieldType(yieldType: SolYieldType): void {
     loadAndRenderHistoricalData();
   }
 
+  updateStatisticalCarry((state as any).lookbackDays || 30);
   updateApp();
 }
 
@@ -903,15 +906,54 @@ export function applyActiveRegimeRates(): void {
   if (!latestStatisticalCarry) return;
   const regime = (state as any).activeRegime || 'base';
 
+  let baseStaking = latestStatisticalCarry.baseStakingApy;
+  let conservativeStaking = latestStatisticalCarry.conservativeStakingApy;
+  let bullStaking = latestStatisticalCarry.bullStakingApy;
+
+  // Adapt staking dispersion for specific collateral presets
+  if (state.mode === 'unified') {
+    if (state.activePreset === 'inverse_100') {
+      baseStaking = 0.0;
+      conservativeStaking = 0.0;
+      bullStaking = 0.0;
+    } else if (state.activePreset === 'fbtc_90') {
+      baseStaking = 3.0;
+      conservativeStaking = Math.max(0.1, parseFloat((3.0 - 2 * (latestStatisticalCarry.staking.stdDev || 0.15)).toFixed(2)));
+      bullStaking = parseFloat((3.0 + 2 * (latestStatisticalCarry.staking.stdDev || 0.15)).toFixed(2));
+    } else if (state.activePreset === 'sanctum_inf_85') {
+      const sBase = state.solYieldType === 'nominal' ? 8.5 : 3.1;
+      baseStaking = sBase;
+      conservativeStaking = Math.max(0.1, parseFloat((sBase - 2 * (latestStatisticalCarry.staking.stdDev || 0.25)).toFixed(2)));
+      bullStaking = parseFloat((sBase + 2 * (latestStatisticalCarry.staking.stdDev || 0.25)).toFixed(2));
+    }
+  } else if (state.tradedAsset === 'BTC') {
+    if (state.btcVariant === 'native') {
+      baseStaking = 0.0;
+      conservativeStaking = 0.0;
+      bullStaking = 0.0;
+    }
+  }
+
+  // Update button label values
+  if (UI?.labelRegimeConservativeVal) {
+    UI.labelRegimeConservativeVal.textContent = `${latestStatisticalCarry.conservativeFundingApr >= 0 ? '+' : ''}${latestStatisticalCarry.conservativeFundingApr.toFixed(1)}% / ${conservativeStaking.toFixed(1)}%`;
+  }
+  if (UI?.labelRegimeBaseVal) {
+    UI.labelRegimeBaseVal.textContent = `${latestStatisticalCarry.baseFundingApr >= 0 ? '+' : ''}${latestStatisticalCarry.baseFundingApr.toFixed(1)}% / ${baseStaking.toFixed(1)}%`;
+  }
+  if (UI?.labelRegimeBullVal) {
+    UI.labelRegimeBullVal.textContent = `${latestStatisticalCarry.bullFundingApr >= 0 ? '+' : ''}${latestStatisticalCarry.bullFundingApr.toFixed(1)}% / ${bullStaking.toFixed(1)}%`;
+  }
+
   if (regime === 'conservative') {
     state.fundingAPR = latestStatisticalCarry.conservativeFundingApr;
-    state.stakingAPY = latestStatisticalCarry.conservativeStakingApy;
+    state.stakingAPY = conservativeStaking;
   } else if (regime === 'bull') {
     state.fundingAPR = latestStatisticalCarry.bullFundingApr;
-    state.stakingAPY = latestStatisticalCarry.bullStakingApy;
+    state.stakingAPY = bullStaking;
   } else {
     state.fundingAPR = latestStatisticalCarry.baseFundingApr;
-    state.stakingAPY = latestStatisticalCarry.baseStakingApy;
+    state.stakingAPY = baseStaking;
   }
 
   state.isLiveFunding = false;
@@ -1087,6 +1129,7 @@ function init() {
 
   applyCollateralPreset('wsteth_90');
   setSplit(50);
+  updateStatisticalCarry(30);
   updateApp();
 }
 
