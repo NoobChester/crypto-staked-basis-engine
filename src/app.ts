@@ -49,10 +49,11 @@ import { drawChart, setupChartInteractions, type ChartConfidenceStats } from './
 import { getCustomStatisticalCarry, type StatisticalCarrySnapshot } from './services/marketData.js';
 import { initRateLabModal, openRateLabModal, closeRateLabModal } from './ui/rateLabModal.js';
 import { initMobileNav, updateMiniHud } from './ui/mobileNav.js';
-import { fetchFuturesTermStructure, interpolateBasisRate } from './services/marketData/futuresCurve.js';
+import { fetchFuturesTermStructure, interpolateBasisRate, getHistoricalFundingSeries } from './services/marketData/futuresCurve.js';
+import { simulateStochasticFunding, calibrateOUFromHistory } from './math/stochasticRates.js';
 import { bindCanvasTouchScrub } from './ui/touchInteractions.js';
 import { initTapToEdit } from './ui/tapToEdit.js';
-import type { StochasticSimulationResult } from './types/rateLab.js';
+import type { StochasticSimulationResult, OUProcessParams } from './types/rateLab.js';
 import { drawHistoricalChart, drawHistoricalStakingSubChart, drawHistoricalSubChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
 
 export type HistoricalHorizon = 'live' | '7d' | '30d' | '90d' | 'custom';
@@ -70,6 +71,8 @@ export const state: HedgingState & {
   activeCrisisScenario: CrisisScenarioKey | null;
   activeRegime?: 'conservative' | 'base' | 'bull';
   lookbackDays?: number;
+  forwardEngine: 'sqmc' | 'dated_basis';
+  activeOUParams?: OUProcessParams;
 } = {
   mode: 'unified',
   capital: 10000,
@@ -94,7 +97,8 @@ export const state: HedgingState & {
   fundingWindow: 'live',
   activeCrisisScenario: null,
   activeRegime: 'base' as 'conservative' | 'base' | 'bull',
-  lookbackDays: 30
+  lookbackDays: 30,
+  forwardEngine: 'sqmc' as 'sqmc' | 'dated_basis'
 };
 
 let UI: UIElements;
@@ -716,42 +720,171 @@ export function setCapital(cap: number): void {
   updateApp();
 }
 
-export type RateSourceType = 'forward_tenor' | 'live' | 'rate_lab' | 'historical_replay' | 'manual';
+export function setPriceChange(pct: number): void {
+  state.priceMove = pct;
+  state.activeCrisisScenario = null;
+  if (UI?.inputPriceMove) UI.inputPriceMove.value = pct.toString();
+  if (UI?.valPriceMove) UI.valPriceMove.textContent = fmtPct(pct);
+  updateApp();
+}
+
+export type RateSourceType = 'forward_tenor' | 'sqmc' | 'dated_basis' | 'live' | 'rate_lab' | 'historical_replay' | 'manual';
+
+const cachedOUParams: Map<string, OUProcessParams> = new Map();
+
+export async function getOrCalibrateOUParams(asset: 'ETH' | 'BTC' | 'SOL'): Promise<OUProcessParams> {
+  if (cachedOUParams.has(asset)) {
+    return cachedOUParams.get(asset)!;
+  }
+  try {
+    const series = await getHistoricalFundingSeries(asset, 90);
+    const params = calibrateOUFromHistory(series);
+    cachedOUParams.set(asset, params);
+    return params;
+  } catch {
+    const fallback: OUProcessParams = {
+      theta: 0.05,
+      mu: 8.58,
+      sigma: 12.0,
+      halfLifeDays: Math.log(2) / 0.05,
+      jumpIntensity: 4.0,
+      jumpMean: -2.5,
+      jumpStdDev: 8.0
+    };
+    cachedOUParams.set(asset, fallback);
+    return fallback;
+  }
+}
+
+export function setActiveOUParams(params: OUProcessParams): void {
+  (state as any).activeOUParams = params;
+  cachedOUParams.set(state.tradedAsset || 'ETH', params);
+}
+
+export function renderForwardEngineToggle(): void {
+  const engine = (state as any).forwardEngine || 'sqmc';
+  const activeSqmc = engine === 'sqmc';
+  const btnSqmc = document.getElementById('btn-fwd-engine-sqmc') || UI?.btnFwdEngineSqmc;
+  const btnBasis = document.getElementById('btn-fwd-engine-basis') || UI?.btnFwdEngineBasis;
+
+  if (btnSqmc) {
+    btnSqmc.className = activeSqmc
+      ? 'px-2 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer flex items-center gap-1'
+      : 'px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer flex items-center gap-1';
+  }
+  if (btnBasis) {
+    btnBasis.className = !activeSqmc
+      ? 'px-2 py-0.5 rounded font-bold transition bg-blue-950 text-blue-300 border border-blue-700 shadow-sm cursor-pointer flex items-center gap-1'
+      : 'px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer flex items-center gap-1';
+  }
+}
 
 export function updateRateSourceBadge(source: RateSourceType, param?: string | number): void {
   const badge = document.getElementById('badge-rate-source');
   const descSource = document.getElementById('desc-funding-source');
   if (!badge) return;
 
-  if (source === 'forward_tenor') {
+  const currentEngine = (state as any).forwardEngine || 'sqmc';
+  const resolvedSource = source === 'forward_tenor' ? currentEngine : source;
+
+  if (resolvedSource === 'sqmc') {
     const days = param ?? state.days ?? 90;
-    badge.textContent = `⚡ FORWARD (${days}D BASIS)`;
+    badge.textContent = `⚡ SQMC MODEL (${days}D)`;
     badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition';
-    if (descSource) descSource.textContent = `Source: Forward Futures Basis (${days}d Tenor Matched)`;
-  } else if (source === 'live') {
+    if (descSource) descSource.textContent = `Source: Forward Stochastic Drift via SQMC (${days}d Tenor)`;
+  } else if (resolvedSource === 'dated_basis') {
+    const days = param ?? state.days ?? 90;
+    badge.textContent = `📈 DATED BASIS (${days}D)`;
+    badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-700 font-bold transition';
+    if (descSource) descSource.textContent = `Source: Deliverable Futures Basis PCHIP Spline (${days}d Tenor)`;
+  } else if (resolvedSource === 'live') {
     badge.textContent = '🟢 LIVE TICKER';
     badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold transition';
     if (descSource) descSource.textContent = 'Source: Real-Time Exchange Funding Ticker';
-  } else if (source === 'rate_lab') {
+  } else if (resolvedSource === 'rate_lab') {
     badge.textContent = '⚡ RATE LAB MODEL';
     badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700 font-bold transition';
     if (descSource) descSource.textContent = 'Source: Calibrated Stochastic / Implied Rate Lab';
-  } else if (source === 'historical_replay') {
+  } else if (resolvedSource === 'historical_replay') {
     badge.textContent = `📅 HISTORICAL ${param || '30D'} REPLAY`;
     badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold transition';
     if (descSource) descSource.textContent = `Source: Rolling ${param || '30D'} Trailing Average`;
-  } else if (source === 'manual') {
+  } else if (resolvedSource === 'manual') {
     badge.textContent = '✏️ MANUAL INPUT';
     badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-bold transition';
     if (descSource) descSource.textContent = 'Source: User Manual Input';
   }
 }
 
-export function setPriceChange(pct: number): void {
-  state.priceMove = pct;
-  state.activeCrisisScenario = null;
-  if (UI.inputPriceMove) UI.inputPriceMove.value = pct.toString();
-  if (UI.valPriceMove) UI.valPriceMove.textContent = fmtPct(pct);
+export async function evaluateForwardHorizon(days: number): Promise<{ primaryRate: number; benchmarkRate: number; benchmarkLabel: string }> {
+  const asset = state.tradedAsset || 'ETH';
+  const engine = (state as any).forwardEngine || 'sqmc';
+
+  // 1. Calculate Dated Basis rate via PCHIP
+  let basisRate = 4.43;
+  try {
+    const termStruct = await fetchFuturesTermStructure(asset);
+    basisRate = interpolateBasisRate(termStruct.tenors, days);
+  } catch {
+    // fallback
+  }
+
+  // 2. Calculate SQMC rate via calibrated Ornstein-Uhlenbeck simulation
+  let sqmcRate = 8.58;
+  try {
+    const ouParams = (state as any).activeOUParams || await getOrCalibrateOUParams(asset);
+    (state as any).activeOUParams = ouParams;
+    const liveFunding = 10.0;
+    const sim = simulateStochasticFunding(liveFunding, ouParams, {
+      horizonDays: days,
+      engineType: 'sqmc_sobol',
+      pathCount: 512,
+      seed: 1337
+    });
+    sqmcRate = sim.expectedCarryApr;
+  } catch {
+    // fallback
+  }
+
+  let primaryRate: number;
+  let benchmarkRate: number;
+  let benchmarkLabel: string;
+
+  if (engine === 'sqmc') {
+    primaryRate = sqmcRate;
+    benchmarkRate = basisRate;
+    benchmarkLabel = `vs ${fmtPct(basisRate)} Dated Basis`;
+    updateRateSourceBadge('sqmc', days);
+  } else {
+    primaryRate = basisRate;
+    benchmarkRate = sqmcRate;
+    benchmarkLabel = `vs ${fmtPct(sqmcRate)} SQMC Model`;
+    updateRateSourceBadge('dated_basis', days);
+  }
+
+  state.fundingAPR = primaryRate;
+  state.isLiveFunding = false;
+  (state as any).fundingWindow = 'custom';
+
+  if (UI?.inputFunding) UI.inputFunding.value = primaryRate.toString();
+  if (UI?.valFunding) {
+    UI.valFunding.textContent = fmtPct(primaryRate) + ' APR';
+    UI.valFunding.className = `font-mono font-bold ${primaryRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+  }
+  const chip = document.getElementById('chip-forward-benchmark') || UI?.chipForwardBenchmark;
+  if (chip) {
+    chip.textContent = benchmarkLabel;
+    chip.title = `Benchmark comparison for ${days} days horizon`;
+  }
+
+  renderForwardEngineToggle();
+  return { primaryRate, benchmarkRate, benchmarkLabel };
+}
+
+export async function setForwardEngine(engine: 'sqmc' | 'dated_basis'): Promise<void> {
+  (state as any).forwardEngine = engine;
+  renderForwardEngineToggle();
+  await evaluateForwardHorizon(state.days);
   updateApp();
 }
 
@@ -760,25 +893,17 @@ export async function setDays(days: number): Promise<void> {
   if (UI.inputDays) UI.inputDays.value = days.toString();
   if (UI.valDays) UI.valDays.textContent = `${days} Days`;
 
-  // Dynamic Forward Tenor Matching: Overwrites funding rate with forward implied basis for this tenor
+  // Dynamic Forward Tenor Matching via active engine (SQMC or Dated Basis)
   try {
-    const termStruct = await fetchFuturesTermStructure(state.tradedAsset || 'ETH');
-    const forwardRate = interpolateBasisRate(termStruct.tenors, days);
-    state.fundingAPR = forwardRate;
-    state.isLiveFunding = false;
-    (state as any).fundingWindow = 'custom';
-    if (UI?.inputFunding) UI.inputFunding.value = forwardRate.toString();
-    if (UI?.valFunding) {
-      UI.valFunding.textContent = fmtPct(forwardRate) + ' APR';
-      UI.valFunding.className = `font-mono font-bold ${forwardRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-    }
-    updateRateSourceBadge('forward_tenor', days);
+    await evaluateForwardHorizon(days);
   } catch {
-    // fallback if term structure calculation fails
+    // fallback if forward calculation fails
   }
 
   updateApp();
 }
+
+
 
 export function setSplit(splitSpot: number): void {
   state.splitSpot = splitSpot;
@@ -1112,15 +1237,20 @@ function init() {
     exportCrisisAuditCsv: exportCrisisCsv,
     setRegime,
     setLookback,
-    openRateLabModal: () => openRateLabModal(state.tradedAsset || 'ETH', state.solYieldType || 'real')
+    openRateLabModal: () => openRateLabModal(state.tradedAsset || 'ETH', state.solYieldType || 'real'),
+    setForwardEngine
   });
   bindSliderListeners(UI, state, updateApp, (days) => setLookback(days));
   initRateLabModal({
-    onApplyRates: (fundingApr, stakingApy) => {
+    onApplyRates: (fundingApr, stakingApy, ouParams) => {
+      if (ouParams) {
+        setActiveOUParams(ouParams);
+      }
       state.fundingAPR = parseFloat(fundingApr.toFixed(2));
       state.stakingAPY = parseFloat(stakingApy.toFixed(2));
       state.isLiveFunding = false;
       state.isLiveStaking = false;
+      updateRateSourceBadge('rate_lab');
       if (UI?.inputFunding) UI.inputFunding.value = state.fundingAPR.toString();
       if (UI?.valFunding) {
         UI.valFunding.textContent = fmtPct(state.fundingAPR) + ' APR';

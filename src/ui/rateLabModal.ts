@@ -34,7 +34,7 @@ import {
 } from './rateLabCanvas.js';
 
 export interface RateLabCallbacks {
-  onApplyRates: (fundingApr: number, stakingApy: number) => void;
+  onApplyRates: (fundingApr: number, stakingApy: number, ouParams?: OUProcessParams) => void;
   onStochasticStressTest?: (simResult: StochasticSimulationResult) => void;
 }
 
@@ -433,7 +433,7 @@ function applyRatesToTerminal(): void {
     targetStaking = state.latestStakingDecomposition.totalStakingApy;
   }
 
-  callbacks.onApplyRates(targetFunding, targetStaking);
+  callbacks.onApplyRates(targetFunding, targetStaking, state.ouParams);
 }
 
 function updateTabHeaderStyles(): void {
