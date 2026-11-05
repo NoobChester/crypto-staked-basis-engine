@@ -45,6 +45,10 @@ export interface AppActions {
   setLookback?: (days: number) => void;
   openRateLabModal?: () => void;
   setForwardEngine?: (engine: 'sqmc' | 'dated_basis') => void;
+  setView?: (view: 'terminal' | 'stress-lab') => void;
+  setStressCapital?: (capital: number) => void;
+  setStressMode?: (mode: MarginMode) => void;
+  setStressAsset?: (asset: TradedAsset) => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -201,6 +205,30 @@ export function setupEventDelegation(actions: AppActions): void {
         actions.exportCrisisAuditCsv?.();
         break;
       }
+      case 'set-view': {
+        const view = target.getAttribute('data-view') as 'terminal' | 'stress-lab';
+        if (view && actions.setView) actions.setView(view);
+        break;
+      }
+      case 'navigate-to-stress-lab': {
+        if (actions.setView) actions.setView('stress-lab');
+        break;
+      }
+      case 'set-stress-capital': {
+        const cap = parseFloat(target.getAttribute('data-capital') || '10000');
+        if (actions.setStressCapital) actions.setStressCapital(cap);
+        break;
+      }
+      case 'set-stress-mode': {
+        const mode = target.getAttribute('data-mode') as MarginMode;
+        if (mode && actions.setStressMode) actions.setStressMode(mode);
+        break;
+      }
+      case 'set-stress-asset': {
+        const asset = target.getAttribute('data-asset') as TradedAsset;
+        if (asset && actions.setStressAsset) actions.setStressAsset(asset);
+        break;
+      }
     }
   });
 }
@@ -209,7 +237,8 @@ export function bindSliderListeners(
   UI: UIElements,
   state: HedgingState,
   onUpdate: () => void,
-  onLookback?: (days: number) => void
+  onLookback?: (days: number) => void,
+  onStressCapital?: (capital: number) => void
 ): void {
   if (UI.inputPriceMove) {
     UI.inputPriceMove.addEventListener('input', (e) => {
@@ -290,6 +319,12 @@ export function bindSliderListeners(
       const days = parseInt((e.target as HTMLInputElement).value, 10);
       if (UI.valLookbackDays) UI.valLookbackDays.textContent = `${days} Days`;
       if (onLookback) onLookback(days);
+    });
+  }
+  if (UI.stressInputCapital) {
+    UI.stressInputCapital.addEventListener('input', (e) => {
+      const val = Math.max(100, parseFloat((e.target as HTMLInputElement).value) || 1000);
+      if (onStressCapital) onStressCapital(val);
     });
   }
 }

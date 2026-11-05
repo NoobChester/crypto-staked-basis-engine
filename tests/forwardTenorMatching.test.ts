@@ -29,6 +29,7 @@ describe('Dynamic Forward Tenor Matching & Horizon Unification', () => {
         beginPath: vi.fn(),
         moveTo: vi.fn(),
         lineTo: vi.fn(),
+        bezierCurveTo: vi.fn(),
         stroke: vi.fn(),
         fill: vi.fn(),
         closePath: vi.fn(),

@@ -170,10 +170,10 @@ export function renderCrisisAuditTable(
   summaryContainer?: HTMLElement | null
 ): void {
   // Render companion two-tier summary card
-  const summaryEl = summaryContainer ?? (typeof document !== 'undefined' ? document.getElementById('crisis-audit-two-tier-summary') : null);
+  const summaryEl = summaryContainer ?? (typeof document !== 'undefined' && typeof document.getElementById === 'function' ? document.getElementById('crisis-audit-two-tier-summary') : null);
   renderCrisisAuditSummary(summaryEl, result);
 
-  if (!tbody) return;
+  if (!tbody || typeof document === 'undefined' || typeof document.createElement !== 'function') return;
   tbody.innerHTML = '';
 
   if (!result || !result.dailyTrajectory || result.dailyTrajectory.length === 0) {
@@ -184,7 +184,7 @@ export function renderCrisisAuditTable(
     return;
   }
 
-  const fragment = document.createDocumentFragment();
+  const fragment = typeof document.createDocumentFragment === 'function' ? document.createDocumentFragment() : null;
 
   result.dailyTrajectory.forEach((step: CrisisSimulationStep) => {
     const tr = document.createElement('tr');
@@ -224,10 +224,16 @@ export function renderCrisisAuditTable(
       <td class="py-2.5 px-3">${statusPill}</td>
     `;
 
-    fragment.appendChild(tr);
+    if (fragment) {
+      fragment.appendChild(tr);
+    } else {
+      tbody.appendChild(tr);
+    }
   });
 
-  tbody.appendChild(fragment);
+  if (fragment) {
+    tbody.appendChild(fragment);
+  }
 }
 
 export function exportCrisisAuditCsv(result: CrisisSimulationResult): void {

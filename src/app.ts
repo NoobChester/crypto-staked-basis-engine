@@ -5,7 +5,9 @@
 
 import { calculateOutcome, calculateCrisisSimulation, fmtPct, type HedgingState, type CrisisSimulationResult } from './math/hedging.js';
 import { drawCrisisTrajectory } from './ui/renderers/crisisTrajectoryRenderer.js';
-import { renderCrisisAuditTable, exportCrisisAuditCsv } from './ui/dom.js';
+import { renderCrisisAuditTable, exportCrisisAuditCsv, renderCrisisAuditSummary } from './ui/dom.js';
+import { renderScenarioMatrix } from './ui/renderers/scenarioRenderer.js';
+import { initViewRouter, setView } from './ui/viewRouter.js';
 import {
   COLLATERAL_PRESETS,
   BTC_LST_VARIANTS,
@@ -118,50 +120,105 @@ export function getConfidenceStats(): ChartConfidenceStats | undefined {
   };
 }
 
+export interface StressLabState {
+  activeScenario: CrisisScenarioKey;
+  capital: number;
+  mode: MarginMode;
+  tradedAsset: TradedAsset;
+  collateralRatio: number;
+  splitSpot: number;
+  solYieldType: SolYieldType;
+}
+
+export const stressLabState: StressLabState = {
+  activeScenario: 'celsius_depeg_2022',
+  capital: 10000,
+  mode: 'unified',
+  tradedAsset: 'ETH',
+  collateralRatio: 0.90,
+  splitSpot: 50,
+  solYieldType: 'real'
+};
+
+export function updateStressLab(): void {
+  if (!UI) return;
+  const key = stressLabState.activeScenario;
+  const scenario = CRISIS_SCENARIOS[key];
+  if (!scenario) return;
+
+  currentCrisisResult = calculateCrisisSimulation(key, stressLabState);
+
+  // Dynamic Risk Diagnosis Verdict Box & Scenario Buttons styling
+  const dummyOutcome = calculateOutcome(scenario.priceMove, {
+    capital: stressLabState.capital,
+    mode: stressLabState.mode,
+    collateralRatio: stressLabState.collateralRatio,
+    splitSpot: stressLabState.splitSpot
+  });
+  renderScenarioMatrix(UI, stressLabState as any, dummyOutcome, key);
+
+  // Render Two-Tier Summary Card into stress lab summary container
+  const summaryEl = UI.stressAuditTwoTierSummary || document.getElementById('stress-audit-two-tier-summary');
+  renderCrisisAuditSummary(summaryEl, currentCrisisResult);
+
+  // Render Day-by-Day Historical Audit Table into desktop tbody
+  const tbodyEl = UI.stressAuditTbody || document.getElementById('stress-audit-tbody');
+  renderCrisisAuditTable(tbodyEl, currentCrisisResult, summaryEl);
+
+  // Also populate mobile modal table & summary in case opened
+  if (UI.crisisAuditTableBody) {
+    renderCrisisAuditTable(UI.crisisAuditTableBody, currentCrisisResult, UI.crisisAuditSummary);
+  }
+
+  // Draw Hero Trajectory Canvas
+  const canvas = UI.crisisTrajectoryCanvas || (document.getElementById('crisis-trajectory-canvas') as HTMLCanvasElement | null);
+  if (canvas) {
+    drawCrisisTrajectory(canvas, currentCrisisResult, {
+      accentColor: scenario.accentColor
+    });
+  }
+
+  // Update Stress Lab context controls DOM state
+  if (UI.stressInputCapital && document.activeElement !== UI.stressInputCapital) {
+    UI.stressInputCapital.value = stressLabState.capital.toString();
+  }
+
+  // Mode switcher styling
+  if (UI.stressModeBtnUnified && UI.stressModeBtnIsolated) {
+    if (stressLabState.mode === 'unified') {
+      UI.stressModeBtnUnified.className = 'px-2.5 py-1 rounded font-bold transition bg-cyan-500 text-black shadow cursor-pointer';
+      UI.stressModeBtnIsolated.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
+    } else {
+      UI.stressModeBtnUnified.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
+      UI.stressModeBtnIsolated.className = 'px-2.5 py-1 rounded font-bold transition bg-cyan-500 text-black shadow cursor-pointer';
+    }
+  }
+
+  // Asset switcher styling
+  const assetBtns: Record<TradedAsset, HTMLElement | null> = {
+    ETH: UI.stressAssetBtnEth,
+    BTC: UI.stressAssetBtnBtc,
+    SOL: UI.stressAssetBtnSol
+  };
+  for (const [asset, btn] of Object.entries(assetBtns) as [TradedAsset, HTMLElement | null][]) {
+    if (!btn) continue;
+    if (stressLabState.tradedAsset === asset) {
+      btn.className = 'px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold cursor-pointer';
+    } else {
+      btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white cursor-pointer';
+    }
+  }
+
+  // Mobile days badge
+  const mobileDaysBadge = document.getElementById('stress-mobile-days-badge');
+  if (mobileDaysBadge) {
+    mobileDaysBadge.textContent = `${currentCrisisResult.horizonDays} Days Audited`;
+  }
+}
+
 export function updateApp(): void {
   if (!UI) return;
   const res = calculateOutcome(state.priceMove, state);
-
-  // If institutional crisis scenario is active, compute path-dependent audit simulation
-  if (state.activeCrisisScenario && CRISIS_SCENARIOS[state.activeCrisisScenario]) {
-    const key = state.activeCrisisScenario;
-    const scenario = CRISIS_SCENARIOS[key];
-    currentCrisisResult = calculateCrisisSimulation(key, state);
-
-    // Overlay path-dependent simulation outcomes onto res for consistent KPI display
-    res.fundingYieldTotal = currentCrisisResult.totalHarvestedFunding;
-    res.stakingYieldTotal = currentCrisisResult.totalHarvestedStaking;
-    res.depegLoss = currentCrisisResult.depegLoss;
-    res.spotPnL = currentCrisisResult.spotPnL;
-    res.perpPnL = currentCrisisResult.perpPnL;
-    res.totalPortfolioVal = currentCrisisResult.terminalEquity;
-    res.netPnL = currentCrisisResult.netPnL;
-    res.roiPct = state.capital > 0 ? (res.netPnL / state.capital) * 100 : 0;
-    res.netRealizedPnL = parseFloat((res.netPnL - res.netFeeDollarLoss).toFixed(2));
-    res.netRealizedRoiPct = state.capital > 0 ? parseFloat(((res.netRealizedPnL / state.capital) * 100).toFixed(2)) : 0;
-    res.netRealizedAPY = currentCrisisResult.netRealizedAPY;
-    res.isLiquidated = currentCrisisResult.isLiquidated;
-
-    if (UI.sliderLockBadge) {
-      UI.sliderLockBadge.textContent = `LOCKED (${scenario.lockedHorizonDays}D)`;
-      UI.sliderLockBadge.classList.remove('hidden');
-    }
-
-    if (UI.crisisTrajectoryContainer && UI.crisisTrajectoryCanvas) {
-      UI.crisisTrajectoryContainer.classList.remove('hidden');
-      drawCrisisTrajectory(UI.crisisTrajectoryCanvas, currentCrisisResult, {
-        accentColor: scenario.accentColor
-      });
-    }
-  } else {
-    currentCrisisResult = null;
-    if (UI.sliderLockBadge) {
-      UI.sliderLockBadge.classList.add('hidden');
-    }
-    if (UI.crisisTrajectoryContainer) {
-      UI.crisisTrajectoryContainer.classList.add('hidden');
-    }
-  }
 
   renderUI(UI, state, res);
   drawChart(UI.canvas, state, res, getConfidenceStats());
@@ -925,43 +982,31 @@ export function applyCrisisScenario(key: CrisisScenarioKey): void {
   const scenario = CRISIS_SCENARIOS[key];
   if (!scenario) return;
 
-  state.activeCrisisScenario = key;
-  state.priceMove = scenario.priceMove;
-  state.fundingAPR = scenario.fundingAPR;
-  state.isLiveFunding = false;
-  state.fundingWindow = 'custom';
-  state.depegPct = scenario.depegPct;
+  stressLabState.activeScenario = key;
+  updateStressLab();
+  setView('stress-lab', true);
+}
 
-  if (scenario.lockedHorizonDays) {
-    state.days = scenario.lockedHorizonDays;
-    if (UI?.inputDays) UI.inputDays.value = scenario.lockedHorizonDays.toString();
-    if (UI?.valDays) UI.valDays.textContent = `${scenario.lockedHorizonDays} Days`;
+export function setStressCapital(capital: number): void {
+  stressLabState.capital = capital;
+  updateStressLab();
+}
+
+export function setStressMode(mode: MarginMode): void {
+  stressLabState.mode = mode;
+  updateStressLab();
+}
+
+export function setStressAsset(asset: TradedAsset): void {
+  stressLabState.tradedAsset = asset;
+  if (asset === 'ETH') {
+    stressLabState.collateralRatio = 0.90;
+  } else if (asset === 'BTC') {
+    stressLabState.collateralRatio = 0.85;
+  } else if (asset === 'SOL') {
+    stressLabState.collateralRatio = 0.85;
   }
-
-  if (scenario.collateralRatio !== undefined) {
-    state.collateralRatio = scenario.collateralRatio;
-    if (UI?.valCollateralRatio) {
-      UI.valCollateralRatio.textContent = (scenario.collateralRatio * 100).toFixed(0) + '%';
-    }
-    if (UI?.collateralRatioExplainer) {
-      UI.collateralRatioExplainer.textContent = `Exchange slashed collateral valuation to ${(scenario.collateralRatio * 100).toFixed(0)}% (${((1 - scenario.collateralRatio) * 100).toFixed(0)}% Haircut) in emergency de-risking.`;
-    }
-  }
-
-  // Update DOM inputs to match scenario parameters
-  if (UI?.inputPriceMove) UI.inputPriceMove.value = scenario.priceMove.toString();
-  if (UI?.valPriceMove) UI.valPriceMove.textContent = fmtPct(scenario.priceMove);
-
-  if (UI?.inputFunding) UI.inputFunding.value = scenario.fundingAPR.toString();
-  if (UI?.valFunding) {
-    UI.valFunding.textContent = fmtPct(scenario.fundingAPR) + ' APR';
-    UI.valFunding.className = `font-mono font-bold ${scenario.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-  }
-
-  if (UI?.inputDepeg) UI.inputDepeg.value = scenario.depegPct.toString();
-  if (UI?.valDepeg) UI.valDepeg.textContent = `${scenario.depegPct.toFixed(1)}% Discount`;
-
-  updateApp();
+  updateStressLab();
 }
 
 export function restoreLiveMarketFeeds(): void {
@@ -969,7 +1014,6 @@ export function restoreLiveMarketFeeds(): void {
   state.priceMove = 0;
   if (UI?.sliderLockBadge) UI.sliderLockBadge.classList.add('hidden');
   if (UI?.crisisTrajectoryContainer) UI.crisisTrajectoryContainer.classList.add('hidden');
-  currentCrisisResult = null;
   if (UI?.inputPriceMove) UI.inputPriceMove.value = '0';
   if (UI?.valPriceMove) UI.valPriceMove.textContent = '+0.0%';
 
@@ -1041,8 +1085,8 @@ export function closeTriadModal(): void {
 
 export function openCrisisAuditModal(): void {
   if (!UI?.crisisAuditModal) return;
-  if (!currentCrisisResult && state.activeCrisisScenario) {
-    currentCrisisResult = calculateCrisisSimulation(state.activeCrisisScenario, state);
+  if (!currentCrisisResult) {
+    currentCrisisResult = calculateCrisisSimulation(stressLabState.activeScenario, stressLabState);
   }
   if (!currentCrisisResult) return;
 
@@ -1052,7 +1096,7 @@ export function openCrisisAuditModal(): void {
   if (UI.crisisAuditSubtitle) {
     UI.crisisAuditSubtitle.textContent = `Horizon: ${currentCrisisResult.horizonDays} Days | Status: ${currentCrisisResult.isLiquidated ? 'LIQUIDATED (Day ' + currentCrisisResult.tLiq + ')' : 'SOLVENT'} | Realized PnL: ${currentCrisisResult.netPnL.toFixed(2)}`;
   }
-  renderCrisisAuditTable(UI.crisisAuditTableBody, currentCrisisResult);
+  renderCrisisAuditTable(UI.crisisAuditTableBody, currentCrisisResult, UI.crisisAuditSummary);
   UI.crisisAuditModal.classList.remove('hidden');
 }
 
@@ -1062,8 +1106,8 @@ export function closeCrisisAuditModal(): void {
 }
 
 export function exportCrisisCsv(): void {
-  if (!currentCrisisResult && state.activeCrisisScenario) {
-    currentCrisisResult = calculateCrisisSimulation(state.activeCrisisScenario, state);
+  if (!currentCrisisResult) {
+    currentCrisisResult = calculateCrisisSimulation(stressLabState.activeScenario, stressLabState);
   }
   if (currentCrisisResult) {
     exportCrisisAuditCsv(currentCrisisResult);
@@ -1238,9 +1282,20 @@ function init() {
     setRegime,
     setLookback,
     openRateLabModal: () => openRateLabModal(state.tradedAsset || 'ETH', state.solYieldType || 'real'),
-    setForwardEngine
+    setForwardEngine,
+    setView: (view) => setView(view, true),
+    setStressCapital,
+    setStressMode,
+    setStressAsset
   });
-  bindSliderListeners(UI, state, updateApp, (days) => setLookback(days));
+  bindSliderListeners(UI, state, updateApp, (days) => setLookback(days), (capital) => setStressCapital(capital));
+  initViewRouter((view) => {
+    if (view === 'stress-lab') {
+      updateStressLab();
+    } else {
+      updateApp();
+    }
+  });
   initRateLabModal({
     onApplyRates: (fundingApr, stakingApy, ouParams) => {
       if (ouParams) {
@@ -1274,8 +1329,13 @@ function init() {
 
   // Initialize Mobile 3-Tab Navigation & Touch Interactions
   initMobileNav((tab) => {
-    if (tab === 'chart' && UI.canvas) {
-      updateApp();
+    if (tab === 'stress') {
+      setView('stress-lab', true);
+    } else {
+      setView('terminal', true);
+      if (tab === 'chart' && UI.canvas) {
+        updateApp();
+      }
     }
   });
 
@@ -1387,10 +1447,13 @@ function init() {
   setSplit(50);
   updateStatisticalCarry(30);
   updateApp();
+  updateStressLab();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 }

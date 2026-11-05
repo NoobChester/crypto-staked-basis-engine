@@ -59,8 +59,26 @@
         </div>
       </div>
 
+      <!-- Top-Level View Navigation Switcher -->
+      <nav id="top-view-nav" class="flex items-center bg-brand-card p-1 rounded-xl border border-brand-border text-xs font-mono shadow-inner order-3 sm:order-2" aria-label="Terminal Views">
+        <button id="nav-btn-terminal" type="button" data-action="set-view" data-view="terminal"
+          class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+          Live Terminal
+        </button>
+        <button id="nav-btn-stress" type="button" data-action="set-view" data-view="stress-lab"
+          class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          Stress &amp; Crisis Lab
+        </button>
+      </nav>
+
       <!-- Account Mode Switcher Tabs -->
-      <div class="flex items-center bg-brand-card p-1 rounded-xl border border-brand-border text-xs font-mono">
+      <div class="flex items-center bg-brand-card p-1 rounded-xl border border-brand-border text-xs font-mono order-2 sm:order-3">
         <button id="mode-btn-unified" data-action="set-mode" data-mode="unified" 
           class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
@@ -76,6 +94,9 @@
   </header>
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
+
+    <!-- View 1: Live Basis Terminal -->
+    <div id="view-live-terminal" class="space-y-5">
 
     <!-- Market Feed Status Ribbon -->
     <div id="market-feed-bar" class="bg-brand-card/90 rounded-2xl p-3 px-4 border border-brand-border backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 text-xs font-mono shadow-sm">
@@ -362,152 +383,27 @@
           </div>
         </div>
 
-        <!-- Macro Stress-Test & Institutional Crisis Scenarios Matrix -->
-        <div id="scenario-matrix-panel" class="bg-brand-card rounded-2xl border border-brand-border p-4 sm:p-5 space-y-3.5">
-          <div class="flex items-center justify-between border-b border-brand-border pb-3">
-            <div class="flex items-center gap-2">
-              <div class="w-2 h-2 rounded-full bg-amber-400"></div>
-              <h3 class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                </svg>
-                Institutional Crisis &amp; Stress-Test Matrix
-              </h3>
-            </div>
-            <button type="button" id="btn-restore-live-feeds" data-action="restore-live-feeds" class="hidden items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono text-cyan-300 bg-cyan-950/70 border border-cyan-700/60 hover:bg-cyan-900/60 rounded-lg transition-all cursor-pointer">
-              <svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        <!-- Quick-Action Link to Dedicated Crisis Lab -->
+        <div id="banner-open-stress-lab" class="bg-brand-card/70 hover:bg-brand-card border border-brand-border hover:border-cyan-700/60 rounded-2xl p-3.5 sm:p-4 flex items-center justify-between gap-3 transition cursor-pointer group shadow-sm" data-action="navigate-to-stress-lab">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 group-hover:scale-105 transition-transform">
+              <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
-              ↺ Restore Live Feeds
-            </button>
-          </div>
-
-          <!-- Scenario Cards Grid (6 Scenarios) -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            <!-- 1. Celsius 2022 LST De-Peg -->
-            <button type="button" id="btn-scenario-celsius" data-action="apply-crisis-scenario" data-scenario="celsius_depeg_2022" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-                  <span class="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-900/60 font-semibold">JUN 2022</span>
-                  <span class="text-rose-400 font-bold">-40% Crash</span>
-                </div>
-                <div class="font-bold text-xs text-white group-hover:text-rose-300 transition-colors">Celsius LST De-Peg</div>
-                <div class="text-[11px] text-slate-400 mt-0.5">Liquidity Freeze &amp; Inverted Funding</div>
-              </div>
-              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
-                <span class="text-slate-400">Funding: <strong class="text-rose-400">-8.0%</strong></span>
-                <span class="text-slate-400">Depeg: <strong class="text-rose-400">6.5%</strong></span>
-              </div>
-            </button>
-
-            <!-- 2. Post-FTX Inverted Carry -->
-            <button type="button" id="btn-scenario-ftx" data-action="apply-crisis-scenario" data-scenario="ftx_carry_winter" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-                  <span class="px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-900/60 font-semibold">NOV 2022</span>
-                  <span class="text-amber-400 font-bold">-25% Bear</span>
-                </div>
-                <div class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">Post-FTX Inverted Carry</div>
-                <div class="text-[11px] text-slate-400 mt-0.5">Prolonged Short Payment Bleed</div>
-              </div>
-              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
-                <span class="text-slate-400">Funding: <strong class="text-amber-400">-12.0%</strong></span>
-                <span class="text-slate-400">Depeg: <strong class="text-slate-300">2.0%</strong></span>
-              </div>
-            </button>
-
-            <!-- 3. Parabolic Bull Squeeze (2x) -->
-            <button type="button" id="btn-scenario-parabolic" data-action="apply-crisis-scenario" data-scenario="parabolic_squeeze_2x" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-                  <span class="px-1.5 py-0.5 rounded bg-cyan-950/60 text-cyan-400 border border-cyan-900/60 font-semibold">Q1 2024</span>
-                  <span class="text-emerald-400 font-bold">+100% Rally</span>
-                </div>
-                <div class="font-bold text-xs text-white group-hover:text-cyan-300 transition-colors">Parabolic Squeeze (2x)</div>
-                <div class="text-[11px] text-slate-400 mt-0.5">Isolated Wipe vs Unified Buffer</div>
-              </div>
-              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
-                <span class="text-slate-400">Funding: <strong class="text-emerald-400">+45.0%</strong></span>
-                <span class="text-slate-400">Depeg: <strong class="text-slate-300">0.0%</strong></span>
-              </div>
-            </button>
-
-            <!-- 4. Exchange Haircut Slash -->
-            <button type="button" id="btn-scenario-haircut" data-action="apply-crisis-scenario" data-scenario="haircut_compression" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-                  <span class="px-1.5 py-0.5 rounded bg-indigo-950/60 text-indigo-400 border border-indigo-900/60 font-semibold">BLACK SWAN</span>
-                  <span class="text-indigo-400 font-bold">+50% Rally</span>
-                </div>
-                <div class="font-bold text-xs text-white group-hover:text-indigo-300 transition-colors">Haircut Compression</div>
-                <div class="text-[11px] text-slate-400 mt-0.5">Exchange De-risking (30% Haircut)</div>
-              </div>
-              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
-                <span class="text-slate-400">Valuation: <strong class="text-indigo-400">70%</strong></span>
-                <span class="text-slate-400">Depeg: <strong class="text-amber-400">4.0%</strong></span>
-              </div>
-            </button>
-
-            <!-- 5. Macro Flash Crash -->
-            <button type="button" id="btn-scenario-flash-crash" data-action="apply-crisis-scenario" data-scenario="flash_crash_yen" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-                  <span class="px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-900/60 font-semibold">AUG 2024</span>
-                  <span class="text-rose-400 font-bold">-30% Crash</span>
-                </div>
-                <div class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">Macro Flash Crash</div>
-                <div class="text-[11px] text-slate-400 mt-0.5">Yen Carry Unwind / Basis Drop</div>
-              </div>
-              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
-                <span class="text-slate-400">Funding: <strong class="text-slate-300">0.0%</strong></span>
-                <span class="text-slate-400">Depeg: <strong class="text-amber-400">3.5%</strong></span>
-              </div>
-            </button>
-
-            <!-- 6. Altcoin Meme Mania (3x) -->
-            <button type="button" id="btn-scenario-meme" data-action="apply-crisis-scenario" data-scenario="meme_mania_rally" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
-                  <span class="px-1.5 py-0.5 rounded bg-purple-950/60 text-purple-400 border border-purple-900/60 font-semibold">PARABOLIC</span>
-                  <span class="text-emerald-400 font-bold">+200% Surge</span>
-                </div>
-                <div class="font-bold text-xs text-white group-hover:text-purple-300 transition-colors">Altcoin Meme Mania</div>
-                <div class="text-[11px] text-slate-400 mt-0.5">Extreme Contango &amp; Cashflow Harvest</div>
-              </div>
-              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
-                <span class="text-slate-400">Funding: <strong class="text-emerald-400">+80.0%</strong></span>
-                <span class="text-slate-400">Depeg: <strong class="text-amber-400">5.0%</strong></span>
-              </div>
-            </button>
-          </div>
-
-          <!-- Dynamic Risk Diagnosis Verdict Box -->
-          <div id="scenario-verdict-box" class="hidden p-3.5 rounded-xl border transition-all text-xs">
-            <div class="flex items-center justify-between gap-2 mb-1.5">
-              <div id="scenario-verdict-title" class="font-bold font-mono tracking-wide"></div>
-              <span id="scenario-verdict-pill" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border shrink-0"></span>
             </div>
-            <p id="scenario-verdict-text" class="text-slate-300 text-[11px] leading-relaxed"></p>
-
-            <!-- Embedded Trajectory Mini-Chart & Audit Button -->
-            <div id="crisis-trajectory-container" class="mt-3 pt-3 border-t border-slate-700/60 hidden">
-              <div class="flex items-center justify-between gap-2 mb-1.5">
-                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold flex items-center gap-1.5">
-                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                  Mark-to-Market Equity Trajectory [0..T]
-                </span>
-                <button type="button" id="btn-open-crisis-audit" data-action="open-crisis-audit-modal"
-                  class="px-2 py-0.5 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/80 transition text-[10px] font-mono flex items-center gap-1 cursor-pointer">
-                  <svg class="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <span>Audit Ledger</span>
-                </button>
+            <div class="min-w-0">
+              <div class="text-xs font-bold text-white group-hover:text-cyan-300 flex items-center gap-2 flex-wrap transition-colors">
+                <span>Institutional Crisis &amp; Stress-Test Matrix</span>
+                <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-semibold">6 Historical Replays</span>
               </div>
-              <div class="relative w-full h-28 bg-slate-950/80 rounded-lg border border-slate-800/80 overflow-hidden">
-                <canvas id="crisis-trajectory-canvas" class="w-full h-full block"></canvas>
-              </div>
+              <p class="text-[11px] text-slate-400 truncate mt-0.5">
+                Replay Celsius 2022, FTX, and Flash Crash 28-day trajectories in the dedicated Stress Lab without altering live terminal sliders.
+              </p>
             </div>
+          </div>
+          <div class="flex items-center gap-1.5 text-xs font-mono font-bold text-cyan-400 group-hover:text-cyan-300 group-hover:translate-x-1 transition-all shrink-0">
+            <span>Open Lab</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
           </div>
         </div>
       </div>
@@ -1169,6 +1065,328 @@
         </button>
       </div>
     </div>
+    </div> <!-- End View 1: Live Basis Terminal (#view-live-terminal) -->
+
+    <!-- View 2: Dedicated Institutional Stress & Crisis Lab -->
+    <div id="view-stress-lab" class="hidden space-y-5">
+      
+      <!-- Stress Lab Header & Portfolio Context Bar -->
+      <div class="bg-brand-card/90 rounded-2xl p-4 sm:p-5 border border-brand-border backdrop-blur-sm flex flex-wrap items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-950/40">
+            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base sm:text-lg font-bold font-mono tracking-tight text-white flex items-center gap-2">
+                INSTITUTIONAL STRESS &amp; CRISIS LAB
+              </h2>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold">
+                MULTI-DAY HISTORICAL REPLAYS
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 font-mono mt-0.5">
+              Path-dependent simulation, peak trough drawdown, and parity recovery accounting across extreme historical crises.
+            </p>
+          </div>
+        </div>
+
+        <!-- Independent Stress Portfolio Context Bar -->
+        <div class="flex flex-wrap items-center gap-3 bg-slate-950/70 p-2 rounded-xl border border-slate-800">
+          <!-- Independent Capital -->
+          <div class="flex items-center gap-2 text-xs font-mono">
+            <span class="text-slate-400 text-[11px]">Capital:</span>
+            <div class="relative">
+              <span class="absolute left-2 top-1.5 text-slate-500 text-xs">$</span>
+              <input type="number" id="stress-input-capital" value="10000" min="100" step="1000"
+                class="w-24 pl-5 pr-2 py-1 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono font-bold text-xs focus:outline-none focus:border-cyan-500" />
+            </div>
+            <!-- Quick Chips -->
+            <div class="hidden sm:flex items-center gap-1">
+              <button type="button" data-action="set-stress-capital" data-capital="10000" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] cursor-pointer">$10K</button>
+              <button type="button" data-action="set-stress-capital" data-capital="50000" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] cursor-pointer">$50K</button>
+              <button type="button" data-action="set-stress-capital" data-capital="100000" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] cursor-pointer">$100K</button>
+            </div>
+          </div>
+
+          <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
+
+          <!-- Independent Mode Switcher -->
+          <div class="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-700/80 text-[11px] font-mono">
+            <button id="stress-mode-btn-unified" type="button" data-action="set-stress-mode" data-mode="unified"
+              class="px-2.5 py-1 rounded font-bold transition bg-cyan-500 text-black shadow cursor-pointer">
+              Unified Margin
+            </button>
+            <button id="stress-mode-btn-isolated" type="button" data-action="set-stress-mode" data-mode="isolated"
+              class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer">
+              Isolated (USDC)
+            </button>
+          </div>
+
+          <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
+
+          <!-- Asset Selector -->
+          <div class="flex items-center gap-1 text-[11px] font-mono">
+            <span class="text-slate-500 text-[10px]">ASSET:</span>
+            <button id="stress-asset-btn-eth" type="button" data-action="set-stress-asset" data-asset="ETH" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold cursor-pointer">ETH</button>
+            <button id="stress-asset-btn-btc" type="button" data-action="set-stress-asset" data-asset="BTC" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white cursor-pointer">BTC</button>
+            <button id="stress-asset-btn-sol" type="button" data-action="set-stress-asset" data-asset="SOL" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white cursor-pointer">SOL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scenario Selection Grid (6 Scenarios) -->
+      <div class="bg-brand-card rounded-2xl border border-brand-border p-4 sm:p-5 space-y-3">
+        <div class="flex items-center justify-between border-b border-brand-border pb-2.5">
+          <span class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            Select Historical or Synthetic Crisis Scenario
+          </span>
+          <span class="text-[10px] font-mono text-slate-400">Click a scenario to replay its multi-day path</span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5">
+          <!-- 1. Celsius 2022 -->
+          <button type="button" id="btn-scenario-celsius" data-action="apply-crisis-scenario" data-scenario="celsius_depeg_2022" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                <span class="px-1.5 py-0.5 rounded bg-rose-950/60 text-rose-400 border border-rose-900/60 font-semibold">JUN 2022</span>
+                <span class="text-rose-400 font-bold">-40% Crash</span>
+              </div>
+              <div class="font-bold text-xs text-white group-hover:text-rose-300 transition-colors">Celsius LST De-Peg</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 line-clamp-1">Liquidity Freeze &amp; Inverted Funding</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+              <span class="text-slate-400">Funding: <strong class="text-rose-400">-8.0%</strong></span>
+              <span class="text-slate-400">Depeg: <strong class="text-rose-400">6.5%</strong></span>
+            </div>
+          </button>
+
+          <!-- 2. FTX Bear Winter -->
+          <button type="button" id="btn-scenario-ftx" data-action="apply-crisis-scenario" data-scenario="ftx_carry_winter" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                <span class="px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-900/60 font-semibold">NOV 2022</span>
+                <span class="text-amber-400 font-bold">-25% Bear</span>
+              </div>
+              <div class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">Post-FTX Inverted Carry</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 line-clamp-1">Prolonged Short Payment Bleed</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+              <span class="text-slate-400">Funding: <strong class="text-amber-400">-12.0%</strong></span>
+              <span class="text-slate-400">Depeg: <strong class="text-slate-300">2.0%</strong></span>
+            </div>
+          </button>
+
+          <!-- 3. Parabolic Squeeze -->
+          <button type="button" id="btn-scenario-parabolic" data-action="apply-crisis-scenario" data-scenario="parabolic_squeeze_2x" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                <span class="px-1.5 py-0.5 rounded bg-cyan-950/60 text-cyan-400 border border-cyan-900/60 font-semibold">Q1 2024</span>
+                <span class="text-emerald-400 font-bold">+100% Rally</span>
+              </div>
+              <div class="font-bold text-xs text-white group-hover:text-cyan-300 transition-colors">Parabolic Squeeze (2x)</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 line-clamp-1">Isolated Wipe vs Unified Buffer</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+              <span class="text-slate-400">Funding: <strong class="text-emerald-400">+45.0%</strong></span>
+              <span class="text-slate-400">Depeg: <strong class="text-slate-300">0.0%</strong></span>
+            </div>
+          </button>
+
+          <!-- 4. Haircut Compression -->
+          <button type="button" id="btn-scenario-haircut" data-action="apply-crisis-scenario" data-scenario="haircut_compression" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                <span class="px-1.5 py-0.5 rounded bg-indigo-950/60 text-indigo-400 border border-indigo-900/60 font-semibold">SYNTHETIC</span>
+                <span class="text-indigo-400 font-bold">+50% Rally</span>
+              </div>
+              <div class="font-bold text-xs text-white group-hover:text-indigo-300 transition-colors">Haircut Compression</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 line-clamp-1">Exchange De-risking (30% Haircut)</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+              <span class="text-slate-400">Valuation: <strong class="text-indigo-400">70%</strong></span>
+              <span class="text-slate-400">Depeg: <strong class="text-amber-400">4.0%</strong></span>
+            </div>
+          </button>
+
+          <!-- 5. Macro Flash Crash -->
+          <button type="button" id="btn-scenario-flash-crash" data-action="apply-crisis-scenario" data-scenario="flash_crash_yen" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                <span class="px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-400 border border-amber-900/60 font-semibold">AUG 2024</span>
+                <span class="text-rose-400 font-bold">-30% Crash</span>
+              </div>
+              <div class="font-bold text-xs text-white group-hover:text-amber-300 transition-colors">Macro Flash Crash</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 line-clamp-1">Yen Carry Unwind / Basis Drop</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+              <span class="text-slate-400">Funding: <strong class="text-slate-300">0.0%</strong></span>
+              <span class="text-slate-400">Depeg: <strong class="text-amber-400">3.5%</strong></span>
+            </div>
+          </button>
+
+          <!-- 6. Meme Mania -->
+          <button type="button" id="btn-scenario-meme" data-action="apply-crisis-scenario" data-scenario="meme_mania_rally" class="p-3 bg-brand-surface/70 hover:bg-slate-800/80 border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all cursor-pointer group flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1">
+                <span class="px-1.5 py-0.5 rounded bg-purple-950/60 text-purple-400 border border-purple-900/60 font-semibold">SYNTHETIC</span>
+                <span class="text-emerald-400 font-bold">+200% Surge</span>
+              </div>
+              <div class="font-bold text-xs text-white group-hover:text-purple-300 transition-colors">Altcoin Meme Mania</div>
+              <div class="text-[10px] text-slate-400 mt-0.5 line-clamp-1">Extreme Contango &amp; Yield Harvest</div>
+            </div>
+            <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono">
+              <span class="text-slate-400">Funding: <strong class="text-emerald-400">+80.0%</strong></span>
+              <span class="text-slate-400">Depeg: <strong class="text-amber-400">5.0%</strong></span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Top Deck: Left = Two-Tier Conclusion & Solvency Diagnosis (ON TOP); Right = Hero Trajectory Chart -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        
+        <!-- Left Column (5 Cols): Audit Conclusion & Comparative Verdict -->
+        <div class="lg:col-span-5 space-y-4 flex flex-col">
+          
+          <!-- Dynamic Risk Diagnosis Verdict Box -->
+          <div id="scenario-verdict-box" class="p-4 rounded-2xl border transition-all text-xs bg-brand-card border-brand-border">
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div id="scenario-verdict-title" class="font-bold font-mono tracking-wide text-sm">ARCHITECTURAL RISK DIAGNOSIS</div>
+              <span id="scenario-verdict-pill" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border shrink-0"></span>
+            </div>
+            <p id="scenario-verdict-text" class="text-slate-300 text-xs leading-relaxed"></p>
+          </div>
+
+          <!-- Two-Tier Audit Conclusion Card (Peak Stress vs Post-Resolution Parity) -->
+          <div class="bg-brand-card rounded-2xl border border-brand-border p-4 flex-1 flex flex-col justify-between">
+            <div class="border-b border-brand-border pb-2.5 flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                <h3 class="text-xs font-mono uppercase tracking-wider text-slate-200 font-bold">
+                  Audit Conclusion: Stress Trough vs. Post-Resolution
+                </h3>
+              </div>
+              <span class="text-[10px] font-mono text-cyan-400 bg-cyan-950 px-2 py-0.5 rounded border border-cyan-800">
+                Audited State
+              </span>
+            </div>
+
+            <!-- Injected Two-Tier Summary Card -->
+            <div id="stress-audit-two-tier-summary" class="mt-3"></div>
+          </div>
+        </div>
+
+        <!-- Right Column (7 Cols): Hero Trajectory Chart [0..T] -->
+        <div class="lg:col-span-7 bg-brand-card rounded-2xl border border-brand-border p-5 flex flex-col justify-between">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-brand-border pb-3 mb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
+                <h3 class="text-xs font-mono uppercase tracking-wider text-white font-bold flex items-center gap-1.5">
+                  Mark-to-Market Equity &amp; Margin Trajectory [0..T]
+                </h3>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5 font-mono">
+                Day-by-day path evolution, margin utilization, and maintenance floor threshold
+              </p>
+            </div>
+            <!-- Chart Legend -->
+            <div class="flex items-center gap-3 text-[11px] font-mono">
+              <span class="flex items-center gap-1.5 text-slate-300">
+                <span class="w-3 h-0.5 bg-cyan-400 inline-block"></span> Equity Curve
+              </span>
+              <span class="flex items-center gap-1.5 text-rose-400">
+                <span class="w-3 h-0.5 border-b border-dashed border-rose-500 inline-block"></span> Maint. Margin
+              </span>
+            </div>
+          </div>
+
+          <!-- Hero Trajectory Canvas Container -->
+          <div class="relative w-full h-72 sm:h-80 bg-slate-950/80 rounded-xl border border-slate-800/80 overflow-hidden">
+            <canvas id="crisis-trajectory-canvas" class="w-full h-full block"></canvas>
+          </div>
+
+          <div class="mt-3 flex items-center justify-between text-[11px] font-mono text-slate-500 pt-2 border-t border-slate-800/60">
+            <span>Hover or drag over trajectory canvas to scrub daily solvency state</span>
+            <span class="text-cyan-400 font-semibold">DELTA-Q Time-Series Engine</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Deck: Historical Trajectory Audit Ledger Table (Directly Below Conclusion on Desktop) -->
+      <div id="stress-audit-desktop-container" class="hidden lg:block bg-brand-card rounded-2xl border border-brand-border p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-brand-border pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="p-1.5 rounded-lg bg-cyan-950 border border-cyan-800 text-cyan-400">
+              <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold font-mono text-white tracking-tight">DAY-BY-DAY HISTORICAL AUDIT LEDGER</h3>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">INSPECTION GRADE</span>
+              </div>
+              <p class="text-xs text-slate-400 font-mono mt-0.5">Granular day-by-day path evolution, funding accruals, depeg discount, and margin ratios.</p>
+            </div>
+          </div>
+
+          <!-- Export CSV Button directly on desktop page -->
+          <button type="button" id="btn-stress-export-csv" data-action="export-crisis-csv"
+            class="px-3.5 py-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 hover:text-white border border-cyan-700/80 transition text-xs font-mono flex items-center gap-1.5 cursor-pointer font-semibold shadow-sm">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Export Audit CSV
+          </button>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60 max-h-[500px] overflow-y-auto">
+          <table class="w-full text-left text-xs font-mono border-collapse">
+            <thead class="sticky top-0 bg-slate-900 border-b border-slate-800 text-[11px] text-slate-400 uppercase tracking-wider select-none z-10">
+              <tr>
+                <th class="py-2.5 px-3">Day</th>
+                <th class="py-2.5 px-3">Date</th>
+                <th class="py-2.5 px-3">Spot Shock</th>
+                <th class="py-2.5 px-3">Funding APR</th>
+                <th class="py-2.5 px-3">Depeg %</th>
+                <th class="py-2.5 px-3">Equity</th>
+                <th class="py-2.5 px-3">Margin Ratio</th>
+                <th class="py-2.5 px-3">Status</th>
+              </tr>
+            </thead>
+            <tbody id="stress-audit-tbody" class="divide-y divide-slate-800/60"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Mobile Ledger Summary Card with Modal Drawer Launcher (< lg) -->
+      <div id="stress-audit-mobile-container" class="lg:hidden bg-brand-card rounded-2xl border border-brand-border p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-mono uppercase tracking-wider text-slate-300 font-bold flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Historical Trajectory Ledger
+          </span>
+          <span id="stress-mobile-days-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">
+            28 Days Audited
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 font-mono">
+          Detailed day-by-day telemetry and liquidation state can be reviewed in the full audit modal or exported to CSV.
+        </p>
+        <button type="button" id="btn-open-mobile-crisis-audit" data-action="open-crisis-audit-modal"
+          class="w-full py-2 px-3 rounded-xl bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/80 transition text-xs font-mono font-bold flex items-center justify-center gap-2 cursor-pointer shadow-sm">
+          <span>📋 View Full Day-by-Day Historical Ledger Table</span>
+        </button>
+      </div>
+
+    </div> <!-- End View 2: Dedicated Stress Lab (#view-stress-lab) -->
 
   </main>
 
@@ -1626,8 +1844,6 @@
 
     </div>
   </div>
-
-  </main>
 
   <footer class="border-t border-brand-border py-4 text-center text-xs font-mono text-slate-500">
     DELTA-Q QUANTITATIVE PLATFORM // FOR INSTITUTIONAL RESEARCH AND MODELING ONLY

@@ -299,7 +299,11 @@ export function drawCrisisTrajectory(
         const cp2x = pNext.x - (pAfter.x - pCurr.x) / 6;
         const cp2y = pNext.y - (pAfter.y - pCurr.y) / 6;
 
-        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, pNext.x, pNext.y);
+        if (typeof ctx.bezierCurveTo === 'function') {
+          ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, pNext.x, pNext.y);
+        } else {
+          ctx.lineTo(pNext.x, pNext.y);
+        }
       }
       ctx.lineTo(pts[pts.length - 1].x, pad.top + plotH);
     }
@@ -335,7 +339,11 @@ export function drawCrisisTrajectory(
         const cp2x = pNext.x - (pAfter.x - pCurr.x) / 6;
         const cp2y = pNext.y - (pAfter.y - pCurr.y) / 6;
 
-        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, pNext.x, pNext.y);
+        if (typeof ctx.bezierCurveTo === 'function') {
+          ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, pNext.x, pNext.y);
+        } else {
+          ctx.lineTo(pNext.x, pNext.y);
+        }
       }
     }
     ctx.stroke();

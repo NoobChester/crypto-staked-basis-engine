@@ -249,6 +249,23 @@ export interface UIElements {
   crisisAuditTableBody: HTMLElement | null;
   crisisAuditSummary: HTMLElement | null;
   btnExportCrisisCsv: HTMLElement | null;
+
+  // Top-Level View Navigation & Dedicated Stress Lab
+  viewLiveTerminal: HTMLElement | null;
+  viewStressLab: HTMLElement | null;
+  navBtnTerminal: HTMLElement | null;
+  navBtnStress: HTMLElement | null;
+  bannerOpenStressLab: HTMLElement | null;
+  stressInputCapital: HTMLInputElement | null;
+  stressModeBtnUnified: HTMLElement | null;
+  stressModeBtnIsolated: HTMLElement | null;
+  stressAssetBtnEth: HTMLElement | null;
+  stressAssetBtnBtc: HTMLElement | null;
+  stressAssetBtnSol: HTMLElement | null;
+  stressAuditTbody: HTMLElement | null;
+  stressAuditTwoTierSummary: HTMLElement | null;
+  btnStressExportCsv: HTMLElement | null;
+  btnOpenMobileCrisisAudit: HTMLElement | null;
   statisticalCarryPanel: HTMLElement | null;
   labelVolatilityDispersion: HTMLElement | null;
   btnRegimeConservative: HTMLElement | null;
@@ -529,6 +546,23 @@ export function getUIElements(): UIElements {
     crisisAuditTableBody: document.getElementById('crisis-audit-tbody'),
     crisisAuditSummary: document.getElementById('crisis-audit-two-tier-summary'),
     btnExportCrisisCsv: document.getElementById('btn-export-crisis-csv'),
+
+    // Top-Level View Navigation & Dedicated Stress Lab
+    viewLiveTerminal: document.getElementById('view-live-terminal'),
+    viewStressLab: document.getElementById('view-stress-lab'),
+    navBtnTerminal: document.getElementById('nav-btn-terminal'),
+    navBtnStress: document.getElementById('nav-btn-stress'),
+    bannerOpenStressLab: document.getElementById('banner-open-stress-lab'),
+    stressInputCapital: document.getElementById('stress-input-capital') as HTMLInputElement | null,
+    stressModeBtnUnified: document.getElementById('stress-mode-btn-unified'),
+    stressModeBtnIsolated: document.getElementById('stress-mode-btn-isolated'),
+    stressAssetBtnEth: document.getElementById('stress-asset-btn-eth'),
+    stressAssetBtnBtc: document.getElementById('stress-asset-btn-btc'),
+    stressAssetBtnSol: document.getElementById('stress-asset-btn-sol'),
+    stressAuditTbody: document.getElementById('stress-audit-tbody'),
+    stressAuditTwoTierSummary: document.getElementById('stress-audit-two-tier-summary'),
+    btnStressExportCsv: document.getElementById('btn-stress-export-csv'),
+    btnOpenMobileCrisisAudit: document.getElementById('btn-open-mobile-crisis-audit'),
     btnOpenRateLab: document.getElementById('btn-open-rate-lab'),
     statisticalCarryPanel: document.getElementById('statistical-carry-panel'),
     labelVolatilityDispersion: document.getElementById('label-volatility-dispersion'),
