@@ -124,3 +124,53 @@ input[type=range]::-webkit-slider-thumb:hover {
   box-shadow: 0 0 15px rgba(168, 85, 247, 0.35) !important;
   color: #f3e8ff !important;
 }
+
+
+/* ============================================================================
+   MOBILE-FIRST TERMINAL UX & TOUCH ERGONOMICS (< 1024px)
+   ============================================================================ */
+
+/* Mobile Bottom Sheets (elevates centered modals to native bottom sheets on mobile) */
+@media (max-width: 639px) {
+  .modal-bottom-sheet {
+    position: fixed !important;
+    inset: auto 0 0 0 !important;
+    top: 2.5rem !important;
+    max-height: calc(100vh - 2.5rem) !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* 44px Thumb & Touch Hitboxes for Mobile */
+@media (max-width: 1023px) {
+  /* Prevent horizontal drag from hijacking vertical scroll */
+  canvas {
+    touch-action: pan-y !important;
+  }
+
+  /* Expanded thumb hit target */
+  input[type=range]::-webkit-slider-thumb {
+    width: 24px !important;
+    height: 24px !important;
+    cursor: grab;
+  }
+
+  input[type=range]::-moz-range-thumb {
+    width: 24px !important;
+    height: 24px !important;
+    cursor: grab;
+  }
+
+  /* Preset and segmented buttons touch height */
+  [data-action^="set-"], [data-action="open-rate-lab"] {
+    min-height: 32px;
+  }
+}
+
+/* Safe Area Padding for iOS Home Bar Indicator */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0.75rem);
+}

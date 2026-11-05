@@ -48,6 +48,9 @@ import { setupEventDelegation, bindSliderListeners } from './ui/events.js';
 import { drawChart, setupChartInteractions, type ChartConfidenceStats } from './ui/chart.js';
 import { getCustomStatisticalCarry, type StatisticalCarrySnapshot } from './services/marketData.js';
 import { initRateLabModal, openRateLabModal, closeRateLabModal } from './ui/rateLabModal.js';
+import { initMobileNav, updateMiniHud } from './ui/mobileNav.js';
+import { bindCanvasTouchScrub } from './ui/touchInteractions.js';
+import { initTapToEdit } from './ui/tapToEdit.js';
 import type { StochasticSimulationResult } from './types/rateLab.js';
 import { drawHistoricalChart, drawHistoricalStakingSubChart, drawHistoricalSubChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
 
@@ -158,6 +161,14 @@ export function updateApp(): void {
   renderUI(UI, state, res);
   drawChart(UI.canvas, state, res, getConfidenceStats());
   updateDepegControl(UI, state, getLatestMarketData());
+  updateMiniHud({
+    netRealizedApy: res.netRealizedAPY,
+    rLiq: res.rLiq,
+    distanceToLiqPct: res.distanceToLiqPct,
+    isLiquidated: res.isLiquidated,
+    netPnL: res.netRealizedPnL,
+    netDelta: res.netDelta
+  });
 }
 
 export function setDepeg(pct: number): void {
@@ -697,6 +708,13 @@ export function setSolYieldType(yieldType: SolYieldType): void {
   updateApp();
 }
 
+export function setCapital(cap: number): void {
+  state.capital = cap;
+  if (UI.inputCapital) UI.inputCapital.value = cap.toString();
+  if (UI.valCapital) UI.valCapital.textContent = '$' + cap.toLocaleString();
+  updateApp();
+}
+
 export function setPriceChange(pct: number): void {
   state.priceMove = pct;
   state.activeCrisisScenario = null;
@@ -1074,7 +1092,34 @@ function init() {
     }
   });
 
-  setupChartInteractions(UI.canvas, UI, () => state, getConfidenceStats);
+  // Initialize Mobile 3-Tab Navigation & Touch Interactions
+  initMobileNav((tab) => {
+    if (tab === 'chart' && UI.canvas) {
+      updateApp();
+    }
+  });
+
+  if (UI.canvas) {
+    bindCanvasTouchScrub(UI.canvas, (scrub) => {
+      if (scrub) {
+        const minPct = -100;
+        const maxPct = 200;
+        const pct = minPct + scrub.plotFraction * (maxPct - minPct);
+        setPriceChange(parseFloat(pct.toFixed(1)));
+      }
+    });
+  }
+
+  initTapToEdit([
+    { id: 'val-capital', field: 'Capital ($)', currentValue: state.capital, min: 100, max: 10000000, step: 500, unit: 'USD', onCommit: (v) => setCapital(v) },
+    { id: 'val-price-move', field: 'Price Shock', currentValue: state.priceMove, min: -100, max: 200, step: 0.5, unit: '%', onCommit: (v) => setPriceChange(v) },
+    { id: 'val-days', field: 'Holding Days', currentValue: state.days, min: 1, max: 730, step: 1, unit: 'Days', onCommit: (v) => setDays(v) },
+    { id: 'val-funding', field: 'Funding Rate', currentValue: state.fundingAPR, min: -100, max: 200, step: 0.5, unit: '% APR', onCommit: (v) => { state.fundingAPR = v; state.isLiveFunding = false; updateApp(); } },
+    { id: 'val-staking', field: 'Staking Yield', currentValue: state.stakingAPY, min: 0, max: 30, step: 0.1, unit: '% APY', onCommit: (v) => { state.stakingAPY = v; state.isLiveStaking = false; updateApp(); } },
+    { id: 'val-depeg', field: 'LST De-Peg Discount', currentValue: state.depegPct, min: 0, max: 50, step: 0.1, unit: '% Discount', onCommit: (v) => setDepeg(v) }
+  ]);
+
+    setupChartInteractions(UI.canvas, UI, () => state, getConfidenceStats);
 
   if (UI.canvas && UI.canvas.parentElement) {
     const ro = new ResizeObserver(() => {
