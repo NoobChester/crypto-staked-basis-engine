@@ -298,7 +298,7 @@ function renderBacktestPaginationControls(): void {
     backtestState.pageSize,
     (newPage: number) => {
       backtestState.currentPage = newPage;
-      renderBacktestLedger(UI.backtestTbody, currentBacktestResult, backtestState.currentPage, backtestState.pageSize);
+      renderBacktestLedger(UI.backtestTbody, currentBacktestResult, backtestState.currentPage, backtestState.pageSize, backtestState.asset);
       renderBacktestPaginationControls();
     }
   );
@@ -320,6 +320,14 @@ export function updateBacktest(): void {
   });
 
   // Controls UI updates
+  if (UI.backtestBtcRegimeCallout) {
+    if (backtestState.asset === 'BTC') {
+      UI.backtestBtcRegimeCallout.classList.remove('hidden');
+    } else {
+      UI.backtestBtcRegimeCallout.classList.add('hidden');
+    }
+  }
+
   if (UI.backtestValCollateralRatio) {
     UI.backtestValCollateralRatio.textContent = (backtestState.collateralRatio * 100).toFixed(0) + '%';
   }
@@ -414,7 +422,18 @@ export function updateBacktest(): void {
     UI.backtestKpiHarvestTotal.textContent = `+${fmtUSD(totalHarvest)}`;
   }
   if (UI.backtestKpiStaking) {
-    UI.backtestKpiStaking.textContent = `Staking: ${fmtUSD(res.totalHarvestedStaking)}`;
+    if (backtestState.asset === 'BTC') {
+      if (res.totalHarvestedStaking === 0) {
+        UI.backtestKpiStaking.textContent = 'Staking: $0 (Pure Basis)';
+        UI.backtestKpiStaking.title = 'Native BTC has 0% staking APY; Babylon Restaking began Aug 15, 2024';
+      } else {
+        UI.backtestKpiStaking.textContent = `Staking: ${fmtUSD(res.totalHarvestedStaking)} (Babylon)`;
+        UI.backtestKpiStaking.title = 'Includes native Babylon restaking yield accrued post-Aug 15, 2024';
+      }
+    } else {
+      UI.backtestKpiStaking.textContent = `Staking: ${fmtUSD(res.totalHarvestedStaking)}`;
+      UI.backtestKpiStaking.title = '';
+    }
   }
   if (UI.backtestKpiFunding) {
     UI.backtestKpiFunding.textContent = `Funding: ${fmtUSD(res.totalHarvestedFunding)}`;
@@ -447,10 +466,10 @@ export function updateBacktest(): void {
   }
 
   // Render Tri-Curve Chart
-  drawBacktestChart(UI.backtestCanvas, res);
+  drawBacktestChart(UI.backtestCanvas, res, backtestState.asset);
 
   // Render Ledger & Pagination
-  renderBacktestLedger(UI.backtestTbody, res, backtestState.currentPage, backtestState.pageSize);
+  renderBacktestLedger(UI.backtestTbody, res, backtestState.currentPage, backtestState.pageSize, backtestState.asset);
   renderBacktestPaginationControls();
 }
 
@@ -460,6 +479,7 @@ export function setBacktestAsset(asset: TradedAsset): void {
     backtestState.collateralRatio = 0.90;
   } else if (asset === 'BTC') {
     backtestState.collateralRatio = 0.85;
+    backtestState.mode = 'isolated'; // BTC LSTs are custodied in Web3, hedged with USDC cash on CEX
   } else if (asset === 'SOL') {
     backtestState.collateralRatio = 0.85;
   }

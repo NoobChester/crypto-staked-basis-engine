@@ -294,6 +294,7 @@ export interface UIElements {
   backtestAssetBtnEth: HTMLElement | null;
   backtestAssetBtnSol: HTMLElement | null;
   backtestAssetBtnBtc: HTMLElement | null;
+  backtestBtcRegimeCallout: HTMLElement | null;
   backtestInputCapital: HTMLInputElement | null;
   backtestModeBtnUnified: HTMLElement | null;
   backtestModeBtnIsolated: HTMLElement | null;
@@ -625,6 +626,7 @@ export function getUIElements(): UIElements {
     backtestAssetBtnEth: document.getElementById('backtest-asset-btn-eth'),
     backtestAssetBtnSol: document.getElementById('backtest-asset-btn-sol'),
     backtestAssetBtnBtc: document.getElementById('backtest-asset-btn-btc'),
+    backtestBtcRegimeCallout: document.getElementById('backtest-btc-regime-callout'),
     backtestInputCapital: document.getElementById('backtest-input-capital') as HTMLInputElement | null,
     backtestModeBtnUnified: document.getElementById('backtest-mode-btn-unified'),
     backtestModeBtnIsolated: document.getElementById('backtest-mode-btn-isolated'),

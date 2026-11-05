@@ -10,7 +10,8 @@ export function renderBacktestLedger(
   tbody: HTMLElement | null,
   result: BacktestSummaryResult | null,
   currentPage: number = 1,
-  pageSize: number = 50
+  pageSize: number = 50,
+  asset: string = 'ETH'
 ): void {
   if (!tbody || typeof document === 'undefined' || typeof document.createElement !== 'function') return;
   tbody.innerHTML = '';
@@ -31,6 +32,26 @@ export function renderBacktestLedger(
   const fragment = typeof document.createDocumentFragment === 'function' ? document.createDocumentFragment() : null;
 
   pageSlice.forEach((step: BacktestStepResult) => {
+    // Milestone row divider for Babylon Restaking Inception (Aug 15, 2024)
+    if (step.date === '2024-08-15' && (asset === 'BTC' || (step.stakingAPY > 0 && steps[0].stakingAPY === 0))) {
+      const milestoneTr = document.createElement('tr');
+      milestoneTr.className = 'bg-gradient-to-r from-amber-950/70 via-purple-950/80 to-slate-900 border-y-2 border-amber-500/80 text-white font-mono';
+      milestoneTr.innerHTML = `
+        <td colspan="9" class="py-2.5 px-3 text-center">
+          <div class="inline-flex items-center gap-2 flex-wrap justify-center">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
+            <span class="text-amber-300 font-bold uppercase tracking-wide">⚡ REGIME SHIFT MILESTONE: BABYLON RESTAKING ERA ACTIVATION (AUG 15, 2024)</span>
+            <span class="text-purple-300 text-[11px] font-semibold">— Transitions from Pure Cash-and-Carry (0.0% PoW) to Native Staked Basis (+1.1% APY)</span>
+          </div>
+        </td>
+      `;
+      if (fragment) {
+        fragment.appendChild(milestoneTr);
+      } else {
+        tbody.appendChild(milestoneTr);
+      }
+    }
+
     const tr = document.createElement('tr');
     const isLiqDay = result.isLiquidated && result.tLiq === step.day;
 
@@ -53,9 +74,15 @@ export function renderBacktestLedger(
       statusPill = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-900 text-rose-200 border border-rose-500 animate-pulse">LIQUIDATED</span>`;
     } else if (step.isLiquidated) {
       statusPill = `<span class="px-1.5 py-0.5 rounded text-[10px] bg-rose-950/80 text-rose-400 border border-rose-800/60">UNHEDGED SPOT</span>`;
+    } else if (step.stakingAPY === 0) {
+      statusPill = `<span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-300 border border-slate-700/80 font-medium" title="Pure Cash-and-Carry Basis (100% Funding Contango, 0% Staking Yield)">CASH &amp; CARRY</span>`;
     } else {
-      statusPill = `<span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">SOLVENT</span>`;
+      statusPill = `<span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-medium" title="Dual-Yield Staked Basis (Staking Yield + Perp Funding)">STAKED BASIS</span>`;
     }
+
+    const stakingDisplay = step.stakingAPY === 0
+      ? `<span class="text-slate-500 font-medium" title="Pure Cash-and-Carry Era (Proof-of-Work: 0% Protocol Staking Yield)">0.0% <span class="text-[9px] text-slate-500 font-normal">PoW</span></span>`
+      : `<span class="text-cyan-300">${step.stakingAPY.toFixed(1)}%</span>`;
 
     tr.innerHTML = `
       <td class="py-2.5 px-3 text-slate-400 font-bold">D${step.day}</td>
@@ -63,7 +90,7 @@ export function renderBacktestLedger(
       <td class="py-2.5 px-3 font-semibold text-white">$${step.spotPrice.toLocaleString()}</td>
       <td class="py-2.5 px-3 ${spotColor}">${spotReturnSign}${step.priceReturnPct.toFixed(1)}%</td>
       <td class="py-2.5 px-3 ${fundingColor}">${fmtPct(step.fundingAPR)}</td>
-      <td class="py-2.5 px-3 text-cyan-300">${step.stakingAPY.toFixed(1)}%</td>
+      <td class="py-2.5 px-3">${stakingDisplay}</td>
       <td class="py-2.5 px-3 text-amber-300">${step.depegPct.toFixed(2)}%</td>
       <td class="py-2.5 px-3 font-bold text-cyan-400">${fmtUSD(step.strategyEquity)}</td>
       <td class="py-2.5 px-3">${statusPill}</td>

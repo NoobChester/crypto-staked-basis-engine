@@ -19,7 +19,8 @@ let activeHoverCleanup: (() => void) | null = null;
 
 export function drawBacktestChart(
   canvas: HTMLCanvasElement | null,
-  result: BacktestSummaryResult | null
+  result: BacktestSummaryResult | null,
+  asset: string = 'ETH'
 ): void {
   if (!canvas || !result || !result.dailyTrajectory || result.dailyTrajectory.length === 0) return;
 
@@ -214,6 +215,34 @@ export function drawBacktestChart(
     ctx.restore();
   }
 
+  // Babylon Restaking Inception Marker (if in range and transitions from 0% PoW to Babylon restaking)
+  const bbnIdx = steps.findIndex(s => s.date === '2024-08-15');
+  if (bbnIdx > 0 && bbnIdx < n - 1 && (asset === 'BTC' || (steps[0].stakingAPY === 0 && steps[bbnIdx].stakingAPY > 0))) {
+    const bbnX = getX(bbnIdx);
+    ctx.save();
+    ctx.strokeStyle = '#f59e0b';
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(bbnX, padding.top + 20);
+    ctx.lineTo(bbnX, height - padding.bottom);
+    ctx.stroke();
+
+    ctx.fillStyle = '#451a03';
+    ctx.strokeStyle = '#f59e0b';
+    ctx.setLineDash([]);
+    ctx.font = 'bold 9px "JetBrains Mono", monospace';
+    const tag = '⚡ BABYLON RESTAKING ERA (Aug 15, 2024)';
+    const tagW = ctx.measureText(tag).width + 8;
+    ctx.fillRect(bbnX - tagW / 2, padding.top + 5, tagW, 16);
+    ctx.strokeRect(bbnX - tagW / 2, padding.top + 5, tagW, 16);
+    ctx.fillStyle = '#fef3c7';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(tag, bbnX, padding.top + 13);
+    ctx.restore();
+  }
+
   // Interactive Hover Crosshair with rAF and index memoization
   setupHoverListener(canvas, result, dims);
 }
@@ -282,9 +311,11 @@ function setupHoverListener(
           <div class="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
             <span>Spot: $${step.spotPrice.toLocaleString()}</span>
             <span>Funding: ${fmtPct(step.fundingAPR)}</span>
-            <span>Staking: ${step.stakingAPY.toFixed(1)}%</span>
+            <span>Staking: ${step.stakingAPY === 0 ? '0.0% (PoW)' : `${step.stakingAPY.toFixed(1)}%`}</span>
           </div>
-          ${step.isLiquidated ? '<div class="text-rose-400 font-bold text-[10px] text-center pt-0.5">⚠️ POST-LIQUIDATION SPOT</div>' : ''}
+          <div class="pt-0.5 text-[10px] font-mono text-center">
+            ${step.isLiquidated ? '<span class="text-rose-400 font-bold">⚠️ POST-LIQUIDATION SPOT</span>' : (step.stakingAPY === 0 ? '<span class="text-amber-400 font-medium">Regime: Pure Cash-and-Carry Basis</span>' : '<span class="text-purple-400 font-medium">Regime: Staked Basis</span>')}
+          </div>
         </div>
       `;
 

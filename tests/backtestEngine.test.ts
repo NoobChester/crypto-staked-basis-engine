@@ -218,6 +218,60 @@ describe('Ledger Table Rendering & CSV Export', () => {
     });
     expect(() => exportBacktestCsv(result)).not.toThrow();
   });
+
+  it('renders explicit Cash-and-Carry vs Babylon Staked Basis regimes in ledger table', () => {
+    const createdElements: any[] = [];
+    const originalDocument = globalThis.document;
+
+    (globalThis as any).document = {
+      createElement: vi.fn((tag: string) => {
+        const el = {
+          tagName: tag.toUpperCase(),
+          innerHTML: '',
+          className: '',
+          children: [] as any[],
+          appendChild: vi.fn()
+        };
+        createdElements.push(el);
+        return el;
+      }),
+      createDocumentFragment: vi.fn(() => {
+        const fragmentChildren: any[] = [];
+        return {
+          nodeType: 11,
+          children: fragmentChildren,
+          appendChild: (c: any) => fragmentChildren.push(c)
+        };
+      })
+    };
+
+    try {
+      const btcSlice = getHistoricalBacktestSeries('BTC', '2024-08-14', '2024-08-16');
+      const btcResult = runHistoricalBacktest(btcSlice, { capital: 10000, mode: 'isolated' });
+      const tbody = { innerHTML: '', appendChild: vi.fn() } as unknown as HTMLElement;
+
+      renderBacktestLedger(tbody, btcResult, 1, 10, 'BTC');
+
+      // 1. D1 (2024-08-14): staking = 0.0%, must show CASH & CARRY and PoW
+      const rowAug14 = createdElements.find(el => el.innerHTML.includes('2024-08-14'));
+      expect(rowAug14).toBeDefined();
+      expect(rowAug14.innerHTML).toContain('CASH &amp; CARRY');
+      expect(rowAug14.innerHTML).toContain('0.0%');
+      expect(rowAug14.innerHTML).toContain('PoW');
+
+      // 2. Milestone row for Aug 15, 2024 Babylon Activation
+      const milestoneRow = createdElements.find(el => el.innerHTML.includes('BABYLON RESTAKING ERA ACTIVATION'));
+      expect(milestoneRow).toBeDefined();
+      expect(milestoneRow.innerHTML).toContain('AUG 15, 2024');
+
+      // 3. Post-activation row (2024-08-16): staking > 0, must show STAKED BASIS
+      const rowAug16 = createdElements.find(el => el.innerHTML.includes('2024-08-16'));
+      expect(rowAug16).toBeDefined();
+      expect(rowAug16.innerHTML).toContain('STAKED BASIS');
+    } finally {
+      (globalThis as any).document = originalDocument;
+    }
+  });
 });
 
 describe('High-Performance Caching & DSA Slicing Optimization', () => {
