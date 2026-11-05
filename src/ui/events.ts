@@ -43,6 +43,7 @@ export interface AppActions {
   exportCrisisAuditCsv?: () => void;
   setRegime?: (regime: 'conservative' | 'base' | 'bull') => void;
   setLookback?: (days: number) => void;
+  openRateLabModal?: () => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -69,6 +70,9 @@ export function setupEventDelegation(actions: AppActions): void {
         break;
       case 'close-historical-modal':
         actions.closeHistoricalModal();
+        break;
+      case 'open-rate-lab':
+        actions.openRateLabModal?.();
         break;
       case 'refresh-live-rates':
         actions.refreshLiveRates();

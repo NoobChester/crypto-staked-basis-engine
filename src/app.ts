@@ -47,6 +47,8 @@ import {
 import { setupEventDelegation, bindSliderListeners } from './ui/events.js';
 import { drawChart, setupChartInteractions, type ChartConfidenceStats } from './ui/chart.js';
 import { getCustomStatisticalCarry, type StatisticalCarrySnapshot } from './services/marketData.js';
+import { initRateLabModal, openRateLabModal, closeRateLabModal } from './ui/rateLabModal.js';
+import type { StochasticSimulationResult } from './types/rateLab.js';
 import { drawHistoricalChart, drawHistoricalStakingSubChart, drawHistoricalSubChart, setupHistoricalChartInteractions } from './ui/historicalChart.js';
 
 export type HistoricalHorizon = 'live' | '7d' | '30d' | '90d' | 'custom';
@@ -1041,9 +1043,37 @@ function init() {
     closeCrisisAuditModal,
     exportCrisisAuditCsv: exportCrisisCsv,
     setRegime,
-    setLookback
+    setLookback,
+    openRateLabModal: () => openRateLabModal(state.tradedAsset || 'ETH', state.solYieldType || 'real')
   });
   bindSliderListeners(UI, state, updateApp, (days) => setLookback(days));
+  initRateLabModal({
+    onApplyRates: (fundingApr, stakingApy) => {
+      state.fundingAPR = parseFloat(fundingApr.toFixed(2));
+      state.stakingAPY = parseFloat(stakingApy.toFixed(2));
+      state.isLiveFunding = false;
+      state.isLiveStaking = false;
+      if (UI?.inputFunding) UI.inputFunding.value = state.fundingAPR.toString();
+      if (UI?.valFunding) {
+        UI.valFunding.textContent = fmtPct(state.fundingAPR) + ' APR';
+        UI.valFunding.className = `font-mono font-bold ${state.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+      if (UI?.inputStaking) UI.inputStaking.value = state.stakingAPY.toString();
+      if (UI?.valStaking) UI.valStaking.textContent = state.stakingAPY.toFixed(1) + '% APY';
+      updateApp();
+    },
+    onStochasticStressTest: (simResult: StochasticSimulationResult) => {
+      state.fundingAPR = parseFloat(simResult.var95Apr.toFixed(2));
+      state.isLiveFunding = false;
+      if (UI?.inputFunding) UI.inputFunding.value = state.fundingAPR.toString();
+      if (UI?.valFunding) {
+        UI.valFunding.textContent = fmtPct(state.fundingAPR) + ' APR (95% VaR Tail)';
+        UI.valFunding.className = `font-mono font-bold ${state.fundingAPR >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+      updateApp();
+    }
+  });
+
   setupChartInteractions(UI.canvas, UI, () => state, getConfidenceStats);
 
   if (UI.canvas && UI.canvas.parentElement) {
@@ -1073,6 +1103,7 @@ function init() {
     UI.historicalModal.addEventListener('click', (e) => {
       if (e.target === UI.historicalModal) {
         closeHistoricalModal();
+      closeRateLabModal();
       }
     });
   }

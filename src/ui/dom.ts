@@ -519,6 +519,7 @@ export function getUIElements(): UIElements {
     crisisAuditSubtitle: document.getElementById('crisis-audit-subtitle'),
     crisisAuditTableBody: document.getElementById('crisis-audit-tbody'),
     btnExportCrisisCsv: document.getElementById('btn-export-crisis-csv'),
+    btnOpenRateLab: document.getElementById('btn-open-rate-lab'),
     statisticalCarryPanel: document.getElementById('statistical-carry-panel'),
     labelVolatilityDispersion: document.getElementById('label-volatility-dispersion'),
     btnRegimeConservative: document.getElementById('btn-regime-conservative'),
