@@ -1,23 +1,170 @@
 /**
  * @file crisisLedgerRenderer.ts
- * @description Renders the granular day-by-day institutional audit ledger table
- * and handles RFC-4180 compliant CSV export for compliance sign-off.
+ * @description Renders the granular day-by-day institutional audit ledger table,
+ * the Trough vs. Resolved Two-Tier Summary Card, and handles RFC-4180 compliant CSV export.
  */
 
 import type { CrisisSimulationResult, CrisisSimulationStep } from '../../math/hedging.js';
 import { fmtUSD, fmtPct } from '../../math/hedging.js';
 
-export function renderCrisisAuditTable(
-  tbody: HTMLElement | null,
+export function renderCrisisAuditSummary(
+  container: HTMLElement | null,
   result: CrisisSimulationResult | null
 ): void {
+  if (!container) return;
+
+  if (!result || !result.dailyTrajectory || result.dailyTrajectory.length === 0) {
+    container.innerHTML = '';
+    container.className = 'hidden';
+    return;
+  }
+
+  container.className = 'mt-4 block';
+
+  const C = Math.max(1, result.terminalEquity - result.netPnL);
+  const steps = result.dailyTrajectory;
+
+  // 1. Find Trough Step (minimum equity reached during the crisis)
+  const troughStep = steps.reduce(
+    (min, s) => (s.equity < min.equity ? s : min),
+    steps[0]
+  );
+  const troughEquity = troughStep.equity;
+  const troughDrawdownPct = ((troughEquity - C) / C) * 100;
+  const peakMarginRatio = Math.max(...steps.map(s => s.marginRatio));
+  const peakDepeg = Math.max(...steps.map(s => s.depegPct));
+  const minHeadroom = Math.max(0, (1 - peakMarginRatio) * 100);
+
+  // 2. Terminal / Post-Resolution Step
+  const lastStep = steps[steps.length - 1];
+  const terminalEquity = result.terminalEquity;
+  const netPnL = result.netPnL;
+  const apy = result.netRealizedAPY;
+  const totalHarvested = (result.totalHarvestedFunding || 0) + (result.totalHarvestedStaking || 0);
+
+  // Depeg resolution classification
+  let impairmentBadge = '';
+  let impairmentDesc = '';
+
+  if (!result.isLiquidated) {
+    if (lastStep.depegPct <= 0.1) {
+      impairmentBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">TRANSITORY ($0.00 Permanent Loss)</span>`;
+      impairmentDesc = 'Mark-to-market dip fully unwound upon re-pegging to parity. 100% carry preserved.';
+    } else {
+      impairmentBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-700">RESIDUAL DISCOUNT (-${fmtUSD(result.depegLoss)})</span>`;
+      impairmentDesc = `Residual discount of ${lastStep.depegPct.toFixed(2)}% remaining at horizon conclusion.`;
+    }
+  } else {
+    impairmentBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-700 animate-pulse">PERMANENT IMPAIRMENT (-${fmtUSD(Math.abs(netPnL))})</span>`;
+    impairmentDesc = `Perp short liquidated on Day ${result.tLiq}. Hedge destroyed; position converted to naked spot.`;
+  }
+
+  const overallStatusPill = result.isLiquidated
+    ? `<span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-600 animate-pulse">BREACH: LIQUIDATED ON DAY ${result.tLiq}</span>`
+    : `<span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">SOLVENT (MIN HEADROOM: ${minHeadroom.toFixed(1)}%)</span>`;
+
+  const pnlColor = netPnL >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  const apyColor = apy >= 0 ? 'text-emerald-400' : 'text-rose-400';
+  const drawdownColor = troughDrawdownPct >= 0 ? 'text-emerald-400' : 'text-rose-400';
+
+  container.innerHTML = `
+    <div class="rounded-xl border border-slate-800 bg-slate-900/90 p-4 space-y-3 font-mono shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-2 h-2 rounded-full ${result.isLiquidated ? 'bg-rose-500 animate-ping' : 'bg-emerald-400'}"></div>
+          <span class="text-xs font-bold text-white uppercase tracking-wider">Audit Conclusion: Stress Trough vs. Post-Resolution</span>
+          ${overallStatusPill}
+        </div>
+        <span class="text-[10px] text-slate-400">Institutional Mark-to-Market vs. Economic Realization</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <!-- Tier 1: Peak Stress (Trough) -->
+        <div class="rounded-lg bg-slate-950/90 border border-slate-800/90 p-3.5 flex flex-col justify-between space-y-3 shadow-inner">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+            <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+              1. Peak Stress (Trough Point)
+            </span>
+            <span class="text-[10px] font-bold text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">${troughStep.dateStr || 'Day ' + troughStep.day}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <span class="text-[10px] text-slate-400 block">Min Trough Equity</span>
+              <span class="text-white font-bold text-sm tracking-tight">${fmtUSD(troughEquity)}</span>
+              <span class="text-[10px] ${drawdownColor} block font-semibold mt-0.5">${troughDrawdownPct >= 0 ? '+' : ''}${troughDrawdownPct.toFixed(1)}% MTM Dip</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block">Peak Margin Ratio</span>
+              <span class="text-amber-300 font-bold text-sm tracking-tight">${(peakMarginRatio * 100).toFixed(1)}%</span>
+              <span class="text-[10px] text-slate-400 block mt-0.5">Min Headroom: ${minHeadroom.toFixed(1)}%</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block">Peak Depeg Discount</span>
+              <span class="text-rose-400 font-semibold">${peakDepeg.toFixed(2)}%</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block">Solvency Verdict</span>
+              <span class="font-bold text-xs ${result.isLiquidated ? 'text-rose-400' : 'text-emerald-400'}">
+                ${result.isLiquidated ? 'BREACHED ON DAY ' + result.tLiq : 'MAINTAINED SOLVENCY'}
+              </span>
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60 italic">
+            ${result.isLiquidated ? 'Liquidated at trough; margin equity breached maintenance buffer.' : 'Account absorbed maximum liquidity shock without breach.'}
+          </div>
+        </div>
+
+        <!-- Tier 2: Post-Resolution (Terminal State) -->
+        <div class="rounded-lg bg-slate-950/90 border border-slate-800/90 p-3.5 flex flex-col justify-between space-y-3 shadow-inner">
+          <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+            <span class="text-[11px] font-bold text-cyan-400 uppercase tracking-wide flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+              2. Post-Resolution (Terminal State)
+            </span>
+            <span class="text-[10px] font-bold text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">${lastStep.dateStr || 'Day ' + lastStep.day} (Horizon End)</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <span class="text-[10px] text-slate-400 block">Resolved Final Equity</span>
+              <span class="text-white font-bold text-sm tracking-tight">${fmtUSD(terminalEquity)}</span>
+              <span class="text-[10px] font-bold block ${pnlColor} mt-0.5">${netPnL >= 0 ? '+' : ''}${fmtUSD(netPnL)} Net PnL</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-slate-400 block">Net Realized APY</span>
+              <span class="${apyColor} font-bold text-sm tracking-tight">${apy >= 0 ? '+' : ''}${apy.toFixed(1)}%</span>
+              <span class="text-[10px] text-slate-400 block mt-0.5">Carry Harvested: +${fmtUSD(totalHarvested)}</span>
+            </div>
+            <div class="col-span-2 pt-1.5 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-1.5">
+              <span class="text-[10px] text-slate-400">Depeg Impairment:</span>
+              ${impairmentBadge}
+            </div>
+          </div>
+          <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60 italic">
+            ${impairmentDesc}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+export function renderCrisisAuditTable(
+  tbody: HTMLElement | null,
+  result: CrisisSimulationResult | null,
+  summaryContainer?: HTMLElement | null
+): void {
+  // Render companion two-tier summary card
+  const summaryEl = summaryContainer ?? (typeof document !== 'undefined' ? document.getElementById('crisis-audit-two-tier-summary') : null);
+  renderCrisisAuditSummary(summaryEl, result);
+
   if (!tbody) return;
   tbody.innerHTML = '';
 
   if (!result || !result.dailyTrajectory || result.dailyTrajectory.length === 0) {
     const tr = document.createElement('tr');
     tr.className = 'border-b border-slate-800 text-slate-500 text-center';
-    tr.innerHTML = `<td colspan="8" class="py-4 text-xs">No simulation data available.</td>`;
+    tr.innerHTML = `<td colspan="8" class="py-4 text-xs font-mono">No simulation data available.</td>`;
     tbody.appendChild(tr);
     return;
   }
@@ -99,12 +246,23 @@ export function exportCrisisAuditCsv(result: CrisisSimulationResult): void {
     step.stakingAccrued.toFixed(2)
   ]);
 
+  const steps = result.dailyTrajectory;
+  const troughStep = steps.reduce(
+    (min, s) => (s.equity < min.equity ? s : min),
+    steps[0]
+  );
+  const peakMarginRatio = Math.max(...steps.map(s => s.marginRatio));
+  const peakDepeg = Math.max(...steps.map(s => s.depegPct));
+  const lastStep = steps[steps.length - 1];
+
   const metadata = [
     `# DELTA-Q QUANT TERMINAL - INSTITUTIONAL CRISIS AUDIT PACKET`,
     `# Scenario: ${result.scenarioTitle || result.scenarioKey}`,
     `# Scenario Key: ${result.scenarioKey}`,
     `# Horizon Days: ${result.horizonDays}`,
     `# Liquidation Status: ${result.isLiquidated ? 'BREACHED on Day ' + result.tLiq : 'SURVIVED / FULLY SOLVENT'}`,
+    `# 1. Peak Stress (Trough): Day ${troughStep.day} (${troughStep.dateStr || 'D' + troughStep.day}), Min_Equity=$${troughStep.equity.toFixed(2)}, Peak_Margin_Ratio=${(peakMarginRatio * 100).toFixed(2)}%, Peak_Depeg=${peakDepeg.toFixed(2)}%`,
+    `# 2. Post-Resolution (Terminal): Day ${lastStep.day} (${lastStep.dateStr || 'D' + lastStep.day}), Terminal_Equity=$${result.terminalEquity.toFixed(2)}, Net_PnL=$${result.netPnL.toFixed(2)}, Realized_APY=${result.netRealizedAPY.toFixed(2)}%, Depeg_Impairment=${!result.isLiquidated ? (lastStep.depegPct <= 0.1 ? 'TRANSITORY ($0.00)' : 'RESIDUAL_DISCOUNT') : 'PERMANENT_IMPAIRMENT'}`,
     `# Net Realized PnL: $${result.netPnL.toFixed(2)}`,
     `# Net Realized APY: ${result.netRealizedAPY.toFixed(2)}%`,
     `# Export Timestamp: ${new Date().toISOString()}`,

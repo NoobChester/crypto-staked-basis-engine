@@ -243,6 +243,7 @@ export interface UIElements {
   crisisAuditTitle: HTMLElement | null;
   crisisAuditSubtitle: HTMLElement | null;
   crisisAuditTableBody: HTMLElement | null;
+  crisisAuditSummary: HTMLElement | null;
   btnExportCrisisCsv: HTMLElement | null;
   statisticalCarryPanel: HTMLElement | null;
   labelVolatilityDispersion: HTMLElement | null;
@@ -519,6 +520,7 @@ export function getUIElements(): UIElements {
     crisisAuditTitle: document.getElementById('crisis-audit-title'),
     crisisAuditSubtitle: document.getElementById('crisis-audit-subtitle'),
     crisisAuditTableBody: document.getElementById('crisis-audit-tbody'),
+    crisisAuditSummary: document.getElementById('crisis-audit-two-tier-summary'),
     btnExportCrisisCsv: document.getElementById('btn-export-crisis-csv'),
     btnOpenRateLab: document.getElementById('btn-open-rate-lab'),
     statisticalCarryPanel: document.getElementById('statistical-carry-panel'),
@@ -562,4 +564,4 @@ export { renderScenarioMatrix } from './renderers/scenarioRenderer.js';
 
 export { bindSliderListeners as bindInputListeners } from "./events.js";
 
-export { renderCrisisAuditTable, exportCrisisAuditCsv } from './renderers/crisisLedgerRenderer.js';
+export { renderCrisisAuditTable, exportCrisisAuditCsv, renderCrisisAuditSummary } from './renderers/crisisLedgerRenderer.js';
