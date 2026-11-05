@@ -44,6 +44,7 @@ export interface AppActions {
   setRegime?: (regime: 'conservative' | 'base' | 'bull') => void;
   setLookback?: (days: number) => void;
   openRateLabModal?: () => void;
+  setForwardEngine?: (engine: 'sqmc' | 'dated_basis') => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -74,6 +75,11 @@ export function setupEventDelegation(actions: AppActions): void {
       case 'open-rate-lab':
         actions.openRateLabModal?.();
         break;
+      case 'set-forward-engine': {
+        const engine = target.getAttribute('data-engine') as 'sqmc' | 'dated_basis';
+        if (engine && actions.setForwardEngine) actions.setForwardEngine(engine);
+        break;
+      }
       case 'refresh-live-rates':
         actions.refreshLiveRates();
         break;

@@ -1002,6 +1002,26 @@
               <span id="val-funding" class="font-mono text-emerald-400 font-bold">+10.00% APR</span>
             </div>
 
+            <!-- Forward Engine Toggle & Dual Benchmark Strip -->
+            <div class="flex items-center justify-between gap-1.5 py-0.5 text-[10px] font-mono">
+              <div class="flex items-center bg-slate-950/90 rounded-md p-0.5 border border-slate-800 text-[9px]">
+                <button type="button" id="btn-fwd-engine-sqmc" data-action="set-forward-engine" data-engine="sqmc"
+                  class="px-2 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer flex items-center gap-1"
+                  title="Forward stochastic Ornstein-Uhlenbeck drift via Scrambled Quasi-Monte Carlo (Default for Perpetuals)">
+                  <span>⚡ SQMC Model</span>
+                </button>
+                <button type="button" id="btn-fwd-engine-basis" data-action="set-forward-engine" data-engine="dated_basis"
+                  class="px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer flex items-center gap-1"
+                  title="Dated deliverable futures calendar basis via Fritsch-Carlson PCHIP spline">
+                  <span>📈 Dated Basis</span>
+                </button>
+              </div>
+              <span id="chip-forward-benchmark" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 tracking-tight"
+                title="Alternate forward rate benchmark for this investment horizon">
+                vs +4.43% Dated Basis
+              </span>
+            </div>
+
             <!-- Rolling Trailing Horizon Pills for Funding -->
             <div class="flex items-center gap-1 flex-wrap py-0.5">
               <span class="text-[9px] text-slate-500 font-mono">APPLY:</span>

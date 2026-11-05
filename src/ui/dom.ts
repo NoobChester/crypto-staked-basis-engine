@@ -219,6 +219,10 @@ export interface UIElements {
   feeTierBtnMm: HTMLElement | null;
   labelActiveFeeTier: HTMLElement | null;
   badgeForwardCarry: HTMLElement | null;
+  badgeRateSource: HTMLElement | null;
+  btnFwdEngineSqmc: HTMLElement | null;
+  btnFwdEngineBasis: HTMLElement | null;
+  chipForwardBenchmark: HTMLElement | null;
 
   // Crisis Scenarios Matrix Elements
   scenarioMatrixPanel: HTMLElement | null;
@@ -496,6 +500,9 @@ export function getUIElements(): UIElements {
     labelActiveFeeTier: document.getElementById('label-active-fee-tier'),
     badgeForwardCarry: document.getElementById('badge-forward-carry'),
     badgeRateSource: document.getElementById('badge-rate-source'),
+    btnFwdEngineSqmc: document.getElementById('btn-fwd-engine-sqmc'),
+    btnFwdEngineBasis: document.getElementById('btn-fwd-engine-basis'),
+    chipForwardBenchmark: document.getElementById('chip-forward-benchmark'),
 
     // Crisis Scenarios Matrix Elements
     scenarioMatrixPanel: document.getElementById('scenario-matrix-panel'),
