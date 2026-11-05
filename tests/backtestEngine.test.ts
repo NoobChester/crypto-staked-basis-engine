@@ -25,6 +25,18 @@ import {
   renderBacktestPagination,
   exportBacktestCsv
 } from '../src/ui/renderers/backtestLedgerRenderer.js';
+import {
+  drawBacktestChart,
+  type VisiblePlots
+} from '../src/ui/renderers/backtestChartRenderer.js';
+import {
+  getRawAssetSeries
+} from '../src/services/marketData/backtestService.js';
+import {
+  backtestState,
+  toggleBacktestPlot,
+  setBacktestStartDateIndex
+} from '../src/app.js';
 
 describe('Historical Time-Series Dataset & Ingestion Service', () => {
   it('contains full contiguous daily series for ETH starting at Beacon Chain Genesis (2020-12-01)', () => {
@@ -300,5 +312,101 @@ describe('High-Performance Caching & DSA Slicing Optimization', () => {
     // Must be identical object reference from LRU simulation cache
     expect(res1).toBe(res2);
     expect(cachedElapsed).toBeLessThan(initialElapsed + 1.0);
+  });
+});
+
+describe('Backtest Chart Toggleable Plots & Start Date Slider Horizon', () => {
+  it('toggles plot visibility and enforces at least one active curve invariant', () => {
+    // Reset to all enabled
+    backtestState.visiblePlots.strategy = true;
+    backtestState.visiblePlots.spot = true;
+    backtestState.visiblePlots.tbill = true;
+
+    // Toggle spot off
+    toggleBacktestPlot('spot');
+    expect(backtestState.visiblePlots.spot).toBe(false);
+    expect(backtestState.visiblePlots.strategy).toBe(true);
+    expect(backtestState.visiblePlots.tbill).toBe(true);
+
+    // Toggle tbill off
+    toggleBacktestPlot('tbill');
+    expect(backtestState.visiblePlots.tbill).toBe(false);
+    expect(backtestState.visiblePlots.strategy).toBe(true);
+
+    // Attempting to toggle strategy off should be blocked (only 1 plot left active)
+    toggleBacktestPlot('strategy');
+    expect(backtestState.visiblePlots.strategy).toBe(true); // Must remain true!
+
+    // Toggle spot back on
+    toggleBacktestPlot('spot');
+    expect(backtestState.visiblePlots.spot).toBe(true);
+
+    // Now strategy can be toggled off because spot is active
+    toggleBacktestPlot('strategy');
+    expect(backtestState.visiblePlots.strategy).toBe(false);
+    expect(backtestState.visiblePlots.spot).toBe(true);
+
+    // Clean up
+    backtestState.visiblePlots.strategy = true;
+    backtestState.visiblePlots.spot = true;
+    backtestState.visiblePlots.tbill = true;
+  });
+
+  it('adjusts start date horizon dynamically via slider index', () => {
+    const rawEth = getRawAssetSeries('ETH');
+    expect(rawEth.length).toBe(2161);
+
+    // Move start date slider to day index 365 (start of 2022)
+    setBacktestStartDateIndex(365);
+    expect(backtestState.startDate).toBe(rawEth[365].date);
+    expect(backtestState.startDate).toBe('2021-12-01');
+    expect(backtestState.activeEpoch).toBe('custom');
+
+    // Move start date slider back to day index 0 (Inception)
+    setBacktestStartDateIndex(0);
+    expect(backtestState.startDate).toBe('2020-12-01');
+  });
+
+  it('safely renders canvas with subset of visible plots', () => {
+    const series = getHistoricalBacktestSeries('ETH', '2023-01-01', '2023-03-01');
+    const result = runHistoricalBacktest(series, { capital: 10000, mode: 'unified' });
+
+    const mockCtx = {
+      resetTransform: vi.fn(),
+      scale: vi.fn(),
+      fillRect: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      fill: vi.fn(),
+      closePath: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      fillText: vi.fn(),
+      strokeRect: vi.fn(),
+      setLineDash: vi.fn(),
+      measureText: vi.fn(() => ({ width: 50 })),
+      createLinearGradient: vi.fn(() => ({
+        addColorStop: vi.fn()
+      }))
+    };
+
+    const mockCanvas = {
+      getContext: vi.fn(() => mockCtx),
+      getBoundingClientRect: vi.fn(() => ({ width: 800, height: 400, left: 0, top: 0 })),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      width: 800,
+      height: 400
+    } as unknown as HTMLCanvasElement;
+
+    const visiblePlots: VisiblePlots = {
+      strategy: true,
+      spot: false, // Spot disabled
+      tbill: true
+    };
+
+    expect(() => drawBacktestChart(mockCanvas, result, 'ETH', visiblePlots)).not.toThrow();
   });
 });

@@ -321,6 +321,17 @@ export interface UIElements {
   backtestKpiSolvencyDetails: HTMLElement | null;
   backtestLegendSpotReturn: HTMLElement | null;
   backtestLegendTbillReturn: HTMLElement | null;
+  backtestSliderStartDate: HTMLInputElement | null;
+  backtestSliderDateDisplay: HTMLElement | null;
+  backtestSliderDaysRemaining: HTMLElement | null;
+  backtestSliderMinLabel: HTMLElement | null;
+  backtestSliderMaxLabel: HTMLElement | null;
+  btnTogglePlotStrategy: HTMLElement | null;
+  btnTogglePlotSpot: HTMLElement | null;
+  btnTogglePlotTbill: HTMLElement | null;
+  badgeTogglePlotStrategy: HTMLElement | null;
+  badgeTogglePlotSpot: HTMLElement | null;
+  badgeTogglePlotTbill: HTMLElement | null;
 
   // Spot Staking Sub-Chart Elements
   historicalStakingSubCanvas: HTMLCanvasElement | null;
@@ -653,6 +664,17 @@ export function getUIElements(): UIElements {
     backtestKpiSolvencyDetails: document.getElementById('backtest-kpi-solvency-details'),
     backtestLegendSpotReturn: document.getElementById('backtest-legend-spot-return'),
     backtestLegendTbillReturn: document.getElementById('backtest-legend-tbill-return'),
+    backtestSliderStartDate: document.getElementById('backtest-slider-start-date') as HTMLInputElement | null,
+    backtestSliderDateDisplay: document.getElementById('backtest-slider-date-display'),
+    backtestSliderDaysRemaining: document.getElementById('backtest-slider-days-remaining'),
+    backtestSliderMinLabel: document.getElementById('backtest-slider-min-label'),
+    backtestSliderMaxLabel: document.getElementById('backtest-slider-max-label'),
+    btnTogglePlotStrategy: document.getElementById('btn-toggle-plot-strategy'),
+    btnTogglePlotSpot: document.getElementById('btn-toggle-plot-spot'),
+    btnTogglePlotTbill: document.getElementById('btn-toggle-plot-tbill'),
+    badgeTogglePlotStrategy: document.getElementById('badge-toggle-plot-strategy'),
+    badgeTogglePlotSpot: document.getElementById('badge-toggle-plot-spot'),
+    badgeTogglePlotTbill: document.getElementById('badge-toggle-plot-tbill'),
 
     // Spot Staking Sub-Chart Elements
     historicalStakingSubCanvas: document.getElementById('historicalStakingSubCanvas') as HTMLCanvasElement | null,

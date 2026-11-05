@@ -60,8 +60,10 @@ import { drawHistoricalChart, drawHistoricalStakingSubChart, drawHistoricalSubCh
 import {
   getHistoricalBacktestSeries,
   getAssetInceptionDate,
+  getRawAssetSeries,
   HISTORICAL_EPOCH_PRESETS
 } from './services/marketData/backtestService.js';
+import type { VisiblePlots } from './ui/renderers/backtestChartRenderer.js';
 import {
   runHistoricalBacktest,
   type BacktestSummaryResult
@@ -272,6 +274,7 @@ export interface BacktestState {
   activeEpoch: string;
   currentPage: number;
   pageSize: number;
+  visiblePlots: VisiblePlots;
 }
 
 export const backtestState: BacktestState = {
@@ -284,7 +287,12 @@ export const backtestState: BacktestState = {
   endDate: '2026-10-31',
   activeEpoch: 'all',
   currentPage: 1,
-  pageSize: 50
+  pageSize: 50,
+  visiblePlots: {
+    strategy: true,
+    spot: true,
+    tbill: true
+  }
 };
 
 let currentBacktestResult: BacktestSummaryResult | null = null;
@@ -458,15 +466,43 @@ export function updateBacktest(): void {
   // Legend benchmarks
   if (UI.backtestLegendSpotReturn) {
     const sign = res.spotBenchmarkReturnPct >= 0 ? '+' : '';
-    UI.backtestLegendSpotReturn.textContent = `Buy & Hold Spot (${sign}${res.spotBenchmarkReturnPct.toFixed(1)}%)`;
+    UI.backtestLegendSpotReturn.textContent = `${sign}${res.spotBenchmarkReturnPct.toFixed(1)}%`;
   }
   if (UI.backtestLegendTbillReturn) {
     const sign = res.tbillBenchmarkReturnPct >= 0 ? '+' : '';
-    UI.backtestLegendTbillReturn.textContent = `Risk-Free T-Bill (${sign}${res.tbillBenchmarkReturnPct.toFixed(1)}%)`;
+    UI.backtestLegendTbillReturn.textContent = `${sign}${res.tbillBenchmarkReturnPct.toFixed(1)}%`;
   }
 
-  // Render Tri-Curve Chart
-  drawBacktestChart(UI.backtestCanvas, res, backtestState.asset);
+  // Synchronize Start Date Slider beneath Tri-Curve Chart
+  const fullSeries = getRawAssetSeries(backtestState.asset);
+  if (UI.backtestSliderStartDate) {
+    const maxIdx = Math.max(0, fullSeries.length - 14);
+    UI.backtestSliderStartDate.max = maxIdx.toString();
+    if (document.activeElement !== UI.backtestSliderStartDate) {
+      const currentIdx = fullSeries.findIndex(s => s.date === backtestState.startDate);
+      if (currentIdx >= 0) {
+        UI.backtestSliderStartDate.value = currentIdx.toString();
+      }
+    }
+  }
+  if (UI.backtestSliderDateDisplay) {
+    UI.backtestSliderDateDisplay.textContent = backtestState.startDate;
+  }
+  if (UI.backtestSliderDaysRemaining) {
+    UI.backtestSliderDaysRemaining.textContent = `${res.horizonDays.toLocaleString()} Days Duration`;
+  }
+  if (UI.backtestSliderMinLabel) {
+    UI.backtestSliderMinLabel.textContent = `${fullSeries[0].date.slice(0, 7)} (Inception)`;
+  }
+  if (UI.backtestSliderMaxLabel) {
+    UI.backtestSliderMaxLabel.textContent = `${fullSeries[fullSeries.length - 1].date.slice(0, 7)}`;
+  }
+
+  // Update Toggleable Plots Legend Buttons
+  updateBacktestPlotTogglesUI();
+
+  // Render Tri-Curve Chart with VisiblePlots
+  drawBacktestChart(UI.backtestCanvas, res, backtestState.asset, backtestState.visiblePlots);
 
   // Render Ledger & Pagination
   renderBacktestLedger(UI.backtestTbody, res, backtestState.currentPage, backtestState.pageSize, backtestState.asset);
@@ -532,6 +568,74 @@ export function setBacktestDates(startDate: string, endDate: string): void {
 export function exportBacktestCsvAction(): void {
   if (currentBacktestResult) {
     exportBacktestCsv(currentBacktestResult);
+  }
+}
+
+export function setBacktestStartDateIndex(index: number): void {
+  const fullSeries = getRawAssetSeries(backtestState.asset);
+  if (index >= 0 && index < fullSeries.length) {
+    backtestState.startDate = fullSeries[index].date;
+    backtestState.activeEpoch = 'custom';
+    backtestState.currentPage = 1;
+    updateBacktest();
+  }
+}
+
+export function toggleBacktestPlot(plot: 'strategy' | 'spot' | 'tbill'): void {
+  const current = backtestState.visiblePlots[plot];
+  if (current) {
+    // Keep at least 1 curve active
+    const activeCount = Object.values(backtestState.visiblePlots).filter(Boolean).length;
+    if (activeCount <= 1) return;
+  }
+  backtestState.visiblePlots[plot] = !current;
+  updateBacktestPlotTogglesUI();
+  if (currentBacktestResult && UI?.backtestCanvas) {
+    drawBacktestChart(UI.backtestCanvas, currentBacktestResult, backtestState.asset, backtestState.visiblePlots);
+  }
+}
+
+export function updateBacktestPlotTogglesUI(): void {
+  if (!UI) return;
+  const { strategy, spot, tbill } = backtestState.visiblePlots;
+
+  // Strategy Button & Badge
+  if (UI.btnTogglePlotStrategy && UI.badgeTogglePlotStrategy) {
+    if (strategy) {
+      UI.btnTogglePlotStrategy.className = 'px-2.5 py-1 rounded-lg border border-cyan-500/80 bg-cyan-950/60 text-cyan-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-cyan-900/60 shadow-sm';
+      UI.badgeTogglePlotStrategy.textContent = 'ON';
+      UI.badgeTogglePlotStrategy.className = 'text-[10px] px-1 rounded bg-cyan-900/80 text-cyan-200 border border-cyan-700/60 font-bold';
+    } else {
+      UI.btnTogglePlotStrategy.className = 'px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-slate-500 font-normal flex items-center gap-2 cursor-pointer transition opacity-50 line-through hover:opacity-75';
+      UI.badgeTogglePlotStrategy.textContent = 'OFF';
+      UI.badgeTogglePlotStrategy.className = 'text-[10px] px-1 rounded bg-slate-800 text-slate-500 border border-slate-700 font-normal';
+    }
+  }
+
+  // Spot Button & Badge
+  if (UI.btnTogglePlotSpot && UI.badgeTogglePlotSpot) {
+    if (spot) {
+      UI.btnTogglePlotSpot.className = 'px-2.5 py-1 rounded-lg border border-purple-500/80 bg-purple-950/60 text-purple-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-purple-900/60 shadow-sm';
+      UI.badgeTogglePlotSpot.textContent = 'ON';
+      UI.badgeTogglePlotSpot.className = 'text-[10px] px-1 rounded bg-purple-900/80 text-purple-200 border border-purple-700/60 font-bold';
+    } else {
+      UI.btnTogglePlotSpot.className = 'px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-slate-500 font-normal flex items-center gap-2 cursor-pointer transition opacity-50 line-through hover:opacity-75';
+      UI.badgeTogglePlotSpot.textContent = 'OFF';
+      UI.badgeTogglePlotSpot.className = 'text-[10px] px-1 rounded bg-slate-800 text-slate-500 border border-slate-700 font-normal';
+    }
+  }
+
+  // T-Bill Button & Badge
+  if (UI.btnTogglePlotTbill && UI.badgeTogglePlotTbill) {
+    if (tbill) {
+      UI.btnTogglePlotTbill.className = 'px-2.5 py-1 rounded-lg border border-emerald-500/80 bg-emerald-950/60 text-emerald-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-emerald-900/60 shadow-sm';
+      UI.badgeTogglePlotTbill.textContent = 'ON';
+      UI.badgeTogglePlotTbill.className = 'text-[10px] px-1 rounded bg-emerald-900/80 text-emerald-200 border border-emerald-700/60 font-bold';
+    } else {
+      UI.btnTogglePlotTbill.className = 'px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-slate-500 font-normal flex items-center gap-2 cursor-pointer transition opacity-50 line-through hover:opacity-75';
+      UI.badgeTogglePlotTbill.textContent = 'OFF';
+      UI.badgeTogglePlotTbill.className = 'text-[10px] px-1 rounded bg-slate-800 text-slate-500 border border-slate-700 font-normal';
+    }
   }
 }
 
@@ -1613,7 +1717,8 @@ function init() {
     setBacktestMode,
     setBacktestEpoch,
     setBacktestDates,
-    exportBacktestCsv: exportBacktestCsvAction
+    exportBacktestCsv: exportBacktestCsvAction,
+    toggleBacktestPlot
   });
   bindSliderListeners(
     UI,
@@ -1621,7 +1726,8 @@ function init() {
     updateApp,
     (days) => setLookback(days),
     (capital) => setStressCapital(capital),
-    (capital) => setBacktestCapital(capital)
+    (capital) => setBacktestCapital(capital),
+    (idx) => setBacktestStartDateIndex(idx)
   );
   initViewRouter((view) => {
     if (view === 'stress-lab') {

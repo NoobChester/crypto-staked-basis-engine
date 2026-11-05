@@ -7,6 +7,12 @@
 import type { BacktestSummaryResult } from '../../math/backtest.js';
 import { fmtUSD, fmtPct } from '../../math/hedging.js';
 
+export interface VisiblePlots {
+  strategy: boolean;
+  spot: boolean;
+  tbill: boolean;
+}
+
 interface ChartDimensions {
   width: number;
   height: number;
@@ -20,7 +26,8 @@ let activeHoverCleanup: (() => void) | null = null;
 export function drawBacktestChart(
   canvas: HTMLCanvasElement | null,
   result: BacktestSummaryResult | null,
-  asset: string = 'ETH'
+  asset: string = 'ETH',
+  visiblePlots: VisiblePlots = { strategy: true, spot: true, tbill: true }
 ): void {
   if (!canvas || !result || !result.dailyTrajectory || result.dailyTrajectory.length === 0) return;
 
@@ -51,20 +58,37 @@ export function drawBacktestChart(
   const steps = result.dailyTrajectory;
   const n = steps.length;
 
-  // Find min and max across all three curves in a single O(N) pass with zero heap allocations
+  // Find min and max across all currently visible curves in a single O(N) pass
   let minVal = Infinity;
   let maxVal = -Infinity;
+  const hasStrategy = visiblePlots.strategy;
+  const hasSpot = visiblePlots.spot;
+  const hasTbill = visiblePlots.tbill;
+
   for (let i = 0; i < n; i++) {
     const s = steps[i];
-    if (s.strategyEquity < minVal) minVal = s.strategyEquity;
-    if (s.strategyEquity > maxVal) maxVal = s.strategyEquity;
-    if (s.spotBenchmarkEquity < minVal) minVal = s.spotBenchmarkEquity;
-    if (s.spotBenchmarkEquity > maxVal) maxVal = s.spotBenchmarkEquity;
-    if (s.tbillBenchmarkEquity < minVal) minVal = s.tbillBenchmarkEquity;
-    if (s.tbillBenchmarkEquity > maxVal) maxVal = s.tbillBenchmarkEquity;
+    if (hasStrategy) {
+      if (s.strategyEquity < minVal) minVal = s.strategyEquity;
+      if (s.strategyEquity > maxVal) maxVal = s.strategyEquity;
+    }
+    if (hasSpot) {
+      if (s.spotBenchmarkEquity < minVal) minVal = s.spotBenchmarkEquity;
+      if (s.spotBenchmarkEquity > maxVal) maxVal = s.spotBenchmarkEquity;
+    }
+    if (hasTbill) {
+      if (s.tbillBenchmarkEquity < minVal) minVal = s.tbillBenchmarkEquity;
+      if (s.tbillBenchmarkEquity > maxVal) maxVal = s.tbillBenchmarkEquity;
+    }
   }
-  if (!Number.isFinite(minVal)) minVal = 0;
-  if (!Number.isFinite(maxVal)) maxVal = 10000;
+  // Fallback to strategy equity if no curves active or non-finite
+  if (!Number.isFinite(minVal) || !Number.isFinite(maxVal)) {
+    minVal = steps[0].strategyEquity;
+    maxVal = steps[n - 1].strategyEquity;
+  }
+  if (minVal === maxVal) {
+    minVal *= 0.9;
+    maxVal *= 1.1;
+  }
 
   const yPadding = (maxVal - minVal) * 0.08 || 500;
   const yMin = Math.max(0, minVal - yPadding);
@@ -116,75 +140,81 @@ export function drawBacktestChart(
   }
 
   // Curve 3: US T-Bills Risk-Free Rate (Emerald Dashed Line)
-  ctx.save();
-  ctx.setLineDash([4, 4]);
-  ctx.strokeStyle = '#10b981';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  for (let i = 0; i < n; i++) {
-    const x = getX(i);
-    const y = getY(steps[i].tbillBenchmarkEquity);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+  if (hasTbill) {
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = getX(i);
+      const y = getY(steps[i].tbillBenchmarkEquity);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
-  ctx.stroke();
-  ctx.restore();
 
   // Curve 2: Buy-and-Hold Spot Asset (Purple Solid Line)
-  ctx.save();
-  ctx.strokeStyle = '#a855f7';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  for (let i = 0; i < n; i++) {
-    const x = getX(i);
-    const y = getY(steps[i].spotBenchmarkEquity);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+  if (hasSpot) {
+    ctx.save();
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = getX(i);
+      const y = getY(steps[i].spotBenchmarkEquity);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
-  ctx.stroke();
-  ctx.restore();
 
   // Curve 1: Staked Basis Strategy Equity (Cyan Solid Line with Gradient Glow)
-  ctx.save();
-  const grad = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-  grad.addColorStop(0, 'rgba(6, 182, 212, 0.25)');
-  grad.addColorStop(1, 'rgba(6, 182, 212, 0.00)');
+  if (hasStrategy) {
+    ctx.save();
+    const grad = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
+    grad.addColorStop(0, 'rgba(6, 182, 212, 0.25)');
+    grad.addColorStop(1, 'rgba(6, 182, 212, 0.00)');
 
-  ctx.beginPath();
-  ctx.moveTo(getX(0), height - padding.bottom);
-  for (let i = 0; i < n; i++) {
-    ctx.lineTo(getX(i), getY(steps[i].strategyEquity));
-  }
-  ctx.lineTo(getX(n - 1), height - padding.bottom);
-  ctx.closePath();
-  ctx.fillStyle = grad;
-  ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(getX(0), height - padding.bottom);
+    for (let i = 0; i < n; i++) {
+      ctx.lineTo(getX(i), getY(steps[i].strategyEquity));
+    }
+    ctx.lineTo(getX(n - 1), height - padding.bottom);
+    ctx.closePath();
+    ctx.fillStyle = grad;
+    ctx.fill();
 
-  // Curve 1: Staked Basis Strategy Equity (Hardware-Accelerated Dual Stroke Neon Glow without raster blur)
-  // Glow pass
-  ctx.strokeStyle = 'rgba(6, 182, 212, 0.22)';
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  for (let i = 0; i < n; i++) {
-    const x = getX(i);
-    const y = getY(steps[i].strategyEquity);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
+    // Curve 1: Staked Basis Strategy Equity (Hardware-Accelerated Dual Stroke Neon Glow without raster blur)
+    // Glow pass
+    ctx.strokeStyle = 'rgba(6, 182, 212, 0.22)';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = getX(i);
+      const y = getY(steps[i].strategyEquity);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
 
-  // Core crisp stroke
-  ctx.strokeStyle = '#06b6d4';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let i = 0; i < n; i++) {
-    const x = getX(i);
-    const y = getY(steps[i].strategyEquity);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    // Core crisp stroke
+    ctx.strokeStyle = '#06b6d4';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = getX(i);
+      const y = getY(steps[i].strategyEquity);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
-  ctx.stroke();
-  ctx.restore();
 
   // Liquidation Marker if breached
   if (result.isLiquidated && result.tLiq) {
@@ -244,13 +274,14 @@ export function drawBacktestChart(
   }
 
   // Interactive Hover Crosshair with rAF and index memoization
-  setupHoverListener(canvas, result, dims);
+  setupHoverListener(canvas, result, dims, visiblePlots);
 }
 
 function setupHoverListener(
   canvas: HTMLCanvasElement,
   result: BacktestSummaryResult,
-  dims: ChartDimensions
+  dims: ChartDimensions,
+  visiblePlots: VisiblePlots
 ): void {
   const steps = result.dailyTrajectory;
   const n = steps.length;
@@ -296,18 +327,18 @@ function setupHoverListener(
             <span>${step.date}</span>
             <span class="text-[10px] text-slate-400">Day ${step.day}/${n}</span>
           </div>
-          <div class="flex items-center justify-between gap-3 text-cyan-400 font-bold">
+${visiblePlots.strategy ? `          <div class="flex items-center justify-between gap-3 text-cyan-400 font-bold">
             <span>Strategy Equity:</span>
             <span>${fmtUSD(step.strategyEquity)}</span>
-          </div>
-          <div class="flex items-center justify-between gap-3 text-purple-400">
+          </div>` : ''}
+${visiblePlots.spot ? `          <div class="flex items-center justify-between gap-3 text-purple-400">
             <span>Spot Buy & Hold:</span>
             <span>${fmtUSD(step.spotBenchmarkEquity)}</span>
-          </div>
-          <div class="flex items-center justify-between gap-3 text-emerald-400">
+          </div>` : ''}
+${visiblePlots.tbill ? `          <div class="flex items-center justify-between gap-3 text-emerald-400">
             <span>US T-Bill Cash:</span>
             <span>${fmtUSD(step.tbillBenchmarkEquity)}</span>
-          </div>
+          </div>` : ''}
           <div class="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
             <span>Spot: $${step.spotPrice.toLocaleString()}</span>
             <span>Funding: ${fmtPct(step.fundingAPR)}</span>

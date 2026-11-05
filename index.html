@@ -1688,17 +1688,31 @@
             </p>
           </div>
 
-          <!-- Tri-Curve Chart Legend -->
-          <div class="flex items-center gap-3.5 text-xs font-mono flex-wrap">
-            <span class="flex items-center gap-1.5 text-cyan-400 font-semibold">
-              <span class="w-3.5 h-1 bg-cyan-400 inline-block rounded"></span> Staked Basis Strategy
-            </span>
-            <span class="flex items-center gap-1.5 text-purple-400">
-              <span class="w-3.5 h-1 bg-purple-500 inline-block rounded"></span> Buy &amp; Hold Spot (<span id="backtest-legend-spot-return">+0%</span>)
-            </span>
-            <span class="flex items-center gap-1.5 text-emerald-400">
-              <span class="w-3.5 h-0.5 border-b-2 border-dashed border-emerald-500 inline-block"></span> US T-Bill 4.35% (<span id="backtest-legend-tbill-return">+0%</span>)
-            </span>
+          <!-- Tri-Curve Chart Legend with Toggleable Plots -->
+          <div class="flex items-center gap-2 text-xs font-mono flex-wrap" role="group" aria-label="Toggle visible curves">
+            <button type="button" id="btn-toggle-plot-strategy" data-action="toggle-backtest-plot" data-plot="strategy"
+              class="px-2.5 py-1 rounded-lg border border-cyan-500/80 bg-cyan-950/60 text-cyan-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-cyan-900/60 shadow-sm"
+              title="Click to toggle Staked Basis Strategy curve visibility">
+              <span class="w-3.5 h-1 bg-cyan-400 inline-block rounded shrink-0"></span>
+              <span>Staked Basis</span>
+              <span class="text-[10px] px-1 rounded bg-cyan-900/80 text-cyan-200 border border-cyan-700/60 font-bold" id="badge-toggle-plot-strategy">ON</span>
+            </button>
+
+            <button type="button" id="btn-toggle-plot-spot" data-action="toggle-backtest-plot" data-plot="spot"
+              class="px-2.5 py-1 rounded-lg border border-purple-500/80 bg-purple-950/60 text-purple-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-purple-900/60 shadow-sm"
+              title="Click to toggle Buy & Hold Spot benchmark curve visibility">
+              <span class="w-3.5 h-1 bg-purple-500 inline-block rounded shrink-0"></span>
+              <span>Buy &amp; Hold Spot (<span id="backtest-legend-spot-return">+0%</span>)</span>
+              <span class="text-[10px] px-1 rounded bg-purple-900/80 text-purple-200 border border-purple-700/60 font-bold" id="badge-toggle-plot-spot">ON</span>
+            </button>
+
+            <button type="button" id="btn-toggle-plot-tbill" data-action="toggle-backtest-plot" data-plot="tbill"
+              class="px-2.5 py-1 rounded-lg border border-emerald-500/80 bg-emerald-950/60 text-emerald-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-emerald-900/60 shadow-sm"
+              title="Click to toggle US T-Bill 4.35% benchmark curve visibility">
+              <span class="w-3.5 h-0.5 border-b-2 border-dashed border-emerald-500 inline-block shrink-0"></span>
+              <span>US T-Bill (<span id="backtest-legend-tbill-return">+0%</span>)</span>
+              <span class="text-[10px] px-1 rounded bg-emerald-900/80 text-emerald-200 border border-emerald-700/60 font-bold" id="badge-toggle-plot-tbill">ON</span>
+            </button>
           </div>
         </div>
 
@@ -1706,6 +1720,36 @@
         <div id="backtest-canvas-container" class="relative w-full h-80 sm:h-96 bg-slate-950/80 rounded-xl border border-slate-800/80 overflow-hidden">
           <canvas id="backtest-canvas" class="w-full h-full block"></canvas>
           <div id="backtest-chart-tooltip" class="hidden absolute z-30 p-2.5 rounded-xl border border-slate-700 bg-slate-900/95 backdrop-blur-md shadow-2xl pointer-events-none"></div>
+        </div>
+
+        <!-- Start Date Horizon Scrubber Slider -->
+        <div class="bg-slate-950/70 rounded-xl border border-slate-800/80 p-3 sm:p-4 space-y-2">
+          <div class="flex items-center justify-between text-xs font-mono flex-wrap gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+              <span class="text-slate-300 font-bold uppercase tracking-wider text-[11px] sm:text-xs">Adjust Simulation Start Date:</span>
+              <span id="backtest-slider-date-display" class="font-bold text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-700/60">
+                2020-12-01
+              </span>
+            </div>
+            <span id="backtest-slider-days-remaining" class="text-[11px] text-slate-400 font-mono">
+              2,161 Days Duration
+            </span>
+          </div>
+
+          <div class="relative pt-1 pb-0.5">
+            <input type="range" id="backtest-slider-start-date" min="0" max="2147" step="1" value="0"
+              class="w-full cursor-pointer" aria-label="Adjust Backtest Start Date">
+          </div>
+
+          <div class="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-0.5 select-none">
+            <span id="backtest-slider-min-label">Dec 2020 (Inception)</span>
+            <span class="hidden sm:inline">2021 Bull</span>
+            <span class="hidden sm:inline">2022 Bear / De-Peg</span>
+            <span class="hidden sm:inline">2023 Shapella</span>
+            <span class="hidden sm:inline">2024 Institutional</span>
+            <span id="backtest-slider-max-label">Oct 2026</span>
+          </div>
         </div>
 
         <div class="flex items-center justify-between text-[11px] font-mono text-slate-500 pt-1">

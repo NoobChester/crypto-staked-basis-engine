@@ -55,6 +55,8 @@ export interface AppActions {
   setBacktestEpoch?: (epoch: string) => void;
   setBacktestDates?: (startDate: string, endDate: string) => void;
   exportBacktestCsv?: () => void;
+  setBacktestStartDateIndex?: (index: number) => void;
+  toggleBacktestPlot?: (plot: 'strategy' | 'spot' | 'tbill') => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -262,6 +264,13 @@ export function setupEventDelegation(actions: AppActions): void {
         actions.exportBacktestCsv?.();
         break;
       }
+      case 'toggle-backtest-plot': {
+        const plot = target.getAttribute('data-plot') as 'strategy' | 'spot' | 'tbill';
+        if (plot && actions.toggleBacktestPlot) {
+          actions.toggleBacktestPlot(plot);
+        }
+        break;
+      }
     }
   });
 }
@@ -272,7 +281,8 @@ export function bindSliderListeners(
   onUpdate: () => void,
   onLookback?: (days: number) => void,
   onStressCapital?: (capital: number) => void,
-  onBacktestCapital?: (capital: number) => void
+  onBacktestCapital?: (capital: number) => void,
+  onBacktestStartDateIndex?: (index: number) => void
 ): void {
   if (UI.inputPriceMove) {
     UI.inputPriceMove.addEventListener('input', (e) => {
@@ -369,6 +379,16 @@ export function bindSliderListeners(
       backtestCapTimer = setTimeout(() => {
         if (onBacktestCapital) onBacktestCapital(val);
       }, 150);
+    });
+  }
+  if (UI.backtestSliderStartDate) {
+    let sliderTimer: ReturnType<typeof setTimeout> | null = null;
+    UI.backtestSliderStartDate.addEventListener('input', (e) => {
+      const idx = parseInt((e.target as HTMLInputElement).value, 10);
+      if (sliderTimer) clearTimeout(sliderTimer);
+      sliderTimer = setTimeout(() => {
+        if (onBacktestStartDateIndex) onBacktestStartDateIndex(idx);
+      }, 50);
     });
   }
 }
