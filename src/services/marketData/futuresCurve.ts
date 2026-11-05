@@ -34,34 +34,112 @@ export const FALLBACK_FUTURES_CURVES: Record<'ETH' | 'BTC' | 'SOL', FuturesBasis
 const termStructureCache: Map<string, FuturesTermStructure> = new Map();
 
 /**
- * Monotone piecewise linear/cubic spline interpolation of annualized basis across days to expiry T.
+ * Evaluates Fritsch-Carlson Monotone Piecewise Cubic Hermite Interpolating Polynomial (PCHIP).
+ * Preserves shape, strictly enforces monotonicity, and guarantees zero overshoot across sparse pillars.
  */
-export function interpolateBasisRate(tenors: FuturesBasisTenor[], targetDays: number): number {
-  if (!tenors || tenors.length === 0) return 10.0;
-  if (tenors.length === 1) return tenors[0].annualizedBasisPct;
+export function pchipInterpolate(
+  points: Array<{ x: number; y: number }>,
+  targetX: number
+): number {
+  if (!points || points.length === 0) return 10.0;
+  if (points.length === 1) return points[0].y;
 
-  // Sort by ascending daysToExpiry
-  const sorted = [...tenors].sort((a, b) => a.daysToExpiry - b.daysToExpiry);
+  const sorted = [...points].sort((a, b) => a.x - b.x);
+  const n = sorted.length;
 
-  if (targetDays <= sorted[0].daysToExpiry) {
-    return sorted[0].annualizedBasisPct;
+  if (targetX <= sorted[0].x) return sorted[0].y;
+  if (targetX >= sorted[n - 1].x) return sorted[n - 1].y;
+
+  if (n === 2) {
+    const s = (targetX - sorted[0].x) / (sorted[1].x - sorted[0].x);
+    return parseFloat((sorted[0].y + s * (sorted[1].y - sorted[0].y)).toFixed(2));
   }
-  if (targetDays >= sorted[sorted.length - 1].daysToExpiry) {
-    return sorted[sorted.length - 1].annualizedBasisPct;
+
+  // Compute intervals and secant slopes
+  const h = new Array(n - 1);
+  const delta = new Array(n - 1);
+  for (let i = 0; i < n - 1; i++) {
+    h[i] = sorted[i + 1].x - sorted[i].x;
+    delta[i] = (sorted[i + 1].y - sorted[i].y) / h[i];
   }
 
-  // Find bounding interval [left, right]
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const left = sorted[i];
-    const right = sorted[i + 1];
-    if (targetDays >= left.daysToExpiry && targetDays <= right.daysToExpiry) {
-      const weight = (targetDays - left.daysToExpiry) / (right.daysToExpiry - left.daysToExpiry);
-      const basis = left.annualizedBasisPct + weight * (right.annualizedBasisPct - left.annualizedBasisPct);
-      return parseFloat(basis.toFixed(2));
+  // Compute node derivatives
+  const d = new Array(n).fill(0);
+
+  // Interior points (weighted harmonic mean)
+  for (let i = 1; i < n - 1; i++) {
+    if (delta[i - 1] * delta[i] <= 0) {
+      d[i] = 0;
+    } else {
+      const w1 = 2 * h[i] + h[i - 1];
+      const w2 = h[i] + 2 * h[i - 1];
+      d[i] = (w1 + w2) / (w1 / delta[i - 1] + w2 / delta[i]);
     }
   }
 
-  return sorted[sorted.length - 1].annualizedBasisPct;
+  // Endpoints (shape-preserving 3-point one-sided derivative)
+  d[0] = ((2 * h[0] + h[1]) * delta[0] - h[0] * delta[1]) / (h[0] + h[1]);
+  if (d[0] * delta[0] <= 0) {
+    d[0] = 0;
+  } else if (delta[0] * delta[1] < 0 && Math.abs(d[0]) > 3 * Math.abs(delta[0])) {
+    d[0] = 3 * delta[0];
+  }
+
+  const last = n - 1;
+  d[last] = ((2 * h[last - 1] + h[last - 2]) * delta[last - 1] - h[last - 1] * delta[last - 2]) / (h[last - 1] + h[last - 2]);
+  if (d[last] * delta[last - 1] <= 0) {
+    d[last] = 0;
+  } else if (delta[last - 1] * delta[last - 2] < 0 && Math.abs(d[last]) > 3 * Math.abs(delta[last - 1])) {
+    d[last] = 3 * delta[last - 1];
+  }
+
+  // Fritsch-Carlson condition to guarantee strict monotonicity
+  for (let i = 0; i < n - 1; i++) {
+    if (delta[i] === 0) {
+      d[i] = 0;
+      d[i + 1] = 0;
+    } else {
+      const alpha = d[i] / delta[i];
+      const beta = d[i + 1] / delta[i];
+      const phi = alpha * alpha + beta * beta;
+      if (phi > 9) {
+        const tau = 3.0 / Math.sqrt(phi);
+        d[i] = tau * alpha * delta[i];
+        d[i + 1] = tau * beta * delta[i];
+      }
+    }
+  }
+
+  // Find interval
+  let k = 0;
+  for (let i = 0; i < n - 1; i++) {
+    if (targetX >= sorted[i].x && targetX <= sorted[i + 1].x) {
+      k = i;
+      break;
+    }
+  }
+
+  const hk = h[k];
+  const s = (targetX - sorted[k].x) / hk;
+  const s2 = s * s;
+  const s3 = s2 * s;
+
+  const h00 = 2 * s3 - 3 * s2 + 1;
+  const h10 = s3 - 2 * s2 + s;
+  const h01 = -2 * s3 + 3 * s2;
+  const h11 = s3 - s2;
+
+  const interpolated = sorted[k].y * h00 + hk * d[k] * h10 + sorted[k + 1].y * h01 + hk * d[k + 1] * h11;
+  return parseFloat(interpolated.toFixed(2));
+}
+
+/**
+ * Fritsch-Carlson Monotone Cubic Hermite Spline (PCHIP) of annualized basis across days to expiry T.
+ */
+export function interpolateBasisRate(tenors: FuturesBasisTenor[], targetDays: number): number {
+  if (!tenors || tenors.length === 0) return 10.0;
+  const points = tenors.map(t => ({ x: t.daysToExpiry, y: t.annualizedBasisPct }));
+  return pchipInterpolate(points, targetDays);
 }
 
 /**

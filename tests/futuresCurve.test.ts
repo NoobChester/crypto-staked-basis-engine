@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
   interpolateBasisRate,
+  pchipInterpolate,
   fetchFuturesTermStructure,
   getHistoricalFundingSeries
 } from '../src/services/marketData/futuresCurve.js';
 
 describe('Market Data: Dated Futures Term Structure & Spline Engine', () => {
-  describe('interpolateBasisRate (Spline & Piecewise Interpolation)', () => {
+  describe('interpolateBasisRate (Fritsch-Carlson Monotone Cubic Spline - PCHIP)', () => {
     const testTenors = [
       { instrument: 'TEST-1M', daysToExpiry: 30, annualizedBasisPct: 10.0, futuresPrice: 3025, spotPrice: 3000 },
       { instrument: 'TEST-3M', daysToExpiry: 90, annualizedBasisPct: 12.0, futuresPrice: 3090, spotPrice: 3000 },
@@ -19,16 +20,42 @@ describe('Market Data: Dated Futures Term Structure & Spline Engine', () => {
       expect(interpolateBasisRate(testTenors, 180)).toBe(14.0);
     });
 
-    it('interpolates smoothly between tenors', () => {
-      // Midpoint between 30d (10.0%) and 90d (12.0%) at 60d should be 11.0%
-      expect(interpolateBasisRate(testTenors, 60)).toBe(11.0);
-      // Midpoint between 90d (12.0%) and 180d (14.0%) at 135d should be 13.0%
-      expect(interpolateBasisRate(testTenors, 135)).toBe(13.0);
+    it('interpolates smoothly and preserves monotonicity between tenors', () => {
+      const mid1 = interpolateBasisRate(testTenors, 60);
+      expect(mid1).toBeGreaterThan(10.0);
+      expect(mid1).toBeLessThan(12.0);
+      expect(mid1).toBeCloseTo(11.08, 1);
+
+      const mid2 = interpolateBasisRate(testTenors, 135);
+      expect(mid2).toBeGreaterThan(12.0);
+      expect(mid2).toBeLessThan(14.0);
+      expect(mid2).toBeCloseTo(13.11, 1);
+    });
+
+    it('enforces Fritsch-Carlson zero overshoot on flat/non-monotonic regions', () => {
+      const plateauPoints = [
+        { x: 30, y: 10.0 },
+        { x: 60, y: 20.0 },
+        { x: 90, y: 20.0 },
+        { x: 120, y: 10.0 }
+      ];
+      // On the plateau [60, 90], PCHIP must remain strictly 20.0 with zero overshoot
+      expect(pchipInterpolate(plateauPoints, 75)).toBe(20.0);
+
+      // Strictly bounded between 30 and 60
+      const climb = pchipInterpolate(plateauPoints, 45);
+      expect(climb).toBeGreaterThanOrEqual(10.0);
+      expect(climb).toBeLessThanOrEqual(20.0);
     });
 
     it('clamps to boundary tenors when target is out of bounds', () => {
       expect(interpolateBasisRate(testTenors, 7)).toBe(10.0);
       expect(interpolateBasisRate(testTenors, 360)).toBe(14.0);
+    });
+
+    it('gracefully handles 1 and 2 tenor edge cases', () => {
+      expect(pchipInterpolate([{ x: 30, y: 8.5 }], 60)).toBe(8.5);
+      expect(pchipInterpolate([{ x: 30, y: 10.0 }, { x: 90, y: 12.0 }], 60)).toBe(11.0);
     });
   });
 

@@ -6,6 +6,7 @@
  */
 
 import type { StochasticSimulationResult, FuturesTermStructure } from '../types/rateLab.js';
+import { interpolateBasisRate } from '../services/marketData/futuresCurve.js';
 
 export interface CanvasDimensions {
   width: number;
@@ -289,30 +290,21 @@ export function renderTermStructureCurve(
   }
   ctx.setLineDash([]);
 
-  // Draw Spline / Segmented Term Structure Curve
+  // Draw Spline / Segmented Term Structure Curve (PCHIP)
   ctx.strokeStyle = '#38bdf8';
   ctx.lineWidth = 2.5;
   ctx.beginPath();
+  let firstPoint = true;
   for (let d = 7; d <= maxDays; d += 2) {
-    // Interpolate basis
-    let basis = tenors[0].annualizedBasisPct;
-    if (d <= tenors[0].daysToExpiry) {
-      basis = tenors[0].annualizedBasisPct;
-    } else if (d >= tenors[tenors.length - 1].daysToExpiry) {
-      basis = tenors[tenors.length - 1].annualizedBasisPct;
-    } else {
-      for (let i = 0; i < tenors.length - 1; i++) {
-        if (d >= tenors[i].daysToExpiry && d <= tenors[i + 1].daysToExpiry) {
-          const w = (d - tenors[i].daysToExpiry) / (tenors[i + 1].daysToExpiry - tenors[i].daysToExpiry);
-          basis = tenors[i].annualizedBasisPct + w * (tenors[i + 1].annualizedBasisPct - tenors[i].annualizedBasisPct);
-          break;
-        }
-      }
-    }
+    const basis = interpolateBasisRate(tenors, d);
     const x = toX(d);
     const y = toY(basis);
-    if (d === 7) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    if (firstPoint) {
+      ctx.moveTo(x, y);
+      firstPoint = false;
+    } else {
+      ctx.lineTo(x, y);
+    }
   }
   ctx.stroke();
 
