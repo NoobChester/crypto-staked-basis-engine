@@ -300,6 +300,9 @@ export interface UIElements {
   backtestModeBtnIsolated: HTMLElement | null;
   backtestValCollateralRatio: HTMLElement | null;
   backtestRangeBadge: HTMLElement | null;
+  backtestChartHeading: HTMLElement | null;
+  backtestChartSubheading: HTMLElement | null;
+  backtestLegendSpotAsset: HTMLElement | null;
   backtestStartDate: HTMLInputElement | null;
   backtestEndDate: HTMLInputElement | null;
   btnApplyCustomDates: HTMLElement | null;
@@ -643,6 +646,9 @@ export function getUIElements(): UIElements {
     backtestModeBtnIsolated: document.getElementById('backtest-mode-btn-isolated'),
     backtestValCollateralRatio: document.getElementById('backtest-val-collateral-ratio'),
     backtestRangeBadge: document.getElementById('backtest-range-badge'),
+    backtestChartHeading: document.getElementById('backtest-chart-heading'),
+    backtestChartSubheading: document.getElementById('backtest-chart-subheading'),
+    backtestLegendSpotAsset: document.getElementById('backtest-legend-spot-asset'),
     backtestStartDate: document.getElementById('backtest-start-date') as HTMLInputElement | null,
     backtestEndDate: document.getElementById('backtest-end-date') as HTMLInputElement | null,
     btnApplyCustomDates: document.getElementById('btn-apply-custom-dates'),

@@ -324,7 +324,8 @@ export function updateBacktest(): void {
     collateralRatio: backtestState.collateralRatio,
     splitSpot: backtestState.splitSpot,
     mmr: 0.005,
-    tbillRate: 4.35
+    tbillRate: 4.35,
+    asset: backtestState.asset
   });
 
   // Controls UI updates
@@ -472,6 +473,15 @@ export function updateBacktest(): void {
     const sign = res.tbillBenchmarkReturnPct >= 0 ? '+' : '';
     UI.backtestLegendTbillReturn.textContent = `${sign}${res.tbillBenchmarkReturnPct.toFixed(1)}%`;
   }
+  if (UI.backtestLegendSpotAsset) {
+    UI.backtestLegendSpotAsset.textContent = backtestState.asset;
+  }
+  if (UI.backtestChartHeading) {
+    UI.backtestChartHeading.textContent = `Historical Tri-Curve Trajectory · ${backtestState.asset} [${res.startDate} → ${res.endDate}]`;
+  }
+  if (UI.backtestChartSubheading) {
+    UI.backtestChartSubheading.textContent = `Staked Basis Strategy Equity vs Buy-and-Hold Spot ${backtestState.asset} vs US T-Bills Risk-Free Rate`;
+  }
 
   // Synchronize Start Date Slider beneath Tri-Curve Chart
   const fullSeries = getRawAssetSeries(backtestState.asset);
@@ -510,19 +520,33 @@ export function updateBacktest(): void {
 }
 
 export function setBacktestAsset(asset: TradedAsset): void {
+  const previousAsset = backtestState.asset;
+  const prevInception = getAssetInceptionDate(previousAsset);
   backtestState.asset = asset;
   if (asset === 'ETH') {
     backtestState.collateralRatio = 0.90;
+    backtestState.mode = 'unified';
   } else if (asset === 'BTC') {
     backtestState.collateralRatio = 0.85;
     backtestState.mode = 'isolated'; // BTC LSTs are custodied in Web3, hedged with USDC cash on CEX
   } else if (asset === 'SOL') {
     backtestState.collateralRatio = 0.85;
+    backtestState.mode = 'unified';
   }
 
   const inception = getAssetInceptionDate(asset);
-  if (backtestState.startDate < inception) {
+  if (backtestState.activeEpoch === 'all' || backtestState.startDate === prevInception) {
     backtestState.startDate = inception;
+    backtestState.endDate = '2026-10-31';
+  } else {
+    // If current date range is invalid for this asset (e.g. before inception like Bull 2021 for SOL)
+    if (backtestState.endDate < inception) {
+      backtestState.activeEpoch = 'all';
+      backtestState.startDate = inception;
+      backtestState.endDate = '2026-10-31';
+    } else if (backtestState.startDate < inception) {
+      backtestState.startDate = inception;
+    }
   }
   backtestState.currentPage = 1;
   updateBacktest();
@@ -575,7 +599,7 @@ export function setBacktestStartDateIndex(index: number): void {
   const fullSeries = getRawAssetSeries(backtestState.asset);
   if (index >= 0 && index < fullSeries.length) {
     backtestState.startDate = fullSeries[index].date;
-    backtestState.activeEpoch = 'custom';
+    backtestState.activeEpoch = index === 0 ? 'all' : 'custom';
     backtestState.currentPage = 1;
     updateBacktest();
   }
@@ -1813,7 +1837,7 @@ function init() {
         drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
       }
       if (UI.backtestCanvas && currentBacktestResult && !UI.viewBacktest?.classList.contains('hidden')) {
-        drawBacktestChart(UI.backtestCanvas, currentBacktestResult);
+        drawBacktestChart(UI.backtestCanvas, currentBacktestResult, backtestState.asset, backtestState.visiblePlots);
       }
     });
     ro.observe(UI.canvas.parentElement);

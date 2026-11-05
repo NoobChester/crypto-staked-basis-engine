@@ -14,6 +14,7 @@ export interface BacktestConfig {
   splitSpot?: number;
   mmr?: number;
   tbillRate?: number;
+  asset?: string;
 }
 
 export interface BacktestStepResult {
@@ -96,7 +97,10 @@ export function runHistoricalBacktest(
   const splitSpot = Math.max(1, Math.min(99, config.splitSpot ?? 50));
 
   // High-performance cache check: sub-millisecond retrieval on repeat configurations
-  const cacheKey = `${mode}|${C}|${V}|${splitSpot}|${mmr}|${tbillRate}|${series[0].date}|${series[series.length - 1].date}|${series.length}`;
+  const p0 = series[0].spotPrice;
+  const pN = series[series.length - 1].spotPrice;
+  const assetKey = config.asset ?? '';
+  const cacheKey = `${assetKey}|${mode}|${C}|${V}|${splitSpot}|${mmr}|${tbillRate}|${p0}|${pN}|${series[0].date}|${series[series.length - 1].date}|${series.length}`;
   const cached = backtestResultCache.get(cacheKey);
   if (cached) {
     return cached;

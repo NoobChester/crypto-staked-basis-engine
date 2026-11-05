@@ -18,6 +18,7 @@ import {
 } from '../src/services/marketData/backtestService.js';
 import {
   runHistoricalBacktest,
+  clearBacktestSimulationCache,
   type BacktestSummaryResult
 } from '../src/math/backtest.js';
 import {
@@ -35,7 +36,8 @@ import {
 import {
   backtestState,
   toggleBacktestPlot,
-  setBacktestStartDateIndex
+  setBacktestStartDateIndex,
+  setBacktestAsset
 } from '../src/app.js';
 
 describe('Historical Time-Series Dataset & Ingestion Service', () => {
@@ -408,5 +410,87 @@ describe('Backtest Chart Toggleable Plots & Start Date Slider Horizon', () => {
     };
 
     expect(() => drawBacktestChart(mockCanvas, result, 'ETH', visiblePlots)).not.toThrow();
+  });
+});
+
+describe('Asset Disambiguation & Cross-Asset Cache Collision Safeguards', () => {
+  it('differentiates BTC and SOL simulations across overlapping date horizons with distinct metrics and curves', () => {
+    clearBacktestSimulationCache();
+    // Overlapping 1-year window from 2023-01-01 to 2023-12-31
+    const btcSlice = getHistoricalBacktestSeries('BTC', '2023-01-01', '2023-12-31');
+    const solSlice = getHistoricalBacktestSeries('SOL', '2023-01-01', '2023-12-31');
+
+    expect(btcSlice.length).toBe(365);
+    expect(solSlice.length).toBe(365);
+    expect(btcSlice[0].date).toBe('2023-01-01');
+    expect(solSlice[0].date).toBe('2023-01-01');
+
+    // Initial spot prices are vastly different: BTC ~$16,600 vs SOL ~$9.98
+    expect(btcSlice[0].spotPrice).toBeGreaterThan(10000);
+    expect(solSlice[0].spotPrice).toBeLessThan(50);
+
+    // Run BTC backtest
+    const btcResult = runHistoricalBacktest(btcSlice, {
+      capital: 10000,
+      mode: 'isolated',
+      collateralRatio: 0.85,
+      asset: 'BTC'
+    });
+
+    // Run SOL backtest with same dates and capital
+    const solResult = runHistoricalBacktest(solSlice, {
+      capital: 10000,
+      mode: 'isolated',
+      collateralRatio: 0.85,
+      asset: 'SOL'
+    });
+
+    // Run BTC backtest again to verify cache retrieval returns BTC, not SOL
+    const btcResultCached = runHistoricalBacktest(btcSlice, {
+      capital: 10000,
+      mode: 'isolated',
+      collateralRatio: 0.85,
+      asset: 'BTC'
+    });
+
+    // Must be completely distinct results
+    expect(btcResult.terminalStrategyEquity).not.toBe(solResult.terminalStrategyEquity);
+    expect(btcResult.spotBenchmarkReturnPct).not.toBe(solResult.spotBenchmarkReturnPct);
+    expect(btcResult.dailyTrajectory[0].spotPrice).not.toBe(solResult.dailyTrajectory[0].spotPrice);
+
+    // Cached retrieval integrity
+    expect(btcResultCached).toBe(btcResult);
+    expect(btcResultCached.spotBenchmarkReturnPct).toBe(btcResult.spotBenchmarkReturnPct);
+  });
+
+  it('adjusts dates, mode, and inception boundaries cleanly when switching between assets', () => {
+    // 1. Start on ETH with all epoch
+    setBacktestAsset('ETH');
+    expect(backtestState.asset).toBe('ETH');
+    expect(backtestState.startDate).toBe('2020-12-01');
+    expect(backtestState.mode).toBe('unified');
+
+    // 2. Switch to SOL: must clamp start date to SOL staking adoption (2022-10-01)
+    setBacktestAsset('SOL');
+    expect(backtestState.asset).toBe('SOL');
+    expect(backtestState.startDate).toBe('2022-10-01');
+    expect(backtestState.mode).toBe('unified');
+
+    // 3. Switch to BTC: must restore start date to 2020-12-01 and set isolated mode
+    setBacktestAsset('BTC');
+    expect(backtestState.asset).toBe('BTC');
+    expect(backtestState.startDate).toBe('2020-12-01');
+    expect(backtestState.mode).toBe('isolated');
+
+    // 4. Switch back to SOL: must set mode back to unified and clamp to 2022-10-01
+    setBacktestAsset('SOL');
+    expect(backtestState.asset).toBe('SOL');
+    expect(backtestState.startDate).toBe('2022-10-01');
+    expect(backtestState.mode).toBe('unified');
+
+    // 5. Clean up by returning to ETH
+    setBacktestAsset('ETH');
+    expect(backtestState.asset).toBe('ETH');
+    expect(backtestState.startDate).toBe('2020-12-01');
   });
 });
