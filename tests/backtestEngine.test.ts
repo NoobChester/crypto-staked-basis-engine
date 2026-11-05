@@ -34,16 +34,17 @@ describe('Historical Time-Series Dataset & Ingestion Service', () => {
     expect(ETH_BEACON_CHAIN_HISTORICAL_SERIES[0].spotPrice).toBeCloseTo(597.11, 2);
   });
 
-  it('contains valid series for SOL starting at staking adoption (2022-10-01) and BTC at Babylon (2024-08-15)', () => {
+  it('contains valid series for SOL starting at staking adoption (2022-10-01) and BTC from 2020-12-01', () => {
     expect(getAssetInceptionDate('ETH')).toBe('2020-12-01');
     expect(getAssetInceptionDate('SOL')).toBe('2022-10-01');
-    expect(getAssetInceptionDate('BTC')).toBe('2024-08-15');
+    expect(getAssetInceptionDate('BTC')).toBe('2020-12-01');
 
     expect(SOL_HISTORICAL_SERIES.length).toBe(1492);
     expect(SOL_HISTORICAL_SERIES[0].date).toBe('2022-10-01');
 
-    expect(BTC_HISTORICAL_SERIES.length).toBe(808);
-    expect(BTC_HISTORICAL_SERIES[0].date).toBe('2024-08-15');
+    expect(BTC_HISTORICAL_SERIES.length).toBe(2161);
+    expect(BTC_HISTORICAL_SERIES[0].date).toBe('2020-12-01');
+    expect(BTC_HISTORICAL_SERIES[0].spotPrice).toBeCloseTo(19345.5, 0);
   });
 
   it('clamps historical series accurately to asset inception dates', () => {
@@ -52,9 +53,9 @@ describe('Historical Time-Series Dataset & Ingestion Service', () => {
     expect(solSeries[0].date).toBe('2022-10-01');
     expect(solSeries[solSeries.length - 1].date).toBe('2023-01-01');
 
-    // Attempting to backtest BTC from 2021 should clamp to 2024-08-15
-    const btcSeries = getHistoricalBacktestSeries('BTC', '2021-01-01', '2025-01-01');
-    expect(btcSeries[0].date).toBe('2024-08-15');
+    // Attempting to backtest BTC from 2019 should clamp to 2020-12-01
+    const btcSeries = getHistoricalBacktestSeries('BTC', '2019-01-01', '2025-01-01');
+    expect(btcSeries[0].date).toBe('2020-12-01');
   });
 
   it('slices named historical epoch presets correctly', () => {
@@ -163,6 +164,34 @@ describe('Quantitative Backtest Engine: Unified vs Isolated Margin Dynamics', ()
     expect(result.horizonDays).toBe(365);
     expect(result.isLiquidated).toBe(false);
     expect(result.dailyTrajectory.length).toBe(365);
+  });
+
+  it('runs Bitcoin multi-year cash-and-carry basis from Dec 2020 through Babylon era', () => {
+    const btcSeries = getHistoricalBacktestSeries('BTC', '2020-12-01', '2026-10-31');
+    expect(btcSeries.length).toBe(2161);
+    expect(btcSeries[0].date).toBe('2020-12-01');
+
+    // Pre-Babylon steps must have 0.0% staking APY
+    const step2021 = btcSeries.find(s => s.date === '2021-04-14');
+    expect(step2021?.stakingAPY).toBe(0.0);
+    expect(step2021?.depegPct).toBe(0.0);
+
+    // Babylon steps must have active staking APY
+    const step2024 = btcSeries.find(s => s.date === '2024-08-15');
+    expect(step2024?.stakingAPY).toBeGreaterThan(0.0);
+
+    const result = runHistoricalBacktest(btcSeries, {
+      capital: 10000,
+      mode: 'unified',
+      collateralRatio: 0.85,
+      mmr: 0.005,
+      tbillRate: 4.35
+    });
+
+    expect(result.horizonDays).toBe(2161);
+    expect(result.isLiquidated).toBe(false);
+    expect(result.totalHarvestedFunding).toBeGreaterThan(1500);
+    expect(result.terminalStrategyEquity).toBeGreaterThan(10000);
   });
 });
 

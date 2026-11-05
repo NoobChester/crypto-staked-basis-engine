@@ -63,7 +63,7 @@ export function getAssetInceptionDate(asset: TradedAsset): string {
     case 'SOL':
       return '2022-10-01';
     case 'BTC':
-      return '2024-08-15';
+      return '2020-12-01';
     case 'ETH':
     default:
       return '2020-12-01';
