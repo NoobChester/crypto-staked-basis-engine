@@ -362,9 +362,13 @@ export function bindSliderListeners(
     });
   }
   if (UI.backtestInputCapital) {
+    let backtestCapTimer: ReturnType<typeof setTimeout> | null = null;
     UI.backtestInputCapital.addEventListener('input', (e) => {
       const val = Math.max(100, parseFloat((e.target as HTMLInputElement).value) || 1000);
-      if (onBacktestCapital) onBacktestCapital(val);
+      if (backtestCapTimer) clearTimeout(backtestCapTimer);
+      backtestCapTimer = setTimeout(() => {
+        if (onBacktestCapital) onBacktestCapital(val);
+      }, 150);
     });
   }
 }

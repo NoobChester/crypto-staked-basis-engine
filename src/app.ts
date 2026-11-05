@@ -1686,7 +1686,7 @@ function init() {
         drawHistoricalStakingSubChart(UI.historicalStakingSubCanvas, currentHistoricalAnalytics);
         drawHistoricalSubChart(UI.historicalSubCanvas, currentHistoricalAnalytics);
       }
-      if (UI.backtestCanvas && currentBacktestResult) {
+      if (UI.backtestCanvas && currentBacktestResult && !UI.viewBacktest?.classList.contains('hidden')) {
         drawBacktestChart(UI.backtestCanvas, currentBacktestResult);
       }
     });
@@ -1769,8 +1769,13 @@ function init() {
   setSplit(50);
   updateStatisticalCarry(30);
   updateApp();
-  updateStressLab();
-  updateBacktest();
+  // Lazy evaluation: only compute non-default views if requested by initial URL hash
+  const initialHash = typeof window !== 'undefined' && window.location?.hash ? window.location.hash.toLowerCase() : '';
+  if (initialHash === '#stress-lab' || initialHash === '#stress') {
+    updateStressLab();
+  } else if (initialHash === '#backtest' || initialHash === '#historical') {
+    updateBacktest();
+  }
 }
 
 if (typeof document !== 'undefined') {

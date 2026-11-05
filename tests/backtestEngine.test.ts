@@ -190,3 +190,32 @@ describe('Ledger Table Rendering & CSV Export', () => {
     expect(() => exportBacktestCsv(result)).not.toThrow();
   });
 });
+
+describe('High-Performance Caching & DSA Slicing Optimization', () => {
+  it('memoizes sliced series via binary search and returns cached reference on repeat calls', () => {
+    const run1 = getHistoricalBacktestSeries('ETH', '2021-06-01', '2021-12-31');
+    const run2 = getHistoricalBacktestSeries('ETH', '2021-06-01', '2021-12-31');
+
+    // Both calls must return identical array reference from memoization cache
+    expect(run1).toBe(run2);
+    expect(run1[0].date).toBe('2021-06-01');
+    expect(run1[run1.length - 1].date).toBe('2021-12-31');
+  });
+
+  it('memoizes simulation calculations and returns cached BacktestSummaryResult', () => {
+    const series = getHistoricalBacktestSeries('ETH', '2022-01-01', '2022-06-30');
+    const config = { capital: 15000, mode: 'unified' as const, collateralRatio: 0.90 };
+
+    const t0 = performance.now();
+    const res1 = runHistoricalBacktest(series, config);
+    const initialElapsed = performance.now() - t0;
+
+    const t1 = performance.now();
+    const res2 = runHistoricalBacktest(series, config);
+    const cachedElapsed = performance.now() - t1;
+
+    // Must be identical object reference from LRU simulation cache
+    expect(res1).toBe(res2);
+    expect(cachedElapsed).toBeLessThan(initialElapsed + 1.0);
+  });
+});

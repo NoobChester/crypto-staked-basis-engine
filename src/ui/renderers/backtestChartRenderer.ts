@@ -50,13 +50,21 @@ export function drawBacktestChart(
   const steps = result.dailyTrajectory;
   const n = steps.length;
 
-  // Find min and max across all three curves
-  const allValues: number[] = [];
-  for (const s of steps) {
-    allValues.push(s.strategyEquity, s.spotBenchmarkEquity, s.tbillBenchmarkEquity);
+  // Find min and max across all three curves in a single O(N) pass with zero heap allocations
+  let minVal = Infinity;
+  let maxVal = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const s = steps[i];
+    if (s.strategyEquity < minVal) minVal = s.strategyEquity;
+    if (s.strategyEquity > maxVal) maxVal = s.strategyEquity;
+    if (s.spotBenchmarkEquity < minVal) minVal = s.spotBenchmarkEquity;
+    if (s.spotBenchmarkEquity > maxVal) maxVal = s.spotBenchmarkEquity;
+    if (s.tbillBenchmarkEquity < minVal) minVal = s.tbillBenchmarkEquity;
+    if (s.tbillBenchmarkEquity > maxVal) maxVal = s.tbillBenchmarkEquity;
   }
-  const minVal = Math.min(...allValues);
-  const maxVal = Math.max(...allValues);
+  if (!Number.isFinite(minVal)) minVal = 0;
+  if (!Number.isFinite(maxVal)) maxVal = 10000;
+
   const yPadding = (maxVal - minVal) * 0.08 || 500;
   const yMin = Math.max(0, minVal - yPadding);
   const yMax = maxVal + yPadding;
@@ -151,10 +159,22 @@ export function drawBacktestChart(
   ctx.fillStyle = grad;
   ctx.fill();
 
+  // Curve 1: Staked Basis Strategy Equity (Hardware-Accelerated Dual Stroke Neon Glow without raster blur)
+  // Glow pass
+  ctx.strokeStyle = 'rgba(6, 182, 212, 0.22)';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const x = getX(i);
+    const y = getY(steps[i].strategyEquity);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Core crisp stroke
   ctx.strokeStyle = '#06b6d4';
-  ctx.lineWidth = 2.5;
-  ctx.shadowColor = '#06b6d4';
-  ctx.shadowBlur = 8;
+  ctx.lineWidth = 2;
   ctx.beginPath();
   for (let i = 0; i < n; i++) {
     const x = getX(i);
@@ -194,7 +214,7 @@ export function drawBacktestChart(
     ctx.restore();
   }
 
-  // Interactive Hover Crosshair
+  // Interactive Hover Crosshair with rAF and index memoization
   setupHoverListener(canvas, result, dims);
 }
 
@@ -205,68 +225,96 @@ function setupHoverListener(
 ): void {
   const steps = result.dailyTrajectory;
   const n = steps.length;
-  const tooltip = document.getElementById('backtest-chart-tooltip');
+  const tooltipEl = typeof document !== 'undefined' ? document.getElementById('backtest-chart-tooltip') : null;
+  if (!tooltipEl) return;
+  const tooltip = tooltipEl;
+
+  let cachedRect: DOMRect | null = null;
+  let lastHoverIdx = -1;
+  let rafId: number | null = null;
+
+  function updateRect() {
+    cachedRect = canvas.getBoundingClientRect();
+  }
+
+  function onMouseEnter() {
+    updateRect();
+  }
 
   function onMouseMove(e: MouseEvent) {
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
+    if (!cachedRect) updateRect();
+    const mouseX = e.clientX - (cachedRect?.left ?? 0);
     if (mouseX < dims.padding.left || mouseX > dims.width - dims.padding.right) {
       if (tooltip) tooltip.classList.add('hidden');
+      lastHoverIdx = -1;
       return;
     }
 
     const frac = (mouseX - dims.padding.left) / dims.plotWidth;
     const idx = Math.min(n - 1, Math.max(0, Math.round(frac * (n - 1))));
-    const step = steps[idx];
 
-    if (!tooltip) return;
+    // Sub-pixel jitter guard: do not re-render DOM if hover index has not changed
+    if (idx === lastHoverIdx) return;
+    lastHoverIdx = idx;
 
-    tooltip.classList.remove('hidden');
-    tooltip.innerHTML = `
-      <div class="space-y-1 text-[11px] font-mono leading-tight">
-        <div class="flex items-center justify-between border-b border-slate-700/80 pb-1 font-bold text-white">
-          <span>${step.date}</span>
-          <span class="text-[10px] text-slate-400">Day ${step.day}/${n}</span>
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      const step = steps[idx];
+      tooltip.classList.remove('hidden');
+      tooltip.innerHTML = `
+        <div class="space-y-1 text-[11px] font-mono leading-tight">
+          <div class="flex items-center justify-between border-b border-slate-700/80 pb-1 font-bold text-white">
+            <span>${step.date}</span>
+            <span class="text-[10px] text-slate-400">Day ${step.day}/${n}</span>
+          </div>
+          <div class="flex items-center justify-between gap-3 text-cyan-400 font-bold">
+            <span>Strategy Equity:</span>
+            <span>${fmtUSD(step.strategyEquity)}</span>
+          </div>
+          <div class="flex items-center justify-between gap-3 text-purple-400">
+            <span>Spot Buy & Hold:</span>
+            <span>${fmtUSD(step.spotBenchmarkEquity)}</span>
+          </div>
+          <div class="flex items-center justify-between gap-3 text-emerald-400">
+            <span>US T-Bill Cash:</span>
+            <span>${fmtUSD(step.tbillBenchmarkEquity)}</span>
+          </div>
+          <div class="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
+            <span>Spot: $${step.spotPrice.toLocaleString()}</span>
+            <span>Funding: ${fmtPct(step.fundingAPR)}</span>
+            <span>Staking: ${step.stakingAPY.toFixed(1)}%</span>
+          </div>
+          ${step.isLiquidated ? '<div class="text-rose-400 font-bold text-[10px] text-center pt-0.5">⚠️ POST-LIQUIDATION SPOT</div>' : ''}
         </div>
-        <div class="flex items-center justify-between gap-3 text-cyan-400 font-bold">
-          <span>Strategy Equity:</span>
-          <span>${fmtUSD(step.strategyEquity)}</span>
-        </div>
-        <div class="flex items-center justify-between gap-3 text-purple-400">
-          <span>Spot Buy & Hold:</span>
-          <span>${fmtUSD(step.spotBenchmarkEquity)}</span>
-        </div>
-        <div class="flex items-center justify-between gap-3 text-emerald-400">
-          <span>US T-Bill Cash:</span>
-          <span>${fmtUSD(step.tbillBenchmarkEquity)}</span>
-        </div>
-        <div class="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
-          <span>Spot: $${step.spotPrice.toLocaleString()}</span>
-          <span>Funding: ${fmtPct(step.fundingAPR)}</span>
-          <span>Staking: ${step.stakingAPY.toFixed(1)}%</span>
-        </div>
-        ${step.isLiquidated ? '<div class="text-rose-400 font-bold text-[10px] text-center pt-0.5">⚠️ POST-LIQUIDATION SPOT</div>' : ''}
-      </div>
-    `;
+      `;
 
-    // Position tooltip smoothly
-    const tooltipW = 230;
-    let leftPos = mouseX + 15;
-    if (leftPos + tooltipW > dims.width) {
-      leftPos = mouseX - tooltipW - 15;
-    }
-    tooltip.style.left = `${leftPos}px`;
-    tooltip.style.top = '15px';
+      // Position tooltip smoothly
+      const tooltipW = 230;
+      let leftPos = mouseX + 15;
+      if (leftPos + tooltipW > dims.width) {
+        leftPos = mouseX - tooltipW - 15;
+      }
+      tooltip.style.left = `${leftPos}px`;
+      tooltip.style.top = '15px';
+    });
   }
 
   function onMouseLeave() {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    lastHoverIdx = -1;
     if (tooltip) tooltip.classList.add('hidden');
   }
 
+  canvas.addEventListener('mouseenter', onMouseEnter);
   canvas.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('mouseleave', onMouseLeave);
 
   activeHoverCleanup = () => {
+    if (rafId !== null) cancelAnimationFrame(rafId);
+    canvas.removeEventListener('mouseenter', onMouseEnter);
     canvas.removeEventListener('mousemove', onMouseMove);
     canvas.removeEventListener('mouseleave', onMouseLeave);
   };

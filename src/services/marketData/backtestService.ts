@@ -82,6 +82,44 @@ export function getRawAssetSeries(asset: TradedAsset): DailyHistoricalMarketStep
   }
 }
 
+// High-performance LRU / Memoization cache for sliced series
+const seriesSliceCache = new Map<string, DailyHistoricalMarketStep[]>();
+const MAX_SLICE_CACHE = 40;
+
+/**
+ * Binary search to find lower bound index in sorted date time-series: O(log N)
+ */
+function findDateLowerBound(series: DailyHistoricalMarketStep[], targetDate: string): number {
+  let low = 0;
+  let high = series.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    if (series[mid].date < targetDate) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  return low;
+}
+
+/**
+ * Binary search to find upper bound index in sorted date time-series: O(log N)
+ */
+function findDateUpperBound(series: DailyHistoricalMarketStep[], targetDate: string): number {
+  let low = 0;
+  let high = series.length;
+  while (low < high) {
+    const mid = (low + high) >>> 1;
+    if (series[mid].date <= targetDate) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  return low - 1;
+}
+
 export function getHistoricalBacktestSeries(
   asset: TradedAsset = 'ETH',
   startDate?: string,
@@ -92,7 +130,33 @@ export function getHistoricalBacktestSeries(
 
   const inceptionDate = getAssetInceptionDate(asset);
   const effectiveStart = (!startDate || startDate < inceptionDate) ? inceptionDate : startDate;
-  const effectiveEnd = endDate || fullSeries[fullSeries.length - 1].date;
+  const effectiveEnd = (!endDate || endDate > fullSeries[fullSeries.length - 1].date)
+    ? fullSeries[fullSeries.length - 1].date
+    : endDate;
 
-  return fullSeries.filter(step => step.date >= effectiveStart && step.date <= effectiveEnd);
+  const cacheKey = `${asset}:${effectiveStart}:${effectiveEnd}`;
+  const cached = seriesSliceCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // O(log N) binary search range extraction instead of O(N) array allocation filter
+  const startIdx = findDateLowerBound(fullSeries, effectiveStart);
+  const endIdx = findDateUpperBound(fullSeries, effectiveEnd);
+
+  let result: DailyHistoricalMarketStep[];
+  if (startIdx > endIdx || startIdx >= fullSeries.length || endIdx < 0) {
+    result = [];
+  } else {
+    result = fullSeries.slice(startIdx, endIdx + 1);
+  }
+
+  // Manage cache capacity
+  if (seriesSliceCache.size >= MAX_SLICE_CACHE) {
+    const firstKey = seriesSliceCache.keys().next().value;
+    if (firstKey) seriesSliceCache.delete(firstKey);
+  }
+  seriesSliceCache.set(cacheKey, result);
+
+  return result;
 }

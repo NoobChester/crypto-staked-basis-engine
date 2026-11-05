@@ -58,6 +58,28 @@ export interface BacktestSummaryResult {
   dailyTrajectory: BacktestStepResult[];
 }
 
+// High-performance LRU / Memoization simulation cache
+const backtestResultCache = new Map<string, BacktestSummaryResult>();
+const MAX_SIMULATION_CACHE = 40;
+
+export function clearBacktestSimulationCache(): void {
+  backtestResultCache.clear();
+}
+
+/**
+ * Fast numerical rounding to 2 decimal places without heap string allocation
+ */
+function round2(val: number): number {
+  return Math.round(val * 100) / 100;
+}
+
+/**
+ * Fast numerical rounding to 4 decimal places without heap string allocation
+ */
+function round4(val: number): number {
+  return Math.round(val * 10000) / 10000;
+}
+
 export function runHistoricalBacktest(
   series: DailyHistoricalMarketStep[],
   config: BacktestConfig
@@ -72,6 +94,13 @@ export function runHistoricalBacktest(
   const mmr = config.mmr ?? 0.005;
   const tbillRate = config.tbillRate ?? 4.35;
   const splitSpot = Math.max(1, Math.min(99, config.splitSpot ?? 50));
+
+  // High-performance cache check: sub-millisecond retrieval on repeat configurations
+  const cacheKey = `${mode}|${C}|${V}|${splitSpot}|${mmr}|${tbillRate}|${series[0].date}|${series[series.length - 1].date}|${series.length}`;
+  const cached = backtestResultCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
 
   let S0: number, M0: number, N0: number;
   if (mode === 'unified') {
@@ -163,90 +192,100 @@ export function runHistoricalBacktest(
       date: step.date,
       timestamp: step.timestamp,
       spotPrice: step.spotPrice,
-      priceReturnPct: parseFloat((r * 100).toFixed(2)),
+      priceReturnPct: round2(r * 100),
       fundingAPR: step.fundingAPR,
       stakingAPY: step.stakingAPY,
       depegPct: step.depegPct,
-      strategyEquity: parseFloat(strategyEquity.toFixed(2)),
-      spotBenchmarkEquity: parseFloat(spotBenchmarkEquity.toFixed(2)),
-      tbillBenchmarkEquity: parseFloat(tbillBenchmarkEquity.toFixed(2)),
-      marginRatio: parseFloat(marginRatio.toFixed(4)),
+      strategyEquity: round2(strategyEquity),
+      spotBenchmarkEquity: round2(spotBenchmarkEquity),
+      tbillBenchmarkEquity: round2(tbillBenchmarkEquity),
+      marginRatio: round4(marginRatio),
       isLiquidated,
-      cumulativeFunding: parseFloat(cumFunding.toFixed(2)),
-      cumulativeStaking: parseFloat(cumStaking.toFixed(2))
+      cumulativeFunding: round2(cumFunding),
+      cumulativeStaking: round2(cumStaking)
     });
   }
 
   const horizonDays = trajectory.length;
   const lastStep = trajectory[trajectory.length - 1];
   const terminalStrategyEquity = lastStep.strategyEquity;
-  const netPnL = parseFloat((terminalStrategyEquity - C).toFixed(2));
-  const cumulativeReturnPct = parseFloat(((netPnL / C) * 100).toFixed(2));
+  const netPnL = round2(terminalStrategyEquity - C);
+  const cumulativeReturnPct = round2((netPnL / C) * 100);
 
   // CAGR (Compound Annual Growth Rate)
   const durationYears = horizonDays / 365;
   const cagrPct = durationYears > 0 && terminalStrategyEquity > 0
-    ? parseFloat(((Math.pow(terminalStrategyEquity / C, 1 / durationYears) - 1) * 100).toFixed(2))
+    ? round2((Math.pow(terminalStrategyEquity / C, 1 / durationYears) - 1) * 100)
     : 0;
 
-  // Maximum Drawdown (MDD) calculation
+  // Maximum Drawdown (MDD) calculation in O(N)
   let peakEquity = trajectory[0].strategyEquity;
   let maxDrawdown = 0;
   let maxDrawdownTroughDate = trajectory[0].date;
 
-  for (const step of trajectory) {
-    if (step.strategyEquity > peakEquity) {
-      peakEquity = step.strategyEquity;
+  for (let i = 0; i < horizonDays; i++) {
+    const eq = trajectory[i].strategyEquity;
+    if (eq > peakEquity) {
+      peakEquity = eq;
     }
-    const dd = (step.strategyEquity - peakEquity) / peakEquity;
+    const dd = (eq - peakEquity) / peakEquity;
     if (dd < maxDrawdown) {
       maxDrawdown = dd;
-      maxDrawdownTroughDate = step.date;
+      maxDrawdownTroughDate = trajectory[i].date;
     }
   }
-  const maxDrawdownPct = parseFloat(Math.abs(maxDrawdown * 100).toFixed(2));
+  const maxDrawdownPct = round2(Math.abs(maxDrawdown * 100));
 
-  // Daily returns for Sharpe and Sortino computation
-  const dailyReturns: number[] = [];
-  for (let i = 1; i < trajectory.length; i++) {
+  // Daily returns for Sharpe and Sortino computation (single allocated array)
+  const dailyReturns: number[] = new Array(horizonDays - 1);
+  let sumDailyReturns = 0;
+  for (let i = 1; i < horizonDays; i++) {
     const prev = trajectory[i - 1].strategyEquity;
     const cur = trajectory[i].strategyEquity;
-    if (prev > 0) {
-      dailyReturns.push((cur - prev) / prev);
-    }
+    const ret = prev > 0 ? (cur - prev) / prev : 0;
+    dailyReturns[i - 1] = ret;
+    sumDailyReturns += ret;
   }
 
   let sharpeRatio = 0;
   let sortinoRatio = 0;
 
-  if (dailyReturns.length > 1) {
-    const meanDaily = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
-    const varDaily = dailyReturns.reduce((acc, r) => acc + Math.pow(r - meanDaily, 2), 0) / (dailyReturns.length - 1);
+  const numReturns = dailyReturns.length;
+  if (numReturns > 1) {
+    const meanDaily = sumDailyReturns / numReturns;
+    let sumSqDiff = 0;
+    let sumDownsideSq = 0;
+
+    for (let i = 0; i < numReturns; i++) {
+      const r = dailyReturns[i];
+      sumSqDiff += Math.pow(r - meanDaily, 2);
+      if (r < 0) {
+        sumDownsideSq += Math.pow(r, 2);
+      }
+    }
+
+    const varDaily = sumSqDiff / (numReturns - 1);
     const annVol = Math.sqrt(varDaily) * Math.sqrt(365);
 
-    // Downside variance for Sortino
-    const downsideReturns = dailyReturns.filter(r => r < 0);
-    const downsideVar = downsideReturns.length > 0
-      ? downsideReturns.reduce((acc, r) => acc + Math.pow(r, 2), 0) / dailyReturns.length
-      : 0;
+    const downsideVar = sumDownsideSq / numReturns;
     const annDownsideVol = Math.sqrt(downsideVar) * Math.sqrt(365);
 
     const excessAnnualReturn = (cagrPct - tbillRate) / 100;
 
     if (annVol > 0.0001) {
-      sharpeRatio = parseFloat((excessAnnualReturn / annVol).toFixed(2));
+      sharpeRatio = round2(excessAnnualReturn / annVol);
     }
     if (annDownsideVol > 0.0001) {
-      sortinoRatio = parseFloat((excessAnnualReturn / annDownsideVol).toFixed(2));
+      sortinoRatio = round2(excessAnnualReturn / annDownsideVol);
     } else if (excessAnnualReturn > 0) {
       sortinoRatio = 99.9;
     }
   }
 
-  const spotBenchmarkReturnPct = parseFloat((((lastStep.spotBenchmarkEquity - C) / C) * 100).toFixed(2));
-  const tbillBenchmarkReturnPct = parseFloat((((lastStep.tbillBenchmarkEquity - C) / C) * 100).toFixed(2));
+  const spotBenchmarkReturnPct = round2(((lastStep.spotBenchmarkEquity - C) / C) * 100);
+  const tbillBenchmarkReturnPct = round2(((lastStep.tbillBenchmarkEquity - C) / C) * 100);
 
-  return {
+  const summaryResult: BacktestSummaryResult = {
     horizonDays,
     startDate: series[0].date,
     endDate: lastStep.date,
@@ -269,4 +308,13 @@ export function runHistoricalBacktest(
     tbillBenchmarkReturnPct,
     dailyTrajectory: trajectory
   };
+
+  // Manage cache capacity & store
+  if (backtestResultCache.size >= MAX_SIMULATION_CACHE) {
+    const firstKey = backtestResultCache.keys().next().value;
+    if (firstKey) backtestResultCache.delete(firstKey);
+  }
+  backtestResultCache.set(cacheKey, summaryResult);
+
+  return summaryResult;
 }
