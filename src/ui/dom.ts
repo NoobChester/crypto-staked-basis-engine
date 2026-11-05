@@ -494,6 +494,7 @@ export function getUIElements(): UIElements {
     feeTierBtnMm: document.getElementById('fee-tier-btn-mm'),
     labelActiveFeeTier: document.getElementById('label-active-fee-tier'),
     badgeForwardCarry: document.getElementById('badge-forward-carry'),
+    badgeRateSource: document.getElementById('badge-rate-source'),
 
     // Crisis Scenarios Matrix Elements
     scenarioMatrixPanel: document.getElementById('scenario-matrix-panel'),

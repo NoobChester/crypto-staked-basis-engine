@@ -31,17 +31,75 @@ export function computeWindowStats(values: number[]): HistoricalWindowStats {
   return { avg, min, max, stdDev, negativeIntervalPct, intervalCount: count };
 }
 
-export async function fetchAssetHistoricalAnalytics(
-  symbol: 'ETH' | 'BTC' | 'SOL',
-  rangeDays: 30 | 90 | 180 = 90,
-  solYieldType: 'nominal' | 'real' = 'real'
-): Promise<AssetHistoricalAnalytics> {
-  const cacheKey = `${symbol}_${rangeDays}_${solYieldType}`;
-  const cached = analyticsCache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
 
+export function buildAnalyticsFromSeries(
+  symbol: 'ETH' | 'BTC' | 'SOL',
+  rangeDays: 30 | 90 | 180,
+  series: HistoricalRatePoint[]
+): AssetHistoricalAnalytics {
+  const fundingValues = series.map(s => s.bestFundingApr);
+  const stakingValues = series.map(s => s.stakingApy);
+  const lstDiscounts = series.map(s => s.lstDiscountPct);
+
+  const funding7d = computeWindowStats(fundingValues.slice(-7));
+  const funding30d = computeWindowStats(fundingValues.slice(-30));
+  const funding90d = computeWindowStats(fundingValues.slice(-90));
+
+  const staking7d = computeWindowStats(stakingValues.slice(-7));
+  const staking30d = computeWindowStats(stakingValues.slice(-30));
+  const staking90d = computeWindowStats(stakingValues.slice(-90));
+
+  const binanceAvg = parseFloat(
+    (series.map(s => s.binanceApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+  );
+  const hyperliquidAvg = parseFloat(
+    (series.map(s => s.hyperliquidApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+  );
+  const venueSpreadAvg = parseFloat(
+    (series.map(s => s.venueSpread ?? Math.abs(s.binanceApr - s.hyperliquidApr)).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+  );
+  const leadingVenue: 'Binance' | 'Hyperliquid' | 'Tied' =
+    binanceAvg > hyperliquidAvg ? 'Binance' : hyperliquidAvg > binanceAvg ? 'Hyperliquid' : 'Tied';
+  const stakingAvg = parseFloat(
+    (series.map(s => s.stakingApy).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
+  );
+  const bestFundingAvg = parseFloat(Math.max(binanceAvg, hyperliquidAvg).toFixed(2));
+  const netCarryAvg = parseFloat((stakingAvg + bestFundingAvg).toFixed(2));
+  const fundingDivergence = parseFloat(Math.abs(binanceAvg - hyperliquidAvg).toFixed(2));
+  const lstDiscountAvg = parseFloat((lstDiscounts.reduce((a, b) => a + b, 0) / lstDiscounts.length).toFixed(2));
+  const lstDiscountMax = parseFloat(Math.max(...lstDiscounts).toFixed(2));
+
+  return {
+    symbol,
+    rangeDays,
+    funding7d,
+    funding30d,
+    funding90d,
+    staking7d,
+    staking30d,
+    staking90d,
+    series,
+    binanceAvg,
+    hyperliquidAvg,
+    venueSpreadAvg,
+    leadingVenue,
+    bestFundingAvg,
+    stakingAvg,
+    netCarryAvg,
+    fundingDivergence,
+    lstDiscountAvg,
+    lstDiscountMax,
+    lastFetched: Date.now()
+  };
+}
+
+const inFlightRequests: Map<string, Promise<HistoricalRatePoint[]>> = new Map();
+
+async function fetchRawDailySeries(
+  symbol: 'ETH' | 'BTC' | 'SOL',
+  rangeDays: 90 | 180,
+  solYieldType: 'nominal' | 'real'
+): Promise<HistoricalRatePoint[]> {
   const now = Date.now();
   const dayMs = 86400000;
   const hourMs = 3600000;
@@ -224,64 +282,65 @@ export async function fetchAssetHistoricalAnalytics(
     });
   }
 
-  // Calculate Rolling Window Statistics (using optimal best funding rate)
-  const fundingValues = series.map(s => s.bestFundingApr);
-  const stakingValues = series.map(s => s.stakingApy);
-  const lstDiscounts = series.map(s => s.lstDiscountPct);
+  return series;
+}
 
-  const funding7d = computeWindowStats(fundingValues.slice(-7));
-  const funding30d = computeWindowStats(fundingValues.slice(-30));
-  const funding90d = computeWindowStats(fundingValues.slice(-90));
+export async function fetchAssetHistoricalAnalytics(
+  symbol: 'ETH' | 'BTC' | 'SOL',
+  rangeDays: 30 | 90 | 180 = 90,
+  solYieldType: 'nominal' | 'real' = 'real'
+): Promise<AssetHistoricalAnalytics> {
+  const cacheKey = `${symbol}_${rangeDays}_${solYieldType}`;
+  const cached = analyticsCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
 
-  const staking7d = computeWindowStats(stakingValues.slice(-7));
-  const staking30d = computeWindowStats(stakingValues.slice(-30));
-  const staking90d = computeWindowStats(stakingValues.slice(-90));
+  // Check if a larger horizon is already in cache
+  const largerKeys = rangeDays === 30
+    ? [`${symbol}_90_${solYieldType}`, `${symbol}_180_${solYieldType}`]
+    : rangeDays === 90
+      ? [`${symbol}_180_${solYieldType}`]
+      : [];
 
-  const binanceAvg = parseFloat(
-    (series.map(s => s.binanceApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
-  );
-  const hyperliquidAvg = parseFloat(
-    (series.map(s => s.hyperliquidApr).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
-  );
-  const venueSpreadAvg = parseFloat(
-    (series.map(s => s.venueSpread ?? Math.abs(s.binanceApr - s.hyperliquidApr)).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
-  );
-  const leadingVenue: 'Binance' | 'Hyperliquid' | 'Tied' =
-    binanceAvg > hyperliquidAvg ? 'Binance' : hyperliquidAvg > binanceAvg ? 'Hyperliquid' : 'Tied';
-  const stakingAvg = parseFloat(
-    (series.map(s => s.stakingApy).reduce((a, b) => a + b, 0) / series.length).toFixed(2)
-  );
-  const bestFundingAvg = parseFloat(Math.max(binanceAvg, hyperliquidAvg).toFixed(2));
-  const netCarryAvg = parseFloat((stakingAvg + bestFundingAvg).toFixed(2));
-  const fundingDivergence = parseFloat(Math.abs(binanceAvg - hyperliquidAvg).toFixed(2));
-  const lstDiscountAvg = parseFloat((lstDiscounts.reduce((a, b) => a + b, 0) / lstDiscounts.length).toFixed(2));
-  const lstDiscountMax = parseFloat(Math.max(...lstDiscounts).toFixed(2));
+  for (const lk of largerKeys) {
+    const parent = analyticsCache.get(lk);
+    if (parent && parent.series.length >= rangeDays) {
+      const sliced = parent.series.slice(-rangeDays);
+      const res = buildAnalyticsFromSeries(symbol, rangeDays, sliced);
+      analyticsCache.set(cacheKey, res);
+      return res;
+    }
+  }
 
-  const analytics: AssetHistoricalAnalytics = {
-    symbol,
-    rangeDays,
-    funding7d,
-    funding30d,
-    funding90d,
-    staking7d,
-    staking30d,
-    staking90d,
-    series,
-    binanceAvg,
-    hyperliquidAvg,
-    venueSpreadAvg,
-    leadingVenue,
-    bestFundingAvg,
-    stakingAvg,
-    netCarryAvg,
-    fundingDivergence,
-    lstDiscountAvg,
-    lstDiscountMax,
-    lastFetched: Date.now()
-  };
+  // To guarantee strict mathematical consistency and eliminate duplicate HTTP traffic,
+  // we fetch 90 days for any request <= 90 days, or 180 days for 180 days.
+  const fetchDays: 90 | 180 = rangeDays === 180 ? 180 : 90;
+  const inFlightKey = `${symbol}_${fetchDays}_${solYieldType}`;
 
-  analyticsCache.set(cacheKey, analytics);
-  return analytics;
+  let promise = inFlightRequests.get(inFlightKey);
+  if (!promise) {
+    promise = fetchRawDailySeries(symbol, fetchDays, solYieldType)
+      .finally(() => {
+        inFlightRequests.delete(inFlightKey);
+      });
+    inFlightRequests.set(inFlightKey, promise);
+  }
+
+  const fullSeries = await promise;
+
+  // Cache the full underlying horizon
+  const fullAnalytics = buildAnalyticsFromSeries(symbol, fetchDays, fullSeries);
+  analyticsCache.set(inFlightKey, fullAnalytics);
+
+  if (rangeDays < fetchDays) {
+    const sliced = fullSeries.slice(-rangeDays);
+    const res = buildAnalyticsFromSeries(symbol, rangeDays, sliced);
+    analyticsCache.set(cacheKey, res);
+    return res;
+  }
+
+  return fullAnalytics;
 }
 
 /**

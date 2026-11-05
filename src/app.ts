@@ -49,6 +49,7 @@ import { drawChart, setupChartInteractions, type ChartConfidenceStats } from './
 import { getCustomStatisticalCarry, type StatisticalCarrySnapshot } from './services/marketData.js';
 import { initRateLabModal, openRateLabModal, closeRateLabModal } from './ui/rateLabModal.js';
 import { initMobileNav, updateMiniHud } from './ui/mobileNav.js';
+import { fetchFuturesTermStructure, interpolateBasisRate } from './services/marketData/futuresCurve.js';
 import { bindCanvasTouchScrub } from './ui/touchInteractions.js';
 import { initTapToEdit } from './ui/tapToEdit.js';
 import type { StochasticSimulationResult } from './types/rateLab.js';
@@ -715,6 +716,37 @@ export function setCapital(cap: number): void {
   updateApp();
 }
 
+export type RateSourceType = 'forward_tenor' | 'live' | 'rate_lab' | 'historical_replay' | 'manual';
+
+export function updateRateSourceBadge(source: RateSourceType, param?: string | number): void {
+  const badge = document.getElementById('badge-rate-source');
+  const descSource = document.getElementById('desc-funding-source');
+  if (!badge) return;
+
+  if (source === 'forward_tenor') {
+    const days = param ?? state.days ?? 90;
+    badge.textContent = `⚡ FORWARD (${days}D BASIS)`;
+    badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition';
+    if (descSource) descSource.textContent = `Source: Forward Futures Basis (${days}d Tenor Matched)`;
+  } else if (source === 'live') {
+    badge.textContent = '🟢 LIVE TICKER';
+    badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold transition';
+    if (descSource) descSource.textContent = 'Source: Real-Time Exchange Funding Ticker';
+  } else if (source === 'rate_lab') {
+    badge.textContent = '⚡ RATE LAB MODEL';
+    badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700 font-bold transition';
+    if (descSource) descSource.textContent = 'Source: Calibrated Stochastic / Implied Rate Lab';
+  } else if (source === 'historical_replay') {
+    badge.textContent = `📅 HISTORICAL ${param || '30D'} REPLAY`;
+    badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 font-bold transition';
+    if (descSource) descSource.textContent = `Source: Rolling ${param || '30D'} Trailing Average`;
+  } else if (source === 'manual') {
+    badge.textContent = '✏️ MANUAL INPUT';
+    badge.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 font-bold transition';
+    if (descSource) descSource.textContent = 'Source: User Manual Input';
+  }
+}
+
 export function setPriceChange(pct: number): void {
   state.priceMove = pct;
   state.activeCrisisScenario = null;
@@ -723,10 +755,28 @@ export function setPriceChange(pct: number): void {
   updateApp();
 }
 
-export function setDays(days: number): void {
+export async function setDays(days: number): Promise<void> {
   state.days = days;
   if (UI.inputDays) UI.inputDays.value = days.toString();
   if (UI.valDays) UI.valDays.textContent = `${days} Days`;
+
+  // Dynamic Forward Tenor Matching: Overwrites funding rate with forward implied basis for this tenor
+  try {
+    const termStruct = await fetchFuturesTermStructure(state.tradedAsset || 'ETH');
+    const forwardRate = interpolateBasisRate(termStruct.tenors, days);
+    state.fundingAPR = forwardRate;
+    state.isLiveFunding = false;
+    (state as any).fundingWindow = 'custom';
+    if (UI?.inputFunding) UI.inputFunding.value = forwardRate.toString();
+    if (UI?.valFunding) {
+      UI.valFunding.textContent = fmtPct(forwardRate) + ' APR';
+      UI.valFunding.className = `font-mono font-bold ${forwardRate >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+    }
+    updateRateSourceBadge('forward_tenor', days);
+  } catch {
+    // fallback if term structure calculation fails
+  }
+
   updateApp();
 }
 
@@ -1114,7 +1164,7 @@ function init() {
     { id: 'val-capital', field: 'Capital ($)', currentValue: state.capital, min: 100, max: 10000000, step: 500, unit: 'USD', onCommit: (v) => setCapital(v) },
     { id: 'val-price-move', field: 'Price Shock', currentValue: state.priceMove, min: -100, max: 200, step: 0.5, unit: '%', onCommit: (v) => setPriceChange(v) },
     { id: 'val-days', field: 'Holding Days', currentValue: state.days, min: 1, max: 730, step: 1, unit: 'Days', onCommit: (v) => setDays(v) },
-    { id: 'val-funding', field: 'Funding Rate', currentValue: state.fundingAPR, min: -100, max: 200, step: 0.5, unit: '% APR', onCommit: (v) => { state.fundingAPR = v; state.isLiveFunding = false; updateApp(); } },
+    { id: 'val-funding', field: 'Funding Rate', currentValue: state.fundingAPR, min: -100, max: 200, step: 0.5, unit: '% APR', onCommit: (v) => { state.fundingAPR = v; state.isLiveFunding = false; updateRateSourceBadge('manual'); updateApp(); } },
     { id: 'val-staking', field: 'Staking Yield', currentValue: state.stakingAPY, min: 0, max: 30, step: 0.1, unit: '% APY', onCommit: (v) => { state.stakingAPY = v; state.isLiveStaking = false; updateApp(); } },
     { id: 'val-depeg', field: 'LST De-Peg Discount', currentValue: state.depegPct, min: 0, max: 50, step: 0.1, unit: '% Discount', onCommit: (v) => setDepeg(v) }
   ]);

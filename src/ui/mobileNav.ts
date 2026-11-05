@@ -49,9 +49,11 @@ export function initMobileNav(onTabChange?: (tab: MobileTabKey) => void): void {
   }
 
   // Handle window resizing across mobile/desktop breakpoint (1024px)
-  window.addEventListener('resize', () => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', () => {
     applyLayoutVisibility();
-  });
+    });
+  }
 
   applyLayoutVisibility();
 }
