@@ -1730,27 +1730,60 @@
           <div id="backtest-chart-tooltip" class="hidden absolute z-30 p-2.5 rounded-xl border border-slate-700 bg-slate-900/95 backdrop-blur-md shadow-2xl pointer-events-none"></div>
         </div>
 
-        <!-- Start Date Horizon Scrubber Slider -->
-        <div class="bg-slate-950/70 rounded-xl border border-slate-800/80 p-3 sm:p-4 space-y-2">
+        <!-- Dual Horizon Scrubber: Start & End Date Sliders -->
+        <div class="bg-slate-950/70 rounded-xl border border-slate-800/80 p-3 sm:p-4 space-y-3">
+          <!-- Horizon Header Badges -->
           <div class="flex items-center justify-between text-xs font-mono flex-wrap gap-2">
             <div class="flex items-center gap-2 flex-wrap">
               <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-              <span class="text-slate-300 font-bold uppercase tracking-wider text-[11px] sm:text-xs">Adjust Simulation Start Date:</span>
-              <span id="backtest-slider-date-display" class="font-bold text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-700/60">
+              <span class="text-slate-300 font-bold uppercase tracking-wider text-[11px] sm:text-xs">Simulation Window:</span>
+              <span id="backtest-slider-start-display" class="font-bold text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded border border-cyan-700/60">
                 2020-12-01
               </span>
+              <span class="text-slate-500 font-bold">→</span>
+              <span id="backtest-slider-end-display" class="font-bold text-purple-300 bg-purple-950/80 px-2 py-0.5 rounded border border-purple-700/60">
+                2026-10-31
+              </span>
             </div>
-            <span id="backtest-slider-days-remaining" class="text-[11px] text-slate-400 font-mono">
+            <span id="backtest-slider-days-remaining" class="text-[11px] text-slate-300 font-mono bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700/60">
               2,161 Days Duration
             </span>
           </div>
 
-          <div class="relative pt-1 pb-0.5">
-            <input type="range" id="backtest-slider-start-date" min="0" max="2147" step="1" value="0"
-              class="w-full cursor-pointer" aria-label="Adjust Backtest Start Date">
+          <!-- Slider 1: Start Date Scrubber -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+              <span class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                <span class="font-semibold text-slate-300">Start Date:</span>
+                <span id="backtest-slider-date-display" class="font-bold text-cyan-300">2020-12-01</span>
+              </span>
+              <span class="text-[10px] text-slate-500">Drag to adjust inception horizon</span>
+            </div>
+            <div class="relative pt-0.5 pb-0.5">
+              <input type="range" id="backtest-slider-start-date" min="0" max="2147" step="1" value="0"
+                class="w-full cursor-pointer accent-cyan-400" aria-label="Adjust Backtest Start Date">
+            </div>
           </div>
 
-          <div class="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-0.5 select-none">
+          <!-- Slider 2: End Date Scrubber -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+              <span class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                <span class="font-semibold text-slate-300">End Date:</span>
+                <span id="backtest-slider-end-label" class="font-bold text-purple-300">2026-10-31</span>
+              </span>
+              <span class="text-[10px] text-slate-500">Drag to adjust terminal horizon</span>
+            </div>
+            <div class="relative pt-0.5 pb-0.5">
+              <input type="range" id="backtest-slider-end-date" min="0" max="2147" step="1" value="2147"
+                class="w-full cursor-pointer accent-purple-400" aria-label="Adjust Backtest End Date">
+            </div>
+          </div>
+
+          <!-- Epoch Timeline Guides -->
+          <div class="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-800/60 select-none">
             <span id="backtest-slider-min-label">Dec 2020 (Inception)</span>
             <span class="hidden sm:inline">2021 Bull</span>
             <span class="hidden sm:inline">2022 Bear / De-Peg</span>

@@ -326,7 +326,11 @@ export interface UIElements {
   backtestLegendTbillReturn: HTMLElement | null;
   backtestLegendSp500Return: HTMLElement | null;
   backtestSliderStartDate: HTMLInputElement | null;
+  backtestSliderEndDate: HTMLInputElement | null;
   backtestSliderDateDisplay: HTMLElement | null;
+  backtestSliderStartDisplay: HTMLElement | null;
+  backtestSliderEndDisplay: HTMLElement | null;
+  backtestSliderEndLabel: HTMLElement | null;
   backtestSliderDaysRemaining: HTMLElement | null;
   backtestSliderMinLabel: HTMLElement | null;
   backtestSliderMaxLabel: HTMLElement | null;
@@ -675,7 +679,11 @@ export function getUIElements(): UIElements {
     backtestLegendTbillReturn: document.getElementById('backtest-legend-tbill-return'),
     backtestLegendSp500Return: document.getElementById('backtest-legend-sp500-return'),
     backtestSliderStartDate: document.getElementById('backtest-slider-start-date') as HTMLInputElement | null,
+    backtestSliderEndDate: document.getElementById('backtest-slider-end-date') as HTMLInputElement | null,
     backtestSliderDateDisplay: document.getElementById('backtest-slider-date-display'),
+    backtestSliderStartDisplay: document.getElementById('backtest-slider-start-display'),
+    backtestSliderEndDisplay: document.getElementById('backtest-slider-end-display'),
+    backtestSliderEndLabel: document.getElementById('backtest-slider-end-label'),
     backtestSliderDaysRemaining: document.getElementById('backtest-slider-days-remaining'),
     backtestSliderMinLabel: document.getElementById('backtest-slider-min-label'),
     backtestSliderMaxLabel: document.getElementById('backtest-slider-max-label'),

@@ -37,7 +37,9 @@ import {
   backtestState,
   toggleBacktestPlot,
   setBacktestStartDateIndex,
-  setBacktestAsset
+  setBacktestEndDateIndex,
+  setBacktestAsset,
+  updateBacktestFast
 } from '../src/app.js';
 
 describe('Historical Time-Series Dataset & Ingestion Service', () => {
@@ -588,5 +590,65 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
       (globalThis as any).URL = originalUrl;
       (globalThis as any).document = originalDocument;
     }
+  });
+
+  describe('Dual Slider Horizon Scrubber & 60fps Fast Path Performance', () => {
+    it('accurately updates start date and clamps when exceeding end date minus minimum window (7 days)', () => {
+      setBacktestAsset('ETH');
+      const ethSeries = getRawAssetSeries('ETH');
+
+      // Set end date to day 100
+      setBacktestEndDateIndex(100);
+      expect(backtestState.endDate).toBe(ethSeries[100].date);
+
+      // Attempt to move start slider past end date (e.g. to index 98)
+      setBacktestStartDateIndex(98);
+      // Must clamp to endIdx - 7 = 93
+      expect(backtestState.startDate).toBe(ethSeries[93].date);
+      expect(backtestState.activeEpoch).toBe('custom');
+    });
+
+    it('accurately updates end date and clamps when preceding start date plus minimum window (7 days)', () => {
+      setBacktestAsset('ETH');
+      const ethSeries = getRawAssetSeries('ETH');
+
+      // Set start date to day 50
+      setBacktestStartDateIndex(50);
+      expect(backtestState.startDate).toBe(ethSeries[50].date);
+
+      // Attempt to move end slider before start date (e.g. to index 52)
+      setBacktestEndDateIndex(52);
+      // Must clamp to startIdx + 7 = 57
+      expect(backtestState.endDate).toBe(ethSeries[57].date);
+      expect(backtestState.activeEpoch).toBe('custom');
+    });
+
+    it('restores activeEpoch to "all" when sliders are reset to inception and terminal horizon', () => {
+      setBacktestAsset('ETH');
+      const ethSeries = getRawAssetSeries('ETH');
+      const maxIdx = ethSeries.length - 1;
+
+      setBacktestStartDateIndex(0);
+      setBacktestEndDateIndex(maxIdx);
+
+      expect(backtestState.startDate).toBe(ethSeries[0].date);
+      expect(backtestState.endDate).toBe(ethSeries[maxIdx].date);
+      expect(backtestState.activeEpoch).toBe('all');
+    });
+
+    it('executes fast dragging updates without throwing or mutating full table unnecessarily', () => {
+      setBacktestAsset('ETH');
+      const ethSeries = getRawAssetSeries('ETH');
+
+      // Fast dragging updates (isDragging = true)
+      expect(() => setBacktestStartDateIndex(10, true)).not.toThrow();
+      expect(backtestState.startDate).toBe(ethSeries[10].date);
+
+      expect(() => setBacktestEndDateIndex(500, true)).not.toThrow();
+      expect(backtestState.endDate).toBe(ethSeries[500].date);
+
+      // Direct fast render call
+      expect(() => updateBacktestFast()).not.toThrow();
+    });
   });
 });

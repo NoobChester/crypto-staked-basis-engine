@@ -4,7 +4,7 @@
  * Visualizes Strategy Equity vs Buy-and-Hold Spot Asset vs Risk-Free US T-Bills with hover crosshair scrubbing.
  */
 
-import type { BacktestSummaryResult } from '../../math/backtest.js';
+import type { BacktestSummaryResult, BacktestStepResult } from '../../math/backtest.js';
 import { fmtUSD, fmtPct } from '../../math/hedging.js';
 
 export interface VisiblePlots {
@@ -22,7 +22,136 @@ interface ChartDimensions {
   plotHeight: number;
 }
 
+interface ActiveChartState {
+  canvas: HTMLCanvasElement;
+  result: BacktestSummaryResult;
+  asset: string;
+  visiblePlots: VisiblePlots;
+  dims: ChartDimensions;
+  steps: BacktestStepResult[];
+}
+
+let activeChartState: ActiveChartState | null = null;
+let currentListeningCanvas: HTMLCanvasElement | null = null;
 let activeHoverCleanup: (() => void) | null = null;
+let lastHoverIdx = -1;
+let hoverRafId: number | null = null;
+
+function setupHoverListeners(canvas: HTMLCanvasElement, tooltip: HTMLElement): void {
+  if (currentListeningCanvas === canvas) return;
+
+  if (activeHoverCleanup) {
+    activeHoverCleanup();
+    activeHoverCleanup = null;
+  }
+
+  let cachedRect: DOMRect | null = null;
+
+  function updateRect() {
+    cachedRect = canvas.getBoundingClientRect();
+  }
+
+  function onMouseEnter() {
+    updateRect();
+  }
+
+  function onMouseMove(e: MouseEvent) {
+    if (!activeChartState || activeChartState.canvas !== canvas) return;
+    const { dims, steps } = activeChartState;
+    const n = steps.length;
+    if (n === 0) return;
+
+    if (!cachedRect) updateRect();
+    const mouseX = e.clientX - (cachedRect?.left ?? 0);
+    if (mouseX < dims.padding.left || mouseX > dims.width - dims.padding.right) {
+      tooltip.classList.add('hidden');
+      lastHoverIdx = -1;
+      return;
+    }
+
+    const frac = (mouseX - dims.padding.left) / dims.plotWidth;
+    const idx = Math.min(n - 1, Math.max(0, Math.round(frac * (n - 1))));
+
+    // Sub-pixel jitter guard: do not re-render DOM if hover index has not changed
+    if (idx === lastHoverIdx) return;
+    lastHoverIdx = idx;
+
+    if (hoverRafId !== null) cancelAnimationFrame(hoverRafId);
+    hoverRafId = requestAnimationFrame(() => {
+      if (!activeChartState || activeChartState.canvas !== canvas) return;
+      const currentSteps = activeChartState.steps;
+      const totalSteps = currentSteps.length;
+      if (idx >= totalSteps) return;
+      const step = currentSteps[idx];
+      const activePlots = activeChartState.visiblePlots;
+
+      tooltip.classList.remove('hidden');
+      tooltip.innerHTML = `
+        <div class="space-y-1 text-[11px] font-mono leading-tight">
+          <div class="flex items-center justify-between border-b border-slate-700/80 pb-1 font-bold text-white">
+            <span>${step.date}</span>
+            <span class="text-[10px] text-slate-400">Day ${step.day}/${totalSteps}</span>
+          </div>
+${activePlots.strategy ? `          <div class="flex items-center justify-between gap-3 text-cyan-400 font-bold">
+            <span>Strategy Equity:</span>
+            <span>${fmtUSD(step.strategyEquity)}</span>
+          </div>` : ''}
+${activePlots.spot ? `          <div class="flex items-center justify-between gap-3 text-purple-400">
+            <span>Spot Buy & Hold:</span>
+            <span>${fmtUSD(step.spotBenchmarkEquity)}</span>
+          </div>` : ''}
+${activePlots.tbill ? `          <div class="flex items-center justify-between gap-3 text-emerald-400">
+            <span>US T-Bill Cash:</span>
+            <span>${fmtUSD(step.tbillBenchmarkEquity)}</span>
+          </div>` : ''}
+${activePlots.sp500 ? `          <div class="flex items-center justify-between gap-3 text-amber-400 font-medium">
+            <span>S&amp;P 500 Index:</span>
+            <span>${fmtUSD(step.sp500BenchmarkEquity)}</span>
+          </div>` : ''}
+          <div class="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
+            <span>Spot: $${step.spotPrice.toLocaleString()}</span>
+            <span>Funding: ${fmtPct(step.fundingAPR)}</span>
+            <span>Staking: ${step.stakingAPY === 0 ? '0.0% (PoW)' : `${step.stakingAPY.toFixed(1)}%`}</span>
+          </div>
+          <div class="pt-0.5 text-[10px] font-mono text-center">
+            ${step.isLiquidated ? '<span class="text-rose-400 font-bold">⚠️ POST-LIQUIDATION SPOT</span>' : (step.stakingAPY === 0 ? '<span class="text-amber-400 font-medium">Regime: Pure Cash-and-Carry Basis</span>' : '<span class="text-purple-400 font-medium">Regime: Staked Basis</span>')}
+          </div>
+        </div>
+      `;
+
+      // Position tooltip smoothly
+      const tooltipW = 240;
+      let leftPos = mouseX + 15;
+      if (leftPos + tooltipW > dims.width) {
+        leftPos = mouseX - tooltipW - 15;
+      }
+      tooltip.style.left = `${leftPos}px`;
+      tooltip.style.top = '15px';
+    });
+  }
+
+  function onMouseLeave() {
+    if (hoverRafId !== null) {
+      cancelAnimationFrame(hoverRafId);
+      hoverRafId = null;
+    }
+    lastHoverIdx = -1;
+    tooltip.classList.add('hidden');
+  }
+
+  canvas.addEventListener('mouseenter', onMouseEnter);
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('mouseleave', onMouseLeave);
+
+  currentListeningCanvas = canvas;
+  activeHoverCleanup = () => {
+    if (hoverRafId !== null) cancelAnimationFrame(hoverRafId);
+    canvas.removeEventListener('mouseenter', onMouseEnter);
+    canvas.removeEventListener('mousemove', onMouseMove);
+    canvas.removeEventListener('mouseleave', onMouseLeave);
+    currentListeningCanvas = null;
+  };
+}
 
 export function drawBacktestChart(
   canvas: HTMLCanvasElement | null,
@@ -34,12 +163,6 @@ export function drawBacktestChart(
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-
-  // Cleanup prior listeners
-  if (activeHoverCleanup) {
-    activeHoverCleanup();
-    activeHoverCleanup = null;
-  }
 
   const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
   const rect = canvas.getBoundingClientRect();
@@ -55,6 +178,16 @@ export function drawBacktestChart(
   const plotWidth = width - padding.left - padding.right;
   const plotHeight = height - padding.top - padding.bottom;
   const dims: ChartDimensions = { width, height, padding, plotWidth, plotHeight };
+
+  // Set active chart state for high-performance hover lookup
+  activeChartState = {
+    canvas,
+    result,
+    asset,
+    visiblePlots,
+    dims,
+    steps: result.dailyTrajectory
+  };
 
   const steps = result.dailyTrajectory;
   const n = steps.length;
@@ -296,114 +429,8 @@ export function drawBacktestChart(
   }
 
   // Interactive Hover Crosshair with rAF and index memoization
-  setupHoverListener(canvas, result, dims, visiblePlots);
-}
-
-function setupHoverListener(
-  canvas: HTMLCanvasElement,
-  result: BacktestSummaryResult,
-  dims: ChartDimensions,
-  visiblePlots: VisiblePlots
-): void {
-  const steps = result.dailyTrajectory;
-  const n = steps.length;
   const tooltipEl = typeof document !== 'undefined' ? document.getElementById('backtest-chart-tooltip') : null;
-  if (!tooltipEl) return;
-  const tooltip = tooltipEl;
-
-  let cachedRect: DOMRect | null = null;
-  let lastHoverIdx = -1;
-  let rafId: number | null = null;
-
-  function updateRect() {
-    cachedRect = canvas.getBoundingClientRect();
+  if (tooltipEl) {
+    setupHoverListeners(canvas, tooltipEl);
   }
-
-  function onMouseEnter() {
-    updateRect();
-  }
-
-  function onMouseMove(e: MouseEvent) {
-    if (!cachedRect) updateRect();
-    const mouseX = e.clientX - (cachedRect?.left ?? 0);
-    if (mouseX < dims.padding.left || mouseX > dims.width - dims.padding.right) {
-      if (tooltip) tooltip.classList.add('hidden');
-      lastHoverIdx = -1;
-      return;
-    }
-
-    const frac = (mouseX - dims.padding.left) / dims.plotWidth;
-    const idx = Math.min(n - 1, Math.max(0, Math.round(frac * (n - 1))));
-
-    // Sub-pixel jitter guard: do not re-render DOM if hover index has not changed
-    if (idx === lastHoverIdx) return;
-    lastHoverIdx = idx;
-
-    if (rafId !== null) cancelAnimationFrame(rafId);
-    rafId = requestAnimationFrame(() => {
-      const step = steps[idx];
-      tooltip.classList.remove('hidden');
-      tooltip.innerHTML = `
-        <div class="space-y-1 text-[11px] font-mono leading-tight">
-          <div class="flex items-center justify-between border-b border-slate-700/80 pb-1 font-bold text-white">
-            <span>${step.date}</span>
-            <span class="text-[10px] text-slate-400">Day ${step.day}/${n}</span>
-          </div>
-${visiblePlots.strategy ? `          <div class="flex items-center justify-between gap-3 text-cyan-400 font-bold">
-            <span>Strategy Equity:</span>
-            <span>${fmtUSD(step.strategyEquity)}</span>
-          </div>` : ''}
-${visiblePlots.spot ? `          <div class="flex items-center justify-between gap-3 text-purple-400">
-            <span>Spot Buy & Hold:</span>
-            <span>${fmtUSD(step.spotBenchmarkEquity)}</span>
-          </div>` : ''}
-${visiblePlots.tbill ? `          <div class="flex items-center justify-between gap-3 text-emerald-400">
-            <span>US T-Bill Cash:</span>
-            <span>${fmtUSD(step.tbillBenchmarkEquity)}</span>
-          </div>` : ''}
-${visiblePlots.sp500 ? `          <div class="flex items-center justify-between gap-3 text-amber-400 font-medium">
-            <span>S&amp;P 500 Index:</span>
-            <span>${fmtUSD(step.sp500BenchmarkEquity)}</span>
-          </div>` : ''}
-          <div class="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
-            <span>Spot: $${step.spotPrice.toLocaleString()}</span>
-            <span>Funding: ${fmtPct(step.fundingAPR)}</span>
-            <span>Staking: ${step.stakingAPY === 0 ? '0.0% (PoW)' : `${step.stakingAPY.toFixed(1)}%`}</span>
-          </div>
-          <div class="pt-0.5 text-[10px] font-mono text-center">
-            ${step.isLiquidated ? '<span class="text-rose-400 font-bold">⚠️ POST-LIQUIDATION SPOT</span>' : (step.stakingAPY === 0 ? '<span class="text-amber-400 font-medium">Regime: Pure Cash-and-Carry Basis</span>' : '<span class="text-purple-400 font-medium">Regime: Staked Basis</span>')}
-          </div>
-        </div>
-      `;
-
-      // Position tooltip smoothly
-      const tooltipW = 240;
-      let leftPos = mouseX + 15;
-      if (leftPos + tooltipW > dims.width) {
-        leftPos = mouseX - tooltipW - 15;
-      }
-      tooltip.style.left = `${leftPos}px`;
-      tooltip.style.top = '15px';
-    });
-  }
-
-  function onMouseLeave() {
-    if (rafId !== null) {
-      cancelAnimationFrame(rafId);
-      rafId = null;
-    }
-    lastHoverIdx = -1;
-    if (tooltip) tooltip.classList.add('hidden');
-  }
-
-  canvas.addEventListener('mouseenter', onMouseEnter);
-  canvas.addEventListener('mousemove', onMouseMove);
-  canvas.addEventListener('mouseleave', onMouseLeave);
-
-  activeHoverCleanup = () => {
-    if (rafId !== null) cancelAnimationFrame(rafId);
-    canvas.removeEventListener('mouseenter', onMouseEnter);
-    canvas.removeEventListener('mousemove', onMouseMove);
-    canvas.removeEventListener('mouseleave', onMouseLeave);
-  };
 }

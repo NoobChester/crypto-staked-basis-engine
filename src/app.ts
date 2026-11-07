@@ -313,11 +313,17 @@ function renderBacktestPaginationControls(): void {
   );
 }
 
-export function updateBacktest(): void {
-  if (!UI) return;
+/**
+ * High-performance fast-path backtest renderer:
+ * Executes quantitative simulation math, updates summary metrics, KPI cards,
+ * slider date and duration badges, and re-renders the canvas chart at 60fps.
+ * Intentionally bypasses the heavy 50-row DOM table and pagination controls during scrubbing.
+ */
+export function updateBacktestFast(): BacktestSummaryResult | null {
+  if (!UI) return null;
 
   const series = getHistoricalBacktestSeries(backtestState.asset, backtestState.startDate, backtestState.endDate);
-  if (!series || series.length === 0) return;
+  if (!series || series.length === 0) return null;
 
   currentBacktestResult = runHistoricalBacktest(series, {
     capital: backtestState.capital,
@@ -329,78 +335,20 @@ export function updateBacktest(): void {
     asset: backtestState.asset
   });
 
-  // Controls UI updates
-  if (UI.backtestBtcRegimeCallout) {
-    if (backtestState.asset === 'BTC') {
-      UI.backtestBtcRegimeCallout.classList.remove('hidden');
-    } else {
-      UI.backtestBtcRegimeCallout.classList.add('hidden');
-    }
-  }
+  const res = currentBacktestResult;
 
-  if (UI.backtestValCollateralRatio) {
-    UI.backtestValCollateralRatio.textContent = (backtestState.collateralRatio * 100).toFixed(0) + '%';
-  }
+  // Date and range indicators
   if (UI.backtestRangeBadge) {
-    UI.backtestRangeBadge.textContent = `${currentBacktestResult.startDate} → ${currentBacktestResult.endDate} (${series.length} Days)`;
+    UI.backtestRangeBadge.textContent = `${res.startDate} → ${res.endDate} (${series.length} Days)`;
   }
-  if (UI.backtestStartDate) {
-    const inception = getAssetInceptionDate(backtestState.asset);
-    UI.backtestStartDate.min = inception;
-    UI.backtestStartDate.max = '2026-10-31';
+  if (UI.backtestStartDate && document.activeElement !== UI.backtestStartDate) {
     UI.backtestStartDate.value = backtestState.startDate;
   }
-  if (UI.backtestEndDate) {
-    const inception = getAssetInceptionDate(backtestState.asset);
-    UI.backtestEndDate.min = inception;
-    UI.backtestEndDate.max = '2026-10-31';
+  if (UI.backtestEndDate && document.activeElement !== UI.backtestEndDate) {
     UI.backtestEndDate.value = backtestState.endDate;
   }
-  if (UI.backtestInputCapital && document.activeElement !== UI.backtestInputCapital) {
-    UI.backtestInputCapital.value = backtestState.capital.toString();
-  }
 
-  // Asset Buttons Active Styling
-  const assetBtns: Record<TradedAsset, HTMLElement | null> = {
-    ETH: UI.backtestAssetBtnEth,
-    SOL: UI.backtestAssetBtnSol,
-    BTC: UI.backtestAssetBtnBtc
-  };
-  for (const [asset, btn] of Object.entries(assetBtns) as [TradedAsset, HTMLElement | null][]) {
-    if (!btn) continue;
-    if (backtestState.asset === asset) {
-      btn.className = 'flex-1 py-1 text-center rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold cursor-pointer transition';
-    } else {
-      btn.className = 'flex-1 py-1 text-center rounded text-slate-400 hover:text-white border-transparent cursor-pointer transition';
-    }
-  }
-
-  // Mode Buttons Active Styling
-  if (UI.backtestModeBtnUnified && UI.backtestModeBtnIsolated) {
-    if (backtestState.mode === 'unified') {
-      UI.backtestModeBtnUnified.className = 'px-2.5 py-1 rounded font-bold transition bg-cyan-500 text-black shadow cursor-pointer';
-      UI.backtestModeBtnIsolated.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
-    } else {
-      UI.backtestModeBtnUnified.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
-      UI.backtestModeBtnIsolated.className = 'px-2.5 py-1 rounded font-bold transition bg-cyan-500 text-black shadow cursor-pointer';
-    }
-  }
-
-  // Epoch Buttons Active Styling
-  const epochKeys = ['all', 'bull_2021', 'bear_2022', 'shapella_2023', 'institutional_2024'];
-  for (const ep of epochKeys) {
-    const id = ep === 'all' ? 'btn-epoch-all' : `btn-epoch-${ep.replace('_', '-')}`;
-    const btn = document.getElementById(id);
-    if (!btn) continue;
-    if (backtestState.activeEpoch === ep) {
-      btn.className = 'p-2.5 rounded-xl border border-purple-500 bg-purple-950/40 text-left cursor-pointer transition hover:border-purple-400 group';
-    } else {
-      btn.className = 'p-2.5 rounded-xl border border-slate-800 bg-brand-surface/70 text-left cursor-pointer transition hover:border-slate-700 group';
-    }
-  }
-
-  // 6 KPI Cards Updates
-  const res = currentBacktestResult;
+  // 6 Primary KPI Cards
   if (UI.backtestKpiReturn) {
     const sign = res.cumulativeReturnPct >= 0 ? '+' : '';
     UI.backtestKpiReturn.textContent = `${sign}${res.cumulativeReturnPct.toFixed(2)}%`;
@@ -488,10 +436,103 @@ export function updateBacktest(): void {
     UI.backtestChartSubheading.textContent = `Staked Basis Strategy Equity vs Buy-and-Hold Spot ${backtestState.asset} vs S&P 500 Index vs US T-Bills Risk-Free Rate`;
   }
 
-  // Synchronize Start Date Slider beneath Tri-Curve Chart
+  // Dual Slider Labels and Badges
+  if (UI.backtestSliderDateDisplay) {
+    UI.backtestSliderDateDisplay.textContent = backtestState.startDate;
+  }
+  if (UI.backtestSliderStartDisplay) {
+    UI.backtestSliderStartDisplay.textContent = backtestState.startDate;
+  }
+  if (UI.backtestSliderEndDisplay) {
+    UI.backtestSliderEndDisplay.textContent = backtestState.endDate;
+  }
+  if (UI.backtestSliderEndLabel) {
+    UI.backtestSliderEndLabel.textContent = backtestState.endDate;
+  }
+  if (UI.backtestSliderDaysRemaining) {
+    UI.backtestSliderDaysRemaining.textContent = `${res.horizonDays.toLocaleString()} Days Duration`;
+  }
+
+  // Render Canvas Chart
+  drawBacktestChart(UI.backtestCanvas, res, backtestState.asset, backtestState.visiblePlots);
+
+  return res;
+}
+
+export function updateBacktest(): void {
+  if (!UI) return;
+
   const fullSeries = getRawAssetSeries(backtestState.asset);
+  if (!fullSeries || fullSeries.length === 0) return;
+  const maxIdx = fullSeries.length - 1;
+
+  // Controls UI updates
+  if (UI.backtestBtcRegimeCallout) {
+    if (backtestState.asset === 'BTC') {
+      UI.backtestBtcRegimeCallout.classList.remove('hidden');
+    } else {
+      UI.backtestBtcRegimeCallout.classList.add('hidden');
+    }
+  }
+
+  if (UI.backtestValCollateralRatio) {
+    UI.backtestValCollateralRatio.textContent = (backtestState.collateralRatio * 100).toFixed(0) + '%';
+  }
+  if (UI.backtestStartDate) {
+    const inception = getAssetInceptionDate(backtestState.asset);
+    UI.backtestStartDate.min = inception;
+    UI.backtestStartDate.max = '2026-10-31';
+  }
+  if (UI.backtestEndDate) {
+    const inception = getAssetInceptionDate(backtestState.asset);
+    UI.backtestEndDate.min = inception;
+    UI.backtestEndDate.max = '2026-10-31';
+  }
+  if (UI.backtestInputCapital && document.activeElement !== UI.backtestInputCapital) {
+    UI.backtestInputCapital.value = backtestState.capital.toString();
+  }
+
+  // Asset Buttons Active Styling
+  const assetBtns: Record<TradedAsset, HTMLElement | null> = {
+    ETH: UI.backtestAssetBtnEth,
+    SOL: UI.backtestAssetBtnSol,
+    BTC: UI.backtestAssetBtnBtc
+  };
+  for (const [asset, btn] of Object.entries(assetBtns) as [TradedAsset, HTMLElement | null][]) {
+    if (!btn) continue;
+    if (backtestState.asset === asset) {
+      btn.className = 'flex-1 py-1 text-center rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold cursor-pointer transition';
+    } else {
+      btn.className = 'flex-1 py-1 text-center rounded text-slate-400 hover:text-white border-transparent cursor-pointer transition';
+    }
+  }
+
+  // Mode Buttons Active Styling
+  if (UI.backtestModeBtnUnified && UI.backtestModeBtnIsolated) {
+    if (backtestState.mode === 'unified') {
+      UI.backtestModeBtnUnified.className = 'px-2.5 py-1 rounded font-bold transition bg-cyan-500 text-black shadow cursor-pointer';
+      UI.backtestModeBtnIsolated.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
+    } else {
+      UI.backtestModeBtnUnified.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
+      UI.backtestModeBtnIsolated.className = 'px-2.5 py-1 rounded font-bold transition bg-cyan-500 text-black shadow cursor-pointer';
+    }
+  }
+
+  // Epoch Buttons Active Styling
+  const epochKeys = ['all', 'bull_2021', 'bear_2022', 'shapella_2023', 'institutional_2024'];
+  for (const ep of epochKeys) {
+    const id = ep === 'all' ? 'btn-epoch-all' : `btn-epoch-${ep.replace('_', '-')}`;
+    const btn = document.getElementById(id);
+    if (!btn) continue;
+    if (backtestState.activeEpoch === ep) {
+      btn.className = 'p-2.5 rounded-xl border border-purple-500 bg-purple-950/40 text-left cursor-pointer transition hover:border-purple-400 group';
+    } else {
+      btn.className = 'p-2.5 rounded-xl border border-slate-800 bg-brand-surface/70 text-left cursor-pointer transition hover:border-slate-700 group';
+    }
+  }
+
+  // Synchronize Start and End Sliders
   if (UI.backtestSliderStartDate) {
-    const maxIdx = Math.max(0, fullSeries.length - 14);
     UI.backtestSliderStartDate.max = maxIdx.toString();
     if (document.activeElement !== UI.backtestSliderStartDate) {
       const currentIdx = fullSeries.findIndex(s => s.date === backtestState.startDate);
@@ -500,26 +541,31 @@ export function updateBacktest(): void {
       }
     }
   }
-  if (UI.backtestSliderDateDisplay) {
-    UI.backtestSliderDateDisplay.textContent = backtestState.startDate;
+
+  if (UI.backtestSliderEndDate) {
+    UI.backtestSliderEndDate.max = maxIdx.toString();
+    if (document.activeElement !== UI.backtestSliderEndDate) {
+      const currentEndIdx = fullSeries.findIndex(s => s.date === backtestState.endDate);
+      const effectiveEndIdx = currentEndIdx >= 0 ? currentEndIdx : maxIdx;
+      UI.backtestSliderEndDate.value = effectiveEndIdx.toString();
+    }
   }
-  if (UI.backtestSliderDaysRemaining) {
-    UI.backtestSliderDaysRemaining.textContent = `${res.horizonDays.toLocaleString()} Days Duration`;
-  }
+
   if (UI.backtestSliderMinLabel) {
     UI.backtestSliderMinLabel.textContent = `${fullSeries[0].date.slice(0, 7)} (Inception)`;
   }
   if (UI.backtestSliderMaxLabel) {
-    UI.backtestSliderMaxLabel.textContent = `${fullSeries[fullSeries.length - 1].date.slice(0, 7)}`;
+    UI.backtestSliderMaxLabel.textContent = `${fullSeries[maxIdx].date.slice(0, 7)}`;
   }
 
   // Update Toggleable Plots Legend Buttons
   updateBacktestPlotTogglesUI();
 
-  // Render Tri-Curve Chart with VisiblePlots
-  drawBacktestChart(UI.backtestCanvas, res, backtestState.asset, backtestState.visiblePlots);
+  // Fast-path execution for KPIs, chart, and badges
+  const res = updateBacktestFast();
+  if (!res) return;
 
-  // Render Ledger & Pagination
+  // Full Ledger Table & Pagination Render
   renderBacktestLedger(UI.backtestTbody, res, backtestState.currentPage, backtestState.pageSize, backtestState.asset);
   renderBacktestPaginationControls();
 }
@@ -600,11 +646,41 @@ export function exportBacktestCsvAction(): void {
   }
 }
 
-export function setBacktestStartDateIndex(index: number): void {
+export function setBacktestStartDateIndex(index: number, isDragging = false): void {
   const fullSeries = getRawAssetSeries(backtestState.asset);
-  if (index >= 0 && index < fullSeries.length) {
-    backtestState.startDate = fullSeries[index].date;
-    backtestState.activeEpoch = index === 0 ? 'all' : 'custom';
+  if (!fullSeries || fullSeries.length === 0) return;
+
+  const currentEndIdx = fullSeries.findIndex(s => s.date === backtestState.endDate);
+  const endIdx = currentEndIdx >= 0 ? currentEndIdx : fullSeries.length - 1;
+  const maxStartIdx = Math.max(0, endIdx - 7);
+  const clamped = Math.min(Math.max(0, index), maxStartIdx);
+
+  backtestState.startDate = fullSeries[clamped].date;
+  backtestState.activeEpoch = (clamped === 0 && endIdx === fullSeries.length - 1) ? 'all' : 'custom';
+
+  if (isDragging) {
+    updateBacktestFast();
+  } else {
+    backtestState.currentPage = 1;
+    updateBacktest();
+  }
+}
+
+export function setBacktestEndDateIndex(index: number, isDragging = false): void {
+  const fullSeries = getRawAssetSeries(backtestState.asset);
+  if (!fullSeries || fullSeries.length === 0) return;
+
+  const currentStartIdx = fullSeries.findIndex(s => s.date === backtestState.startDate);
+  const startIdx = currentStartIdx >= 0 ? currentStartIdx : 0;
+  const minEndIdx = Math.min(fullSeries.length - 1, startIdx + 7);
+  const clamped = Math.max(minEndIdx, Math.min(fullSeries.length - 1, index));
+
+  backtestState.endDate = fullSeries[clamped].date;
+  backtestState.activeEpoch = (startIdx === 0 && clamped === fullSeries.length - 1) ? 'all' : 'custom';
+
+  if (isDragging) {
+    updateBacktestFast();
+  } else {
     backtestState.currentPage = 1;
     updateBacktest();
   }
@@ -1769,7 +1845,8 @@ function init() {
     (days) => setLookback(days),
     (capital) => setStressCapital(capital),
     (capital) => setBacktestCapital(capital),
-    (idx) => setBacktestStartDateIndex(idx)
+    (idx, isDragging) => setBacktestStartDateIndex(idx, isDragging),
+    (idx, isDragging) => setBacktestEndDateIndex(idx, isDragging)
   );
   initViewRouter((view) => {
     if (view === 'stress-lab') {

@@ -55,7 +55,8 @@ export interface AppActions {
   setBacktestEpoch?: (epoch: string) => void;
   setBacktestDates?: (startDate: string, endDate: string) => void;
   exportBacktestCsv?: () => void;
-  setBacktestStartDateIndex?: (index: number) => void;
+  setBacktestStartDateIndex?: (index: number, isDragging?: boolean) => void;
+  setBacktestEndDateIndex?: (index: number, isDragging?: boolean) => void;
   toggleBacktestPlot?: (plot: 'strategy' | 'spot' | 'tbill' | 'sp500') => void;
 }
 
@@ -282,7 +283,8 @@ export function bindSliderListeners(
   onLookback?: (days: number) => void,
   onStressCapital?: (capital: number) => void,
   onBacktestCapital?: (capital: number) => void,
-  onBacktestStartDateIndex?: (index: number) => void
+  onBacktestStartDateIndex?: (index: number, isDragging?: boolean) => void,
+  onBacktestEndDateIndex?: (index: number, isDragging?: boolean) => void
 ): void {
   if (UI.inputPriceMove) {
     UI.inputPriceMove.addEventListener('input', (e) => {
@@ -382,13 +384,62 @@ export function bindSliderListeners(
     });
   }
   if (UI.backtestSliderStartDate) {
-    let sliderTimer: ReturnType<typeof setTimeout> | null = null;
+    let startRafId: number | null = null;
+    let startIdleTimer: ReturnType<typeof setTimeout> | null = null;
+
     UI.backtestSliderStartDate.addEventListener('input', (e) => {
       const idx = parseInt((e.target as HTMLInputElement).value, 10);
-      if (sliderTimer) clearTimeout(sliderTimer);
-      sliderTimer = setTimeout(() => {
-        if (onBacktestStartDateIndex) onBacktestStartDateIndex(idx);
-      }, 50);
+      if (isNaN(idx)) return;
+
+      // 60fps fast path: canvas + kpi badges, skip heavy table
+      if (startRafId !== null) cancelAnimationFrame(startRafId);
+      startRafId = requestAnimationFrame(() => {
+        if (onBacktestStartDateIndex) onBacktestStartDateIndex(idx, true);
+        startRafId = null;
+      });
+
+      // Debounce the full table render when user pauses dragging (~150ms)
+      if (startIdleTimer) clearTimeout(startIdleTimer);
+      startIdleTimer = setTimeout(() => {
+        if (onBacktestStartDateIndex) onBacktestStartDateIndex(idx, false);
+      }, 150);
+    });
+
+    UI.backtestSliderStartDate.addEventListener('change', (e) => {
+      const idx = parseInt((e.target as HTMLInputElement).value, 10);
+      if (isNaN(idx)) return;
+      if (startIdleTimer) clearTimeout(startIdleTimer);
+      if (onBacktestStartDateIndex) onBacktestStartDateIndex(idx, false);
+    });
+  }
+
+  if (UI.backtestSliderEndDate) {
+    let endRafId: number | null = null;
+    let endIdleTimer: ReturnType<typeof setTimeout> | null = null;
+
+    UI.backtestSliderEndDate.addEventListener('input', (e) => {
+      const idx = parseInt((e.target as HTMLInputElement).value, 10);
+      if (isNaN(idx)) return;
+
+      // 60fps fast path: canvas + kpi badges, skip heavy table
+      if (endRafId !== null) cancelAnimationFrame(endRafId);
+      endRafId = requestAnimationFrame(() => {
+        if (onBacktestEndDateIndex) onBacktestEndDateIndex(idx, true);
+        endRafId = null;
+      });
+
+      // Debounce the full table render when user pauses dragging (~150ms)
+      if (endIdleTimer) clearTimeout(endIdleTimer);
+      endIdleTimer = setTimeout(() => {
+        if (onBacktestEndDateIndex) onBacktestEndDateIndex(idx, false);
+      }, 150);
+    });
+
+    UI.backtestSliderEndDate.addEventListener('change', (e) => {
+      const idx = parseInt((e.target as HTMLInputElement).value, 10);
+      if (isNaN(idx)) return;
+      if (endIdleTimer) clearTimeout(endIdleTimer);
+      if (onBacktestEndDateIndex) onBacktestEndDateIndex(idx, false);
     });
   }
 }
