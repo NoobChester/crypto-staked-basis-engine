@@ -118,6 +118,9 @@ describe('Quantitative Backtest Engine: Unified vs Isolated Margin Dynamics', ()
     // Benchmarks comparison
     expect(result.tbillBenchmarkReturnPct).toBeGreaterThan(0);
     expect(result.spotBenchmarkReturnPct).toBeGreaterThan(0);
+    expect(result.sp500BenchmarkReturnPct).toBeGreaterThan(0);
+    expect(result.dailyTrajectory[0].sp500BenchmarkEquity).toBe(10000);
+    expect(result.dailyTrajectory[result.dailyTrajectory.length - 1].sp500BenchmarkEquity).toBeGreaterThan(10000);
   });
 
   it('demonstrates Isolated Margin breaches liquidation during 2021 parabolic rally (+100% price move)', () => {
@@ -323,35 +326,42 @@ describe('Backtest Chart Toggleable Plots & Start Date Slider Horizon', () => {
     backtestState.visiblePlots.strategy = true;
     backtestState.visiblePlots.spot = true;
     backtestState.visiblePlots.tbill = true;
+    backtestState.visiblePlots.sp500 = true;
 
     // Toggle spot off
     toggleBacktestPlot('spot');
     expect(backtestState.visiblePlots.spot).toBe(false);
     expect(backtestState.visiblePlots.strategy).toBe(true);
     expect(backtestState.visiblePlots.tbill).toBe(true);
+    expect(backtestState.visiblePlots.sp500).toBe(true);
 
     // Toggle tbill off
     toggleBacktestPlot('tbill');
     expect(backtestState.visiblePlots.tbill).toBe(false);
+
+    // Toggle sp500 off
+    toggleBacktestPlot('sp500');
+    expect(backtestState.visiblePlots.sp500).toBe(false);
     expect(backtestState.visiblePlots.strategy).toBe(true);
 
     // Attempting to toggle strategy off should be blocked (only 1 plot left active)
     toggleBacktestPlot('strategy');
     expect(backtestState.visiblePlots.strategy).toBe(true); // Must remain true!
 
-    // Toggle spot back on
-    toggleBacktestPlot('spot');
-    expect(backtestState.visiblePlots.spot).toBe(true);
+    // Toggle sp500 back on
+    toggleBacktestPlot('sp500');
+    expect(backtestState.visiblePlots.sp500).toBe(true);
 
-    // Now strategy can be toggled off because spot is active
+    // Now strategy can be toggled off because sp500 is active
     toggleBacktestPlot('strategy');
     expect(backtestState.visiblePlots.strategy).toBe(false);
-    expect(backtestState.visiblePlots.spot).toBe(true);
+    expect(backtestState.visiblePlots.sp500).toBe(true);
 
     // Clean up
     backtestState.visiblePlots.strategy = true;
     backtestState.visiblePlots.spot = true;
     backtestState.visiblePlots.tbill = true;
+    backtestState.visiblePlots.sp500 = true;
   });
 
   it('adjusts start date horizon dynamically via slider index', () => {
@@ -406,7 +416,8 @@ describe('Backtest Chart Toggleable Plots & Start Date Slider Horizon', () => {
     const visiblePlots: VisiblePlots = {
       strategy: true,
       spot: false, // Spot disabled
-      tbill: true
+      tbill: true,
+      sp500: true
     };
 
     expect(() => drawBacktestChart(mockCanvas, result, 'ETH', visiblePlots)).not.toThrow();
@@ -476,11 +487,11 @@ describe('Asset Disambiguation & Cross-Asset Cache Collision Safeguards', () => 
     expect(backtestState.startDate).toBe('2022-10-01');
     expect(backtestState.mode).toBe('unified');
 
-    // 3. Switch to BTC: must restore start date to 2020-12-01 and set isolated mode
+    // 3. Switch to BTC: must restore start date to 2020-12-01 and retain unified mode by default
     setBacktestAsset('BTC');
     expect(backtestState.asset).toBe('BTC');
     expect(backtestState.startDate).toBe('2020-12-01');
-    expect(backtestState.mode).toBe('isolated');
+    expect(backtestState.mode).toBe('unified');
 
     // 4. Switch back to SOL: must set mode back to unified and clamp to 2022-10-01
     setBacktestAsset('SOL');
@@ -492,5 +503,90 @@ describe('Asset Disambiguation & Cross-Asset Cache Collision Safeguards', () => 
     setBacktestAsset('ETH');
     expect(backtestState.asset).toBe('ETH');
     expect(backtestState.startDate).toBe('2020-12-01');
+    expect(backtestState.mode).toBe('unified');
+  });
+});
+
+describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
+  it('calculates S&P 500 benchmark equity starting at capital C on Day 1 and tracking index level accurately', () => {
+    const series = getHistoricalBacktestSeries('ETH', '2020-12-01', '2021-12-31');
+    const result = runHistoricalBacktest(series, { capital: 10000, mode: 'unified' });
+
+    // Day 1 must match initial capital C exactly
+    expect(result.dailyTrajectory[0].sp500BenchmarkEquity).toBe(10000);
+
+    // Terminal S&P 500 equity and return:
+    // S&P 500 closed at 3,662.45 on 2020-12-01 and 4,766.18 on 2021-12-31 (+30.14%)
+    const expectedReturnPct = Math.round(((4766.18 - 3662.45) / 3662.45) * 10000) / 100;
+    expect(result.sp500BenchmarkReturnPct).toBeCloseTo(expectedReturnPct, 1);
+    expect(result.dailyTrajectory[result.dailyTrajectory.length - 1].sp500BenchmarkEquity).toBeCloseTo(13013.6, 0);
+  });
+
+  it('normalizes S&P 500 benchmark starting equity to initial capital for custom start dates', () => {
+    // 2022 Bear market (2022-01-01 to 2022-12-31): S&P 500 experienced significant drawdown (~ -19%)
+    const series = getHistoricalBacktestSeries('ETH', '2022-01-01', '2022-12-31');
+    const result = runHistoricalBacktest(series, { capital: 25000, mode: 'unified' });
+
+    expect(result.dailyTrajectory[0].sp500BenchmarkEquity).toBe(25000);
+    expect(result.sp500BenchmarkReturnPct).toBeLessThan(0);
+    expect(result.dailyTrajectory[result.dailyTrajectory.length - 1].sp500BenchmarkEquity).toBeLessThan(25000);
+  });
+
+  it('verifies backtest uses unified margin mode by default across all assets', () => {
+    // Default asset ETH -> unified
+    setBacktestAsset('ETH');
+    expect(backtestState.mode).toBe('unified');
+
+    // Switch to SOL -> unified
+    setBacktestAsset('SOL');
+    expect(backtestState.mode).toBe('unified');
+
+    // Switch to BTC -> unified (per institutional backtest default requirement)
+    setBacktestAsset('BTC');
+    expect(backtestState.mode).toBe('unified');
+
+    // Return to ETH -> unified
+    setBacktestAsset('ETH');
+    expect(backtestState.mode).toBe('unified');
+  });
+
+  it('includes S&P 500 column and benchmark return in CSV export', () => {
+    const series = getHistoricalBacktestSeries('ETH', '2024-01-01', '2024-06-30');
+    const result = runHistoricalBacktest(series, { capital: 10000, mode: 'unified' });
+
+    let capturedCsv = '';
+    const originalBlob = (globalThis as any).Blob;
+    const originalUrl = (globalThis as any).URL;
+    const originalDocument = (globalThis as any).document;
+
+    (globalThis as any).Blob = class MockBlob {
+      constructor(parts: any[]) {
+        capturedCsv = parts.join('');
+      }
+    };
+    (globalThis as any).URL = {
+      createObjectURL: vi.fn(() => 'blob:mock-url'),
+      revokeObjectURL: vi.fn()
+    };
+    (globalThis as any).document = {
+      createElement: vi.fn(() => ({
+        setAttribute: vi.fn(),
+        click: vi.fn()
+      })),
+      body: {
+        appendChild: vi.fn(),
+        removeChild: vi.fn()
+      }
+    };
+
+    try {
+      exportBacktestCsv(result);
+      expect(capturedCsv).toContain('SP500_Benchmark_USD');
+      expect(capturedCsv).toContain('S&P 500:');
+    } finally {
+      (globalThis as any).Blob = originalBlob;
+      (globalThis as any).URL = originalUrl;
+      (globalThis as any).document = originalDocument;
+    }
   });
 });

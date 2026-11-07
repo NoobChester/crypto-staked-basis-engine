@@ -291,7 +291,8 @@ export const backtestState: BacktestState = {
   visiblePlots: {
     strategy: true,
     spot: true,
-    tbill: true
+    tbill: true,
+    sp500: true
   }
 };
 
@@ -473,14 +474,18 @@ export function updateBacktest(): void {
     const sign = res.tbillBenchmarkReturnPct >= 0 ? '+' : '';
     UI.backtestLegendTbillReturn.textContent = `${sign}${res.tbillBenchmarkReturnPct.toFixed(1)}%`;
   }
+  if (UI.backtestLegendSp500Return) {
+    const sign = res.sp500BenchmarkReturnPct >= 0 ? '+' : '';
+    UI.backtestLegendSp500Return.textContent = `${sign}${res.sp500BenchmarkReturnPct.toFixed(1)}%`;
+  }
   if (UI.backtestLegendSpotAsset) {
     UI.backtestLegendSpotAsset.textContent = backtestState.asset;
   }
   if (UI.backtestChartHeading) {
-    UI.backtestChartHeading.textContent = `Historical Tri-Curve Trajectory · ${backtestState.asset} [${res.startDate} → ${res.endDate}]`;
+    UI.backtestChartHeading.textContent = `Historical Comparative Trajectory · ${backtestState.asset} [${res.startDate} → ${res.endDate}]`;
   }
   if (UI.backtestChartSubheading) {
-    UI.backtestChartSubheading.textContent = `Staked Basis Strategy Equity vs Buy-and-Hold Spot ${backtestState.asset} vs US T-Bills Risk-Free Rate`;
+    UI.backtestChartSubheading.textContent = `Staked Basis Strategy Equity vs Buy-and-Hold Spot ${backtestState.asset} vs S&P 500 Index vs US T-Bills Risk-Free Rate`;
   }
 
   // Synchronize Start Date Slider beneath Tri-Curve Chart
@@ -528,7 +533,7 @@ export function setBacktestAsset(asset: TradedAsset): void {
     backtestState.mode = 'unified';
   } else if (asset === 'BTC') {
     backtestState.collateralRatio = 0.85;
-    backtestState.mode = 'isolated'; // BTC LSTs are custodied in Web3, hedged with USDC cash on CEX
+    backtestState.mode = 'unified';
   } else if (asset === 'SOL') {
     backtestState.collateralRatio = 0.85;
     backtestState.mode = 'unified';
@@ -605,7 +610,7 @@ export function setBacktestStartDateIndex(index: number): void {
   }
 }
 
-export function toggleBacktestPlot(plot: 'strategy' | 'spot' | 'tbill'): void {
+export function toggleBacktestPlot(plot: keyof VisiblePlots): void {
   const current = backtestState.visiblePlots[plot];
   if (current) {
     // Keep at least 1 curve active
@@ -621,7 +626,7 @@ export function toggleBacktestPlot(plot: 'strategy' | 'spot' | 'tbill'): void {
 
 export function updateBacktestPlotTogglesUI(): void {
   if (!UI) return;
-  const { strategy, spot, tbill } = backtestState.visiblePlots;
+  const { strategy, spot, tbill, sp500 } = backtestState.visiblePlots;
 
   // Strategy Button & Badge
   if (UI.btnTogglePlotStrategy && UI.badgeTogglePlotStrategy) {
@@ -646,6 +651,19 @@ export function updateBacktestPlotTogglesUI(): void {
       UI.btnTogglePlotSpot.className = 'px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-slate-500 font-normal flex items-center gap-2 cursor-pointer transition opacity-50 line-through hover:opacity-75';
       UI.badgeTogglePlotSpot.textContent = 'OFF';
       UI.badgeTogglePlotSpot.className = 'text-[10px] px-1 rounded bg-slate-800 text-slate-500 border border-slate-700 font-normal';
+    }
+  }
+
+  // S&P 500 Button & Badge
+  if (UI.btnTogglePlotSp500 && UI.badgeTogglePlotSp500) {
+    if (sp500) {
+      UI.btnTogglePlotSp500.className = 'px-2.5 py-1 rounded-lg border border-amber-500/80 bg-amber-950/60 text-amber-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-amber-900/60 shadow-sm';
+      UI.badgeTogglePlotSp500.textContent = 'ON';
+      UI.badgeTogglePlotSp500.className = 'text-[10px] px-1 rounded bg-amber-900/80 text-amber-200 border border-amber-700/60 font-bold';
+    } else {
+      UI.btnTogglePlotSp500.className = 'px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-slate-500 font-normal flex items-center gap-2 cursor-pointer transition opacity-50 line-through hover:opacity-75';
+      UI.badgeTogglePlotSp500.textContent = 'OFF';
+      UI.badgeTogglePlotSp500.className = 'text-[10px] px-1 rounded bg-slate-800 text-slate-500 border border-slate-700 font-normal';
     }
   }
 

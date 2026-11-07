@@ -56,7 +56,7 @@ export interface AppActions {
   setBacktestDates?: (startDate: string, endDate: string) => void;
   exportBacktestCsv?: () => void;
   setBacktestStartDateIndex?: (index: number) => void;
-  toggleBacktestPlot?: (plot: 'strategy' | 'spot' | 'tbill') => void;
+  toggleBacktestPlot?: (plot: 'strategy' | 'spot' | 'tbill' | 'sp500') => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -265,7 +265,7 @@ export function setupEventDelegation(actions: AppActions): void {
         break;
       }
       case 'toggle-backtest-plot': {
-        const plot = target.getAttribute('data-plot') as 'strategy' | 'spot' | 'tbill';
+        const plot = target.getAttribute('data-plot') as 'strategy' | 'spot' | 'tbill' | 'sp500';
         if (plot && actions.toggleBacktestPlot) {
           actions.toggleBacktestPlot(plot);
         }

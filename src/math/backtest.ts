@@ -6,6 +6,7 @@
 
 import type { MarginMode } from '../config/presets.js';
 import type { DailyHistoricalMarketStep } from '../data/historical/ethBeaconSeries.js';
+import { getSp500Price } from '../data/historical/sp500Series.js';
 
 export interface BacktestConfig {
   capital: number;
@@ -29,6 +30,7 @@ export interface BacktestStepResult {
   strategyEquity: number;
   spotBenchmarkEquity: number;
   tbillBenchmarkEquity: number;
+  sp500BenchmarkEquity: number;
   marginRatio: number;
   isLiquidated: boolean;
   cumulativeFunding: number;
@@ -56,6 +58,7 @@ export interface BacktestSummaryResult {
   tLiq: number | null;
   spotBenchmarkReturnPct: number;
   tbillBenchmarkReturnPct: number;
+  sp500BenchmarkReturnPct: number;
   dailyTrajectory: BacktestStepResult[];
 }
 
@@ -119,6 +122,7 @@ export function runHistoricalBacktest(
   }
 
   const P0 = series[0].spotPrice;
+  const sp500P0 = getSp500Price(series[0].date);
   const trajectory: BacktestStepResult[] = [];
   let cumFunding = 0;
   let cumStaking = 0;
@@ -190,6 +194,8 @@ export function runHistoricalBacktest(
     // Benchmarks
     const spotBenchmarkEquity = C * (1 + r);
     const tbillBenchmarkEquity = C * Math.pow(1 + (tbillRate / 100), (day / 365));
+    const sp500Price = getSp500Price(step.date);
+    const sp500BenchmarkEquity = sp500P0 > 0 ? C * (sp500Price / sp500P0) : C;
 
     trajectory.push({
       day,
@@ -203,6 +209,7 @@ export function runHistoricalBacktest(
       strategyEquity: round2(strategyEquity),
       spotBenchmarkEquity: round2(spotBenchmarkEquity),
       tbillBenchmarkEquity: round2(tbillBenchmarkEquity),
+      sp500BenchmarkEquity: round2(sp500BenchmarkEquity),
       marginRatio: round4(marginRatio),
       isLiquidated,
       cumulativeFunding: round2(cumFunding),
@@ -288,6 +295,7 @@ export function runHistoricalBacktest(
 
   const spotBenchmarkReturnPct = round2(((lastStep.spotBenchmarkEquity - C) / C) * 100);
   const tbillBenchmarkReturnPct = round2(((lastStep.tbillBenchmarkEquity - C) / C) * 100);
+  const sp500BenchmarkReturnPct = round2(((lastStep.sp500BenchmarkEquity - C) / C) * 100);
 
   const summaryResult: BacktestSummaryResult = {
     horizonDays,
@@ -310,6 +318,7 @@ export function runHistoricalBacktest(
     tLiq,
     spotBenchmarkReturnPct,
     tbillBenchmarkReturnPct,
+    sp500BenchmarkReturnPct,
     dailyTrajectory: trajectory
   };
 

@@ -11,6 +11,7 @@ export interface VisiblePlots {
   strategy: boolean;
   spot: boolean;
   tbill: boolean;
+  sp500: boolean;
 }
 
 interface ChartDimensions {
@@ -27,7 +28,7 @@ export function drawBacktestChart(
   canvas: HTMLCanvasElement | null,
   result: BacktestSummaryResult | null,
   asset: string = 'ETH',
-  visiblePlots: VisiblePlots = { strategy: true, spot: true, tbill: true }
+  visiblePlots: VisiblePlots = { strategy: true, spot: true, tbill: true, sp500: true }
 ): void {
   if (!canvas || !result || !result.dailyTrajectory || result.dailyTrajectory.length === 0) return;
 
@@ -64,6 +65,7 @@ export function drawBacktestChart(
   const hasStrategy = visiblePlots.strategy;
   const hasSpot = visiblePlots.spot;
   const hasTbill = visiblePlots.tbill;
+  const hasSp500 = visiblePlots.sp500;
 
   for (let i = 0; i < n; i++) {
     const s = steps[i];
@@ -78,6 +80,10 @@ export function drawBacktestChart(
     if (hasTbill) {
       if (s.tbillBenchmarkEquity < minVal) minVal = s.tbillBenchmarkEquity;
       if (s.tbillBenchmarkEquity > maxVal) maxVal = s.tbillBenchmarkEquity;
+    }
+    if (hasSp500) {
+      if (s.sp500BenchmarkEquity < minVal) minVal = s.sp500BenchmarkEquity;
+      if (s.sp500BenchmarkEquity > maxVal) maxVal = s.sp500BenchmarkEquity;
     }
   }
   // Fallback to strategy equity if no curves active or non-finite
@@ -149,6 +155,22 @@ export function drawBacktestChart(
     for (let i = 0; i < n; i++) {
       const x = getX(i);
       const y = getY(steps[i].tbillBenchmarkEquity);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Curve 4: S&P 500 Index Benchmark (Amber Solid Line)
+  if (hasSp500) {
+    ctx.save();
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) {
+      const x = getX(i);
+      const y = getY(steps[i].sp500BenchmarkEquity);
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }
@@ -339,6 +361,10 @@ ${visiblePlots.tbill ? `          <div class="flex items-center justify-between 
             <span>US T-Bill Cash:</span>
             <span>${fmtUSD(step.tbillBenchmarkEquity)}</span>
           </div>` : ''}
+${visiblePlots.sp500 ? `          <div class="flex items-center justify-between gap-3 text-amber-400 font-medium">
+            <span>S&amp;P 500 Index:</span>
+            <span>${fmtUSD(step.sp500BenchmarkEquity)}</span>
+          </div>` : ''}
           <div class="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
             <span>Spot: $${step.spotPrice.toLocaleString()}</span>
             <span>Funding: ${fmtPct(step.fundingAPR)}</span>
@@ -351,7 +377,7 @@ ${visiblePlots.tbill ? `          <div class="flex items-center justify-between 
       `;
 
       // Position tooltip smoothly
-      const tooltipW = 230;
+      const tooltipW = 240;
       let leftPos = mouseX + 15;
       if (leftPos + tooltipW > dims.width) {
         leftPos = mouseX - tooltipW - 15;

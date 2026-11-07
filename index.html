@@ -1680,15 +1680,15 @@
             <div class="flex items-center gap-2">
               <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
               <h3 id="backtest-chart-heading" class="text-xs sm:text-sm font-bold font-mono text-white tracking-tight uppercase">
-                Historical Tri-Curve Trajectory [Dec 2020 – Present]
+                Historical Comparative Trajectory [Dec 2020 – Present]
               </h3>
             </div>
             <p class="text-xs text-slate-400 font-mono mt-0.5">
-              <span id="backtest-chart-subheading">Staked Basis Strategy Equity vs Buy-and-Hold Spot Asset vs US T-Bills Risk-Free Rate</span>
+              <span id="backtest-chart-subheading">Staked Basis Strategy Equity vs Buy-and-Hold Spot Asset vs S&P 500 Index vs US T-Bills Risk-Free Rate</span>
             </p>
           </div>
 
-          <!-- Tri-Curve Chart Legend with Toggleable Plots -->
+          <!-- Comparative Chart Legend with Toggleable Plots -->
           <div class="flex items-center gap-2 text-xs font-mono flex-wrap" role="group" aria-label="Toggle visible curves">
             <button type="button" id="btn-toggle-plot-strategy" data-action="toggle-backtest-plot" data-plot="strategy"
               class="px-2.5 py-1 rounded-lg border border-cyan-500/80 bg-cyan-950/60 text-cyan-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-cyan-900/60 shadow-sm"
@@ -1704,6 +1704,14 @@
               <span class="w-3.5 h-1 bg-purple-500 inline-block rounded shrink-0"></span>
               <span>Buy &amp; Hold Spot <span id="backtest-legend-spot-asset"></span> (<span id="backtest-legend-spot-return">+0%</span>)</span>
               <span class="text-[10px] px-1 rounded bg-purple-900/80 text-purple-200 border border-purple-700/60 font-bold" id="badge-toggle-plot-spot">ON</span>
+            </button>
+
+            <button type="button" id="btn-toggle-plot-sp500" data-action="toggle-backtest-plot" data-plot="sp500"
+              class="px-2.5 py-1 rounded-lg border border-amber-500/80 bg-amber-950/60 text-amber-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-amber-900/60 shadow-sm"
+              title="Click to toggle S&P 500 benchmark curve visibility">
+              <span class="w-3.5 h-1 bg-amber-400 inline-block rounded shrink-0"></span>
+              <span>S&amp;P 500 (<span id="backtest-legend-sp500-return">+0%</span>)</span>
+              <span class="text-[10px] px-1 rounded bg-amber-900/80 text-amber-200 border border-amber-700/60 font-bold" id="badge-toggle-plot-sp500">ON</span>
             </button>
 
             <button type="button" id="btn-toggle-plot-tbill" data-action="toggle-backtest-plot" data-plot="tbill"
