@@ -60,6 +60,8 @@ export function renderBacktestLedger(
       rowClass += ' bg-rose-950/40 text-rose-300 font-bold';
     } else if (step.isLiquidated) {
       rowClass += ' text-rose-400/80 bg-rose-950/10';
+    } else if (step.isResetStep) {
+      rowClass += ' bg-amber-950/25 text-amber-200 border-l-2 border-l-amber-500';
     } else {
       rowClass += ' text-slate-300';
     }
@@ -74,6 +76,8 @@ export function renderBacktestLedger(
       statusPill = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-900 text-rose-200 border border-rose-500 animate-pulse">LIQUIDATED</span>`;
     } else if (step.isLiquidated) {
       statusPill = `<span class="px-1.5 py-0.5 rounded text-[10px] bg-rose-950/80 text-rose-400 border border-rose-800/60">UNHEDGED SPOT</span>`;
+    } else if (step.isResetStep) {
+      statusPill = `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-500/90 shadow" title="Auto Baseline Reset: Paid ${fmtUSD(step.resetFeePaid ?? 0)} fee · Rebalanced into new baseline at $${step.spotPrice.toLocaleString()}">🔄 RESET (${fmtUSD(step.resetFeePaid ?? 0)})</span>`;
     } else if (step.stakingAPY === 0) {
       statusPill = `<span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-900 text-slate-300 border border-slate-700/80 font-medium" title="Pure Cash-and-Carry Basis (100% Funding Contango, 0% Staking Yield)">CASH &amp; CARRY</span>`;
     } else {
@@ -173,6 +177,8 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
     'SP500_Benchmark_USD',
     'Margin_Ratio_Pct',
     'Status',
+    'Is_Reset_Step',
+    'Reset_Fee_Paid_USD',
     'Cumulative_Funding_USD',
     'Cumulative_Staking_USD',
     'Borrow_APR_Pct',
@@ -192,7 +198,9 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
     step.tbillBenchmarkEquity.toFixed(2),
     step.sp500BenchmarkEquity.toFixed(2),
     (step.marginRatio * 100).toFixed(2),
-    `"${step.isLiquidated ? (result.tLiq === step.day ? 'LIQUIDATED_BREACH' : 'POST_LIQUIDATION_UNHEDGED') : 'SOLVENT'}"`,
+    `"${step.isLiquidated ? (result.tLiq === step.day ? 'LIQUIDATED_BREACH' : 'POST_LIQUIDATION_UNHEDGED') : (step.isResetStep ? 'AUTO_RESET_EVENT' : 'SOLVENT')}"`,
+    step.isResetStep ? 1 : 0,
+    (step.resetFeePaid ?? 0).toFixed(2),
     step.cumulativeFunding.toFixed(2),
     step.cumulativeStaking.toFixed(2),
     (step.borrowRateAPR ?? 0).toFixed(2),
@@ -204,6 +212,8 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
     `# Horizon: ${result.startDate} to ${result.endDate} (${result.horizonDays} Days)`,
     `# Initial Capital: $${result.initialCapital.toFixed(2)}`,
     `# Active Leverage: ${(result.leverage ?? 1.0).toFixed(1)}x | Total Borrow Interest Paid: $${(result.totalBorrowInterestPaid ?? 0).toFixed(2)}`,
+    `# Auto-Reset Engine: ${result.autoResetEnabled ? `ENABLED (${result.executionMode.toUpperCase()} mode @ ${(result.autoResetThreshold * 100).toFixed(0)}% MMR)` : 'DISABLED'}`,
+    `# Total Resets: ${result.totalResetsCount} | Total Reset Fees Deducted: $${result.totalResetFeesPaid.toFixed(2)}`,
     `# Terminal Strategy Equity: $${result.terminalStrategyEquity.toFixed(2)}`,
     `# Cumulative Net PnL: $${result.netPnL.toFixed(2)} (${result.cumulativeReturnPct.toFixed(2)}%)`,
     `# Annualized Return (CAGR): ${result.cagrPct.toFixed(2)}%`,

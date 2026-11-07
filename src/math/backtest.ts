@@ -8,6 +8,8 @@ import type { MarginMode } from '../config/presets.js';
 import type { DailyHistoricalMarketStep } from '../data/historical/ethBeaconSeries.js';
 import { getSp500Price } from '../data/historical/sp500Series.js';
 
+export type BacktestExecutionMode = 'optimized' | 'retail';
+
 export interface BacktestConfig {
   capital: number;
   mode: MarginMode;
@@ -17,6 +19,9 @@ export interface BacktestConfig {
   tbillRate?: number;
   asset?: string;
   leverage?: number;
+  autoResetEnabled?: boolean;
+  autoResetThreshold?: number; // e.g. 0.80 for 80% MMR
+  executionMode?: BacktestExecutionMode; // 'optimized' (5 bps on net delta) | 'retail' (18 bps on gross turnover)
 }
 
 export interface BacktestStepResult {
@@ -39,6 +44,10 @@ export interface BacktestStepResult {
   borrowRateAPR: number;
   cumulativeBorrowInterest: number;
   borrowDebt: number;
+  isResetStep?: boolean;
+  resetFeePaid?: number;
+  resetBaselinePrice?: number | null;
+  resetVolumeTraded?: number;
 }
 
 export interface BacktestSummaryResult {
@@ -66,6 +75,12 @@ export interface BacktestSummaryResult {
   tbillBenchmarkReturnPct: number;
   sp500BenchmarkReturnPct: number;
   dailyTrajectory: BacktestStepResult[];
+  totalResetsCount: number;
+  totalResetFeesPaid: number;
+  savedFromLiquidation: boolean;
+  autoResetEnabled: boolean;
+  autoResetThreshold: number;
+  executionMode: BacktestExecutionMode;
 }
 
 // High-performance LRU / Memoization simulation cache
@@ -107,11 +122,21 @@ export function runHistoricalBacktest(
   const L = mode === 'unified' ? Math.max(1.0, Math.min(5.0, config.leverage ?? 1.0)) : 1.0;
   const D = mode === 'unified' ? (L - 1) * C : 0;
 
+  const autoResetEnabled = config.autoResetEnabled ?? false;
+  const autoResetThreshold = Math.max(0.50, Math.min(0.99, config.autoResetThreshold ?? 0.80));
+  const executionMode: BacktestExecutionMode = config.executionMode ?? 'optimized';
+
+  // Fee rates:
+  // Optimized: 5 bps (0.0005) on net delta traded volume (post-only maker + CoW Swap batch auction)
+  // Retail: 18 bps (0.0018) on gross turnover (market taker + retail DEX slippage)
+  const OPTIMIZED_FEE_RATE = 0.0005;
+  const RETAIL_FEE_RATE = 0.0018;
+
   // High-performance cache check: sub-millisecond retrieval on repeat configurations
   const p0 = series[0].spotPrice;
   const pN = series[series.length - 1].spotPrice;
   const assetKey = config.asset ?? '';
-  const cacheKey = `${assetKey}|${mode}|${C}|${L}|${V}|${splitSpot}|${mmr}|${tbillRate}|${p0}|${pN}|${series[0].date}|${series[series.length - 1].date}|${series.length}`;
+  const cacheKey = `${assetKey}|${mode}|${C}|${L}|${V}|${splitSpot}|${mmr}|${tbillRate}|${p0}|${pN}|${series[0].date}|${series[series.length - 1].date}|${series.length}|${autoResetEnabled}|${autoResetThreshold}|${executionMode}`;
   const cached = backtestResultCache.get(cacheKey);
   if (cached) {
     return cached;
@@ -142,43 +167,153 @@ export function runHistoricalBacktest(
   let liquidationDepeg = 0;
   let residualSpotEquityAtLiq = 0;
 
+  // State-preserving epoch baseline tracking for auto-reset
+  let currentS0 = S0;
+  let currentM0 = M0;
+  let currentN0 = N0;
+  let currentD = D;
+  let epochBaselinePrice = P0;
+  let cumFundingAtEpochStart = 0;
+  let cumStakingAtEpochStart = 0;
+  let cumBorrowInterestAtEpochStart = 0;
+  let totalResetFeesPaid = 0;
+  let totalResetsCount = 0;
+  let savedFromLiquidation = false;
+
   for (let i = 0; i < series.length; i++) {
     const step = series[i];
     const day = i + 1;
-    const r = (step.spotPrice - P0) / P0;
+    let r_epoch = (step.spotPrice - epochBaselinePrice) / epochBaselinePrice;
+    const r_total = (step.spotPrice - P0) / P0;
     const depeg = Math.max(0, Math.min(1, step.depegPct / 100));
 
-    // Staking accrual on spot collateral
-    const dailyStaking = S0 * (step.stakingAPY / 100) * (1 / 365);
+    // Staking accrual on current spot collateral
+    const dailyStaking = currentS0 * (step.stakingAPY / 100) * (1 / 365);
     cumStaking += dailyStaking;
 
     // Funding accrues only if hedge is solvent
     if (!isLiquidated) {
-      const dailyFunding = N0 * (step.fundingAPR / 100) * (1 / 365);
+      const dailyFunding = currentN0 * (step.fundingAPR / 100) * (1 / 365);
       cumFunding += dailyFunding;
     }
 
     // Borrow interest on USD margin loan debt (stops once debt is settled upon liquidation)
     const borrowRate = step.borrowAPR ?? 6.5;
     let dailyBorrowInterest = 0;
-    if (D > 0 && !isLiquidated) {
-      dailyBorrowInterest = D * (borrowRate / 100) * (1 / 365);
+    if (currentD > 0 && !isLiquidated) {
+      dailyBorrowInterest = currentD * (borrowRate / 100) * (1 / 365);
       cumBorrowInterest += dailyBorrowInterest;
     }
 
-    // Spot position valuation including depeg discount
-    const spotVal = S0 * (1 + r) * (1 - depeg);
+    // Spot position valuation including depeg discount for current epoch
+    let spotVal = currentS0 * (1 + r_epoch) * (1 - depeg);
 
     // Maintenance margin and margin equity
     let maintenanceMargin: number;
     let marginEquity: number;
 
     if (mode === 'unified') {
-      maintenanceMargin = N0 * (1 + r) * mmr;
-      marginEquity = spotVal * V - D - N0 * r;
+      maintenanceMargin = currentN0 * (1 + r_epoch) * mmr;
+      marginEquity = spotVal * V - currentD - currentN0 * r_epoch;
     } else {
-      maintenanceMargin = N0 * (1 + r) * mmr;
-      marginEquity = M0 - N0 * r;
+      maintenanceMargin = currentN0 * (1 + r_epoch) * mmr;
+      marginEquity = currentM0 - currentN0 * r_epoch;
+    }
+
+    let marginRatio = marginEquity > 0 ? (maintenanceMargin / marginEquity) : 1.0;
+
+    let isResetStep = false;
+    let resetFeePaid = 0;
+    let resetBaselinePrice: number | null = null;
+    let resetVolumeTraded = 0;
+
+    // Automatic Baseline Reset check: triggers if margin ratio breaches threshold
+    if (autoResetEnabled && !isLiquidated) {
+      if (marginRatio >= autoResetThreshold || marginEquity <= maintenanceMargin) {
+        const epochYield = (cumFunding - cumFundingAtEpochStart) + (cumStaking - cumStakingAtEpochStart) - (cumBorrowInterest - cumBorrowInterestAtEpochStart);
+        let equityBeforeReset: number;
+        if (mode === 'unified') {
+          const perpPnL = -currentN0 * r_epoch;
+          equityBeforeReset = (spotVal - currentD) + perpPnL + epochYield;
+        } else {
+          const perpMarginVal = Math.max(0, currentM0 - currentN0 * r_epoch);
+          equityBeforeReset = spotVal + perpMarginVal + epochYield;
+        }
+
+        if (equityBeforeReset > 0) {
+          let fee = 0;
+          let volume = 0;
+          const oldSpotNotional = currentS0 * (1 + r_epoch);
+          const oldPerpNotional = currentN0 * (1 + r_epoch);
+
+          if (mode === 'unified') {
+            const newNotional = equityBeforeReset * L;
+            if (executionMode === 'optimized') {
+              // Optimized: 5 bps on net delta volume (trimmed spot + new perp delta)
+              const netSpotTrim = Math.max(0, oldSpotNotional - newNotional);
+              const netPerpTrim = Math.max(0, oldPerpNotional - newNotional);
+              volume = netSpotTrim + netPerpTrim;
+              fee = volume * OPTIMIZED_FEE_RATE;
+            } else {
+              // Retail: 18 bps on full gross turnover (close all + open all)
+              volume = (oldSpotNotional + oldPerpNotional) + (newNotional * 2);
+              fee = (volume / 2) * RETAIL_FEE_RATE;
+            }
+          } else {
+            const sFrac = splitSpot / 100;
+            const newSpotNotional = equityBeforeReset * sFrac;
+            const newPerpNotional = newSpotNotional;
+            if (executionMode === 'optimized') {
+              const netSpotTrim = Math.max(0, oldSpotNotional - newSpotNotional);
+              const netPerpTrim = Math.max(0, oldPerpNotional - newPerpNotional);
+              volume = netSpotTrim + netPerpTrim;
+              fee = volume * OPTIMIZED_FEE_RATE;
+            } else {
+              volume = (oldSpotNotional + oldPerpNotional) + (newSpotNotional + newPerpNotional);
+              fee = (volume / 2) * RETAIL_FEE_RATE;
+            }
+          }
+
+          fee = round2(fee);
+          totalResetFeesPaid += fee;
+          totalResetsCount++;
+          savedFromLiquidation = true;
+          isResetStep = true;
+          resetFeePaid = fee;
+          resetBaselinePrice = step.spotPrice;
+          resetVolumeTraded = round2(volume);
+
+          // Rebalance & redeploy 100% of post-fee equity into new baseline
+          const newEquity = Math.max(1, equityBeforeReset - fee);
+          cumFundingAtEpochStart = cumFunding;
+          cumStakingAtEpochStart = cumStaking;
+          cumBorrowInterestAtEpochStart = cumBorrowInterest;
+          epochBaselinePrice = step.spotPrice;
+          r_epoch = 0;
+
+          if (mode === 'unified') {
+            currentS0 = newEquity * L;
+            currentM0 = newEquity;
+            currentN0 = newEquity * L;
+            currentD = (L - 1) * newEquity;
+
+            spotVal = currentS0 * (1 - depeg);
+            maintenanceMargin = currentN0 * mmr;
+            marginEquity = spotVal * V - currentD;
+            marginRatio = marginEquity > 0 ? (maintenanceMargin / marginEquity) : 0;
+          } else {
+            const sFrac = splitSpot / 100;
+            currentS0 = newEquity * sFrac;
+            currentM0 = newEquity * (1 - sFrac);
+            currentN0 = currentS0;
+
+            spotVal = currentS0 * (1 - depeg);
+            maintenanceMargin = currentN0 * mmr;
+            marginEquity = currentM0;
+            marginRatio = marginEquity > 0 ? (maintenanceMargin / marginEquity) : 0;
+          }
+        }
+      }
     }
 
     // Solvency breach check
@@ -190,15 +325,14 @@ export function runHistoricalBacktest(
         liquidationPrice = step.spotPrice;
         liquidationDepeg = depeg;
         if (mode === 'unified') {
-          // In unified mode, the exchange sells spot collateral to settle short perp loss (-N0 * r) and repay USD debt D
-          residualSpotEquityAtLiq = Math.max(0, spotVal - (N0 * r + D));
+          // In unified mode, the exchange sells spot collateral to settle short perp loss and repay USD debt D
+          residualSpotEquityAtLiq = Math.max(0, spotVal - (currentN0 * r_epoch + currentD));
         }
       }
     }
 
     // Mark-to-market Strategy Equity
     let strategyEquity: number;
-    let marginRatio: number;
 
     if (isLiquidated) {
       if (mode === 'unified') {
@@ -214,18 +348,19 @@ export function runHistoricalBacktest(
       }
       marginRatio = 1.0;
     } else {
+      const epochYield = (cumFunding - cumFundingAtEpochStart) + (cumStaking - cumStakingAtEpochStart) - (cumBorrowInterest - cumBorrowInterestAtEpochStart);
       if (mode === 'unified') {
-        const perpPnL = -N0 * r;
-        strategyEquity = (spotVal - D) + perpPnL + cumFunding + cumStaking - cumBorrowInterest;
+        const perpPnL = -currentN0 * r_epoch;
+        strategyEquity = (spotVal - currentD) + perpPnL + epochYield;
       } else {
-        const perpMarginVal = Math.max(0, M0 - N0 * r);
-        strategyEquity = spotVal + perpMarginVal + cumFunding + cumStaking;
+        const perpMarginVal = Math.max(0, currentM0 - currentN0 * r_epoch);
+        strategyEquity = spotVal + perpMarginVal + epochYield;
       }
       marginRatio = marginEquity > 0 ? (maintenanceMargin / marginEquity) : 1.0;
     }
 
     // Benchmarks
-    const spotBenchmarkEquity = C * (1 + r);
+    const spotBenchmarkEquity = C * (1 + r_total);
     const tbillBenchmarkEquity = C * Math.pow(1 + (tbillRate / 100), (day / 365));
     const sp500Price = getSp500Price(step.date);
     const sp500BenchmarkEquity = sp500P0 > 0 ? C * (sp500Price / sp500P0) : C;
@@ -235,7 +370,7 @@ export function runHistoricalBacktest(
       date: step.date,
       timestamp: step.timestamp,
       spotPrice: step.spotPrice,
-      priceReturnPct: round2(r * 100),
+      priceReturnPct: round2(r_total * 100),
       fundingAPR: step.fundingAPR,
       stakingAPY: step.stakingAPY,
       depegPct: step.depegPct,
@@ -249,7 +384,11 @@ export function runHistoricalBacktest(
       cumulativeStaking: round2(cumStaking),
       borrowRateAPR: borrowRate,
       cumulativeBorrowInterest: round2(cumBorrowInterest),
-      borrowDebt: D
+      borrowDebt: currentD,
+      isResetStep,
+      resetFeePaid,
+      resetBaselinePrice,
+      resetVolumeTraded
     });
   }
 
@@ -357,7 +496,13 @@ export function runHistoricalBacktest(
     spotBenchmarkReturnPct,
     tbillBenchmarkReturnPct,
     sp500BenchmarkReturnPct,
-    dailyTrajectory: trajectory
+    dailyTrajectory: trajectory,
+    totalResetsCount,
+    totalResetFeesPaid: round2(totalResetFeesPaid),
+    savedFromLiquidation,
+    autoResetEnabled,
+    autoResetThreshold,
+    executionMode
   };
 
   // Manage cache capacity & store

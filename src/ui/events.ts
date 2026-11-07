@@ -62,6 +62,10 @@ export interface AppActions {
   toggleBorrowAuto?: () => void;
   setBorrowAPR?: (apr: number) => void;
   setBacktestLeverage?: (leverage: number) => void;
+  toggleBacktestAutoReset?: () => void;
+  setBacktestExecutionMode?: (mode: 'optimized' | 'retail') => void;
+  setBacktestResetThreshold?: (threshold: number) => void;
+  resetBacktestThresholdDefault?: () => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -290,6 +294,19 @@ export function setupEventDelegation(actions: AppActions): void {
         if (actions.setBacktestLeverage) actions.setBacktestLeverage(lev);
         break;
       }
+      case 'toggle-backtest-autoreset': {
+        if (actions.toggleBacktestAutoReset) actions.toggleBacktestAutoReset();
+        break;
+      }
+      case 'set-backtest-exec-mode': {
+        const mode = target.getAttribute('data-mode') as 'optimized' | 'retail';
+        if (mode && actions.setBacktestExecutionMode) actions.setBacktestExecutionMode(mode);
+        break;
+      }
+      case 'reset-backtest-threshold-default': {
+        if (actions.resetBacktestThresholdDefault) actions.resetBacktestThresholdDefault();
+        break;
+      }
     }
   });
 }
@@ -305,7 +322,8 @@ export function bindSliderListeners(
   onBacktestEndDateIndex?: (index: number, isDragging?: boolean) => void,
   onBacktestLeverage?: (leverage: number) => void,
   onBorrowAPR?: (apr: number) => void,
-  onLeverage?: (leverage: number) => void
+  onLeverage?: (leverage: number) => void,
+  onBacktestResetThreshold?: (threshold: number) => void
 ): void {
   if (UI.inputPriceMove) {
     UI.inputPriceMove.addEventListener('input', (e) => {
@@ -517,6 +535,16 @@ export function bindSliderListeners(
   if (UI.backtestInputLeverage) {
     UI.backtestInputLeverage.addEventListener('input', (e) => {
       handleBacktestLev(parseFloat((e.target as HTMLInputElement).value));
+    });
+  }
+
+  // Backtest Auto-Reset Threshold Slider
+  if (UI.backtestSliderResetThreshold) {
+    UI.backtestSliderResetThreshold.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      if (!isNaN(val) && onBacktestResetThreshold) {
+        onBacktestResetThreshold(val / 100);
+      }
     });
   }
 }

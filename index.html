@@ -1580,6 +1580,53 @@
             Debt: $0 | Historical Borrow Drag: $0.00
           </span>
         </div>
+
+        <!-- Backtest Auto Baseline Reset (Rebalance Engine) Strip -->
+        <div class="col-span-1 md:col-span-12 pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400 font-bold flex items-center gap-1">
+              <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              AUTO-RESET:
+            </span>
+            <button type="button" id="backtest-btn-autoreset-toggle" data-action="toggle-backtest-autoreset"
+              class="px-2.5 py-0.5 rounded font-bold transition cursor-pointer bg-slate-800 text-slate-400 hover:text-white border border-slate-700"
+              title="Toggle automatic baseline reset on liquidation threat">
+              OFF
+            </button>
+          </div>
+
+          <!-- Execution Mode (Optimized vs Retail) -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-500 text-[11px] font-bold">EXECUTION:</span>
+            <div class="flex items-center bg-slate-900 rounded p-0.5 border border-slate-800 text-[11px]">
+              <button type="button" id="backtest-btn-exec-optimized" data-action="set-backtest-exec-mode" data-mode="optimized"
+                class="px-2 py-0.5 rounded font-bold transition bg-emerald-500 text-black shadow cursor-pointer"
+                title="Optimized Execution: 5 bps on net delta volume using post-only maker rebates and CoW Swap batch auctions (MEV-protected)">
+                ⚡ Optimized (5 bps)
+              </button>
+              <button type="button" id="backtest-btn-exec-retail" data-action="set-backtest-exec-mode" data-mode="retail"
+                class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition cursor-pointer"
+                title="Retail Standard: 18 bps on full position turnover using market taker orders and standard DEX slippage">
+                🛒 Retail (18 bps)
+              </button>
+            </div>
+          </div>
+
+          <!-- Threshold Slider (60% to 95%) & Default Reset Button -->
+          <div class="flex items-center gap-2">
+            <span class="text-slate-500 text-[11px] font-bold">TRIGGER MMR:</span>
+            <span id="backtest-val-reset-threshold" class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 font-bold border border-emerald-800 text-[11px]">80%</span>
+            <input type="range" id="backtest-slider-reset-threshold" min="60" max="95" step="1" value="80" class="w-24 sm:w-28 accent-emerald-500" aria-label="Auto-Reset Margin Ratio Threshold">
+            <button type="button" id="btn-backtest-reset-threshold-default" data-action="reset-backtest-threshold-default"
+              class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white border border-slate-700 text-[10px] cursor-pointer" title="Reset threshold to 80% default">
+              ↺ 80%
+            </button>
+          </div>
+
+          <span id="backtest-autoreset-note" class="text-[11px] text-slate-400 truncate max-w-xs sm:max-w-none">
+            Resets: 0 | Total Fees: $0.00
+          </span>
+        </div>
       </div>
 
       <!-- Bitcoin Historical Dual-Era Regime Banner (Dynamic: Shown when Asset === 'BTC') -->
@@ -1774,6 +1821,7 @@
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span> SOLVENT
           </div>
           <span id="backtest-kpi-solvency-details" class="text-[10px] font-mono text-slate-400 block truncate">Zero Breaches</span>
+          <span id="backtest-kpi-resets-summary" class="text-[10px] font-mono text-slate-500 block truncate">Auto-Reset: Inactive</span>
         </div>
       </div>
 

@@ -66,7 +66,8 @@ import {
 import type { VisiblePlots } from './ui/renderers/backtestChartRenderer.js';
 import {
   runHistoricalBacktest,
-  type BacktestSummaryResult
+  type BacktestSummaryResult,
+  type BacktestExecutionMode
 } from './math/backtest.js';
 import {
   drawBacktestChart,
@@ -279,6 +280,9 @@ export interface BacktestState {
   currentPage: number;
   pageSize: number;
   visiblePlots: VisiblePlots;
+  autoResetEnabled: boolean;
+  autoResetThreshold: number;
+  executionMode: BacktestExecutionMode;
 }
 
 export const backtestState: BacktestState = {
@@ -298,7 +302,10 @@ export const backtestState: BacktestState = {
     spot: true,
     tbill: true,
     sp500: true
-  }
+  },
+  autoResetEnabled: false,
+  autoResetThreshold: 0.80,
+  executionMode: 'optimized'
 };
 
 let currentBacktestResult: BacktestSummaryResult | null = null;
@@ -338,7 +345,10 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
     splitSpot: backtestState.splitSpot,
     mmr: 0.005,
     tbillRate: 4.35,
-    asset: backtestState.asset
+    asset: backtestState.asset,
+    autoResetEnabled: backtestState.autoResetEnabled,
+    autoResetThreshold: backtestState.autoResetThreshold,
+    executionMode: backtestState.executionMode
   });
 
   const res = currentBacktestResult;
@@ -406,6 +416,9 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
     if (res.isLiquidated && res.tLiq) {
       UI.backtestKpiSolvencyStatus.textContent = `LIQUIDATED (Day ${res.tLiq})`;
       UI.backtestKpiSolvencyStatus.className = 'text-base sm:text-lg font-bold font-mono text-rose-400';
+    } else if (res.savedFromLiquidation) {
+      UI.backtestKpiSolvencyStatus.textContent = `✓ SOLVENT (${res.totalResetsCount} Resets)`;
+      UI.backtestKpiSolvencyStatus.className = 'text-base sm:text-lg font-bold font-mono text-emerald-400';
     } else {
       UI.backtestKpiSolvencyStatus.textContent = '100% SOLVENT';
       UI.backtestKpiSolvencyStatus.className = 'text-base sm:text-lg font-bold font-mono text-emerald-400';
@@ -414,8 +427,19 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
   if (UI.backtestKpiSolvencyDetails) {
     if (res.isLiquidated && res.tLiq) {
       UI.backtestKpiSolvencyDetails.textContent = `Margin breached on ${res.liquidationDate ?? ''}`;
+    } else if (res.savedFromLiquidation) {
+      UI.backtestKpiSolvencyDetails.textContent = `Auto-reset avoided liquidation · Fees: -${fmtUSD(res.totalResetFeesPaid)}`;
     } else {
       UI.backtestKpiSolvencyDetails.textContent = `Zero liquidation across ${res.horizonDays} days`;
+    }
+  }
+  if (UI.backtestKpiResetsSummary) {
+    if (res.autoResetEnabled) {
+      UI.backtestKpiResetsSummary.textContent = `Auto-Resets: ${res.totalResetsCount} (-${fmtUSD(res.totalResetFeesPaid)})`;
+      UI.backtestKpiResetsSummary.className = `text-[10px] font-mono ${res.totalResetsCount > 0 ? 'text-amber-400 font-bold' : 'text-slate-500'} block truncate`;
+    } else {
+      UI.backtestKpiResetsSummary.textContent = 'Auto-Reset: Inactive';
+      UI.backtestKpiResetsSummary.className = 'text-[10px] font-mono text-slate-500 block truncate';
     }
   }
 
@@ -489,6 +513,42 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
       btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition';
     }
   });
+
+  // Auto Baseline Reset Controls & Indicator
+  if (UI.backtestBtnAutoResetToggle) {
+    if (backtestState.autoResetEnabled) {
+      UI.backtestBtnAutoResetToggle.textContent = 'ON';
+      UI.backtestBtnAutoResetToggle.className = 'px-2.5 py-0.5 rounded font-bold transition cursor-pointer bg-emerald-500 text-black shadow';
+    } else {
+      UI.backtestBtnAutoResetToggle.textContent = 'OFF';
+      UI.backtestBtnAutoResetToggle.className = 'px-2.5 py-0.5 rounded font-bold transition cursor-pointer bg-slate-800 text-slate-400 hover:text-white border border-slate-700';
+    }
+  }
+
+  if (UI.backtestBtnExecOptimized && UI.backtestBtnExecRetail) {
+    if (backtestState.executionMode === 'optimized') {
+      UI.backtestBtnExecOptimized.className = 'px-2 py-0.5 rounded font-bold transition bg-emerald-500 text-black shadow cursor-pointer';
+      UI.backtestBtnExecRetail.className = 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition cursor-pointer';
+    } else {
+      UI.backtestBtnExecRetail.className = 'px-2 py-0.5 rounded font-bold transition bg-amber-500 text-black shadow cursor-pointer';
+      UI.backtestBtnExecOptimized.className = 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition cursor-pointer';
+    }
+  }
+
+  if (UI.backtestValResetThreshold) {
+    UI.backtestValResetThreshold.textContent = `${(backtestState.autoResetThreshold * 100).toFixed(0)}%`;
+  }
+  if (UI.backtestSliderResetThreshold && document.activeElement !== UI.backtestSliderResetThreshold) {
+    UI.backtestSliderResetThreshold.value = (backtestState.autoResetThreshold * 100).toFixed(0);
+  }
+
+  if (UI.backtestAutoResetNote) {
+    if (res.autoResetEnabled) {
+      UI.backtestAutoResetNote.textContent = `Resets: ${res.totalResetsCount} | Total Fees: -${fmtUSD(res.totalResetFeesPaid)}`;
+    } else {
+      UI.backtestAutoResetNote.textContent = 'Resets: Inactive | Toggle ON to prevent rally liquidation';
+    }
+  }
 
   // Render Canvas Chart
   drawBacktestChart(UI.backtestCanvas, res, backtestState.asset, backtestState.visiblePlots);
@@ -1587,6 +1647,34 @@ export function setBacktestLeverage(lev: number): void {
   updateBacktest();
 }
 
+export function toggleBacktestAutoReset(): void {
+  backtestState.autoResetEnabled = !backtestState.autoResetEnabled;
+  updateBacktest();
+}
+
+export function setBacktestAutoReset(enabled: boolean): void {
+  backtestState.autoResetEnabled = enabled;
+  updateBacktest();
+}
+
+export function setBacktestExecutionMode(mode: BacktestExecutionMode): void {
+  backtestState.executionMode = mode;
+  updateBacktest();
+}
+
+export function setBacktestResetThreshold(threshold: number): void {
+  backtestState.autoResetThreshold = Math.max(0.50, Math.min(0.99, threshold));
+  updateBacktest();
+}
+
+export function resetBacktestThresholdDefault(): void {
+  backtestState.autoResetThreshold = 0.80;
+  if (UI?.backtestSliderResetThreshold) {
+    UI.backtestSliderResetThreshold.value = '80';
+  }
+  updateBacktest();
+}
+
 export function applyCrisisScenario(key: CrisisScenarioKey): void {
   const scenario = CRISIS_SCENARIOS[key];
   if (!scenario) return;
@@ -1911,7 +1999,11 @@ function init() {
     setLeverage,
     toggleBorrowAuto,
     setBorrowAPR,
-    setBacktestLeverage
+    setBacktestLeverage,
+    toggleBacktestAutoReset,
+    setBacktestExecutionMode,
+    setBacktestResetThreshold,
+    resetBacktestThresholdDefault
   });
   bindSliderListeners(
     UI,
@@ -1924,7 +2016,8 @@ function init() {
     (idx, isDragging) => setBacktestEndDateIndex(idx, isDragging),
     (lev) => setBacktestLeverage(lev),
     (apr) => setBorrowAPR(apr),
-    (lev) => setLeverage(lev)
+    (lev) => setLeverage(lev),
+    (threshold) => setBacktestResetThreshold(threshold)
   );
   initViewRouter((view) => {
     if (view === 'stress-lab') {

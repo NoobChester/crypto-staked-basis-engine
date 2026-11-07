@@ -226,6 +226,12 @@ describe('Leveraged Basis Trade (Carry Spread) UI & Systems Suite', () => {
       sp500BenchmarkReturnPct: 0.5,
       totalHarvestedFunding: 120,
       totalHarvestedStaking: 40.68,
+      totalResetsCount: 0,
+      totalResetFeesPaid: 0,
+      savedFromLiquidation: false,
+      autoResetEnabled: false,
+      autoResetThreshold: 0.80,
+      executionMode: 'optimized',
       dailyTrajectory: [
         {
           day: 1,

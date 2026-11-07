@@ -326,6 +326,14 @@ export interface UIElements {
   backtestBtnLev15: HTMLElement | null;
   backtestBtnLev20: HTMLElement | null;
   backtestBtnLev30: HTMLElement | null;
+  backtestBtnAutoResetToggle: HTMLElement | null;
+  backtestBtnExecOptimized: HTMLElement | null;
+  backtestBtnExecRetail: HTMLElement | null;
+  backtestSliderResetThreshold: HTMLInputElement | null;
+  backtestValResetThreshold: HTMLElement | null;
+  btnBacktestResetThresholdDefault: HTMLElement | null;
+  backtestAutoResetNote: HTMLElement | null;
+  backtestKpiResetsSummary: HTMLElement | null;
   backtestRangeBadge: HTMLElement | null;
   backtestChartHeading: HTMLElement | null;
   backtestChartSubheading: HTMLElement | null;
@@ -706,6 +714,14 @@ export function getUIElements(): UIElements {
     backtestBtnLev15: document.getElementById('backtest-btn-lev-15'),
     backtestBtnLev20: document.getElementById('backtest-btn-lev-20'),
     backtestBtnLev30: document.getElementById('backtest-btn-lev-30'),
+    backtestBtnAutoResetToggle: document.getElementById('backtest-btn-autoreset-toggle'),
+    backtestBtnExecOptimized: document.getElementById('backtest-btn-exec-optimized'),
+    backtestBtnExecRetail: document.getElementById('backtest-btn-exec-retail'),
+    backtestSliderResetThreshold: document.getElementById('backtest-slider-reset-threshold') as HTMLInputElement | null,
+    backtestValResetThreshold: document.getElementById('backtest-val-reset-threshold'),
+    btnBacktestResetThresholdDefault: document.getElementById('btn-backtest-reset-threshold-default'),
+    backtestAutoResetNote: document.getElementById('backtest-autoreset-note'),
+    backtestKpiResetsSummary: document.getElementById('backtest-kpi-resets-summary'),
     backtestRangeBadge: document.getElementById('backtest-range-badge'),
     backtestChartHeading: document.getElementById('backtest-chart-heading'),
     backtestChartSubheading: document.getElementById('backtest-chart-subheading'),

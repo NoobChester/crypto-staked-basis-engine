@@ -108,6 +108,10 @@ ${activePlots.sp500 ? `          <div class="flex items-center justify-between g
             <span>S&amp;P 500 Index:</span>
             <span>${fmtUSD(step.sp500BenchmarkEquity)}</span>
           </div>` : ''}
+${step.isResetStep ? `          <div class="py-1 px-1.5 my-1 rounded bg-amber-950/90 border border-amber-500/80 text-[10px] text-amber-300 font-bold flex items-center justify-between shadow">
+            <span>🔄 Auto-Reset Baseline</span>
+            <span>Fee: -${fmtUSD(step.resetFeePaid || 0)}</span>
+          </div>` : ''}
 ${step.borrowRateAPR && activeChartState?.result?.leverage && activeChartState.result.leverage > 1.0 ? `          <div class="flex items-center justify-between gap-3 text-purple-400 font-medium">
             <span>USD Borrow APR:</span>
             <span>${fmtPct(step.borrowRateAPR)} (-${fmtUSD(step.cumulativeBorrowInterest || 0)})</span>
@@ -445,6 +449,48 @@ export function drawBacktestChart(
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(tag, bbnX, padding.top + 13);
+    ctx.restore();
+  }
+
+  // Auto-Reset Marker Pins on Strategy Curve
+  if (hasStrategy && result.totalResetsCount > 0) {
+    ctx.save();
+    for (let i = 0; i < n; i++) {
+      const s = steps[i];
+      if (s.isResetStep) {
+        const x = getX(i);
+        const y = getY(s.strategyEquity);
+
+        // Vertical dashed amber accent line
+        ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+        ctx.setLineDash([2, 2]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x, padding.top);
+        ctx.lineTo(x, height - padding.bottom);
+        ctx.stroke();
+
+        // Outer glowing amber ring
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.25)';
+        ctx.beginPath();
+        ctx.arc(x, y, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Middle ring
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Center white pip
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
     ctx.restore();
   }
 
