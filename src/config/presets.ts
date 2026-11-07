@@ -9,7 +9,7 @@ export type TradedAsset = 'ETH' | 'BTC' | 'SOL';
 export type MarginMode = 'unified' | 'isolated';
 export type SolYieldType = 'nominal' | 'real';
 export type BtcVariant = 'native' | 'lbtc' | 'solvbtc';
-export type CollateralPresetKey = 'wsteth_90' | 'fbtc_90' | 'jitosol_85' | 'sanctum_inf_85' | 'inverse_100' | 'btc_eth_95' | 'sol_lrt_85';
+export type CollateralPresetKey = 'wsteth_90' | 'wbeth_95' | 'fbtc_90' | 'jitosol_85' | 'sanctum_inf_85' | 'inverse_100' | 'btc_eth_95' | 'sol_lrt_85';
 
 export interface CollateralPreset {
   collateralRatio: number;
@@ -73,6 +73,13 @@ export const COLLATERAL_PRESETS: Record<CollateralPresetKey, CollateralPreset> =
     defaultAsset: 'ETH',
     badgeLabel: '#1 Lido wstETH (90%)',
     explainer: 'Rank #1 Institutional Gold Standard: Lido wstETH with 10% haircut (+852% runway) and multi-billion secondary liquidity.'
+  },
+  wbeth_95: {
+    collateralRatio: 0.95,
+    stakingAPY: 3.1,
+    defaultAsset: 'ETH',
+    badgeLabel: '#2 Binance WBETH (95%)',
+    explainer: 'Binance Portfolio Margin Native Staked ETH: 95% collateral ratio (5% haircut, +1,718% runway at 1x) with 0-fee promotions and deep Binance CEX liquidity.'
   },
   fbtc_90: {
     collateralRatio: 0.90,
@@ -145,6 +152,19 @@ export const COLLATERAL_INTELLIGENCE: Record<CollateralPresetKey, CollateralInte
     beatsAlternative: 'Ether.fi (weETH) gives ~+0.8% more yield, but Bybit hits you with a 20% haircut (reducing runway from +852% to +395%) and exposes funds to EigenLayer AVS slashing bugs.',
     alternativeName: 'Ether.fi (weETH)',
     verdict: 'For a 7-figure delta-neutral carry trade, wstETH is the cleanest, most sleep-at-night asset in crypto.'
+  },
+  wbeth_95: {
+    rank: 2,
+    asset: 'Ethereum (ETH)',
+    protocol: 'Binance Staking (WBETH)',
+    marginVenue: 'Unified Margin (0.95) // Binance Portfolio Margin',
+    realApyText: '~3.1% Base PoS + Perp (~13% - 15% Gross)',
+    valuationRatio: 0.95,
+    bufferText: '+1,718.2% Rally Runway (5% Haircut)',
+    whyWorthUsing: 'Unlocks the tightest haircut (5%) on any tier-1 CEX. Maximizes capital efficiency, doubles the 1x liquidation runway to +1,718%, and allows leverage up to 18x.',
+    beatsAlternative: 'Lido wstETH carries a 10% haircut (+852% runway). WBETH only carries a 5% haircut (+1,718% runway) and offers 0-fee promotions on Binance.',
+    alternativeName: 'Lido (wstETH)',
+    verdict: 'The premier choice for high-leverage delta-neutral basis on Binance Portfolio Margin.'
   },
   fbtc_90: {
     rank: 2,
@@ -310,6 +330,18 @@ export function getInstrumentDetails(s: StrategyStateLike): InstrumentDetails {
       marginDesc: 'wstETH Collateral (Bybit UTA / Binance PM, 10% Haircut)',
       note: 'Rank #1 Institutional Gold Standard: wstETH accepted directly as margin collateral (90% valuation).'
     };
+  } else if (preset === 'wbeth_95') {
+    return {
+      pairBadge: 'WBETH / ETH-USDT PERP',
+      spotSymbol: 'WBETH',
+      spotName: 'Binance Wrapped Beacon ETH',
+      spotTag: 'CEX LST',
+      perpSymbol: 'ETH-USDT PERP',
+      perpName: 'Ethereum Linear Perpetual Short',
+      perpTag: 'USDⓈ-M PERP',
+      marginDesc: 'WBETH Collateral (Binance Portfolio Margin, 5% Haircut)',
+      note: 'Binance Native Staked ETH: 95% collateral credit ratio (5% haircut, +1,718% rally runway at 1x).'
+    };
   } else if (preset === 'fbtc_90') {
     return {
       pairBadge: 'FBTC / BTC-USDT PERP',
@@ -407,3 +439,55 @@ export function updatePresetsWithLiveData(data: MarketDataSnapshot): void {
   BTC_LST_VARIANTS.solvbtc.stakingAPY = data.btcLst.solvbtc.stakingAPY;
   BTC_LST_VARIANTS.solvbtc.note = `Babylon Staking Active: SolvBTC.BBN held in Web3 custody (~${data.btcLst.solvbtc.stakingAPY.toFixed(1)}% APY). Hedged with CEX cash margin. (${data.btcLst.solvbtc.source})`;
 }
+
+export interface VenueFeeSchedule {
+  venueName: string;
+  retailRate: number;
+  optimizedRate: number;
+  retailLabel: string;
+  optimizedLabel: string;
+  exchange: 'binance' | 'bybit' | 'hyperliquid';
+}
+
+export const VENUE_FEE_SCHEDULES: Record<string, VenueFeeSchedule> = {
+  wbeth: {
+    venueName: 'Binance Portfolio Margin',
+    retailRate: 0.0014, // 14 bps
+    optimizedRate: 0.0004, // 4 bps
+    retailLabel: '14 bps (Binance VIP0 Taker)',
+    optimizedLabel: '4 bps (Maker Post-Only)',
+    exchange: 'binance'
+  },
+  wsteth: {
+    venueName: 'Bybit Unified Account (UTA)',
+    retailRate: 0.0018, // 18 bps
+    optimizedRate: 0.0005, // 5 bps
+    retailLabel: '18 bps (Bybit VIP0 Taker)',
+    optimizedLabel: '5 bps (Maker Post-Only)',
+    exchange: 'bybit'
+  },
+  fbtc: {
+    venueName: 'Bybit Unified Account (UTA)',
+    retailRate: 0.0018,
+    optimizedRate: 0.0005,
+    retailLabel: '18 bps (Bybit VIP0 Taker)',
+    optimizedLabel: '5 bps (Maker Post-Only)',
+    exchange: 'bybit'
+  },
+  jitosol: {
+    venueName: 'Bybit Unified Account (UTA)',
+    retailRate: 0.0018,
+    optimizedRate: 0.0005,
+    retailLabel: '18 bps (Bybit VIP0 Taker)',
+    optimizedLabel: '5 bps (Maker Post-Only)',
+    exchange: 'bybit'
+  },
+  isolated: {
+    venueName: 'Hyperliquid / Web3 Custody',
+    retailRate: 0.0008, // 8 bps
+    optimizedRate: 0.0002, // 2 bps
+    retailLabel: '8 bps (DEX Taker)',
+    optimizedLabel: '2 bps (DEX Maker)',
+    exchange: 'hyperliquid'
+  }
+};

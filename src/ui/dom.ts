@@ -328,9 +328,26 @@ export interface UIElements {
   backtestBtnLev30: HTMLElement | null;
   backtestBtnLev50: HTMLElement | null;
   backtestBtnLev90: HTMLElement | null;
+  backtestBtnLev150: HTMLElement | null;
+  backtestBtnLev200: HTMLElement | null;
+  backtestLeverageInstaLine: HTMLElement | null;
+  backtestLeverageInstaLabel: HTMLElement | null;
+  backtestCollateralStrip: HTMLElement | null;
+  backtestTokenSelectorGroup: HTMLElement | null;
+  backtestBtnTokenWsteth: HTMLElement | null;
+  backtestBtnTokenWbeth: HTMLElement | null;
+  backtestInstrumentCard: HTMLElement | null;
+  backtestInstrumentBadge: HTMLElement | null;
+  backtestInstrumentVenue: HTMLElement | null;
   backtestBtnAutoResetToggle: HTMLElement | null;
   backtestBtnExecOptimized: HTMLElement | null;
   backtestBtnExecRetail: HTMLElement | null;
+  backtestLblExecOptimized: HTMLElement | null;
+  backtestLblExecRetail: HTMLElement | null;
+  btnOpenExecutionModal: HTMLElement | null;
+  modalExecutionMath: HTMLElement | null;
+  btnCloseExecutionModal: HTMLElement | null;
+  btnCloseExecutionModalFooter: HTMLElement | null;
   backtestSliderResetThreshold: HTMLInputElement | null;
   backtestValResetThreshold: HTMLElement | null;
   btnBacktestResetThresholdDefault: HTMLElement | null;
@@ -723,9 +740,26 @@ export function getUIElements(): UIElements {
     backtestBtnLev30: document.getElementById('backtest-btn-lev-30'),
     backtestBtnLev50: document.getElementById('backtest-btn-lev-50'),
     backtestBtnLev90: document.getElementById('backtest-btn-lev-90'),
+    backtestBtnLev150: document.getElementById('backtest-btn-lev-150'),
+    backtestBtnLev200: document.getElementById('backtest-btn-lev-200'),
+    backtestLeverageInstaLine: document.getElementById('backtest-leverage-insta-line'),
+    backtestLeverageInstaLabel: document.getElementById('backtest-leverage-insta-label'),
+    backtestCollateralStrip: document.getElementById('backtest-collateral-strip'),
+    backtestTokenSelectorGroup: document.getElementById('backtest-token-selector-group'),
+    backtestBtnTokenWsteth: document.getElementById('backtest-btn-token-wsteth'),
+    backtestBtnTokenWbeth: document.getElementById('backtest-btn-token-wbeth'),
+    backtestInstrumentCard: document.getElementById('backtest-instrument-card'),
+    backtestInstrumentBadge: document.getElementById('backtest-instrument-badge'),
+    backtestInstrumentVenue: document.getElementById('backtest-instrument-venue'),
     backtestBtnAutoResetToggle: document.getElementById('backtest-btn-autoreset-toggle'),
     backtestBtnExecOptimized: document.getElementById('backtest-btn-exec-optimized'),
     backtestBtnExecRetail: document.getElementById('backtest-btn-exec-retail'),
+    backtestLblExecOptimized: document.getElementById('backtest-lbl-exec-optimized'),
+    backtestLblExecRetail: document.getElementById('backtest-lbl-exec-retail'),
+    btnOpenExecutionModal: document.getElementById('btn-open-execution-modal'),
+    modalExecutionMath: document.getElementById('modal-execution-math'),
+    btnCloseExecutionModal: document.getElementById('btn-close-execution-modal'),
+    btnCloseExecutionModalFooter: document.getElementById('btn-close-execution-modal-footer'),
     backtestSliderResetThreshold: document.getElementById('backtest-slider-reset-threshold') as HTMLInputElement | null,
     backtestValResetThreshold: document.getElementById('backtest-val-reset-threshold'),
     btnBacktestResetThresholdDefault: document.getElementById('btn-backtest-reset-threshold-default'),

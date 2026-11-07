@@ -12,6 +12,7 @@ import {
   COLLATERAL_PRESETS,
   BTC_LST_VARIANTS,
   updatePresetsWithLiveData,
+  getInstrumentDetails,
   type MarginMode,
   type TradedAsset,
   type BtcVariant,
@@ -269,6 +270,7 @@ export function updateStressLab(): void {
 
 export interface BacktestState {
   asset: TradedAsset;
+  collateralToken: 'wsteth' | 'wbeth' | 'fbtc' | 'jitosol';
   capital: number;
   leverage: number;
   mode: MarginMode;
@@ -287,6 +289,7 @@ export interface BacktestState {
 
 export const backtestState: BacktestState = {
   asset: 'ETH',
+  collateralToken: 'wsteth',
   capital: 10000,
   leverage: 1.0,
   mode: 'unified',
@@ -343,6 +346,7 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
     leverage: backtestState.leverage ?? 1.0,
     mode: backtestState.mode,
     collateralRatio: backtestState.collateralRatio,
+    collateralToken: backtestState.collateralToken,
     splitSpot: backtestState.splitSpot,
     mmr: 0.005,
     tbillRate: 4.35,
@@ -502,8 +506,40 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
     UI.backtestSliderDaysRemaining.textContent = `${res.horizonDays.toLocaleString()} Days Duration`;
   }
 
+  // Collateral Instrument Selector & Details
+  if (UI.backtestCollateralStrip) {
+    if (backtestState.asset === 'ETH') {
+      UI.backtestCollateralStrip.classList.remove('hidden');
+    } else {
+      UI.backtestCollateralStrip.classList.add('hidden');
+    }
+  }
+  if (UI.backtestBtnTokenWsteth && UI.backtestBtnTokenWbeth) {
+    if (backtestState.collateralToken === 'wbeth') {
+      UI.backtestBtnTokenWbeth.className = 'px-2.5 py-1 rounded font-bold transition bg-yellow-950 text-yellow-300 border border-yellow-700 shadow cursor-pointer';
+      UI.backtestBtnTokenWsteth.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
+    } else {
+      UI.backtestBtnTokenWsteth.className = 'px-2.5 py-1 rounded font-bold transition bg-purple-950 text-purple-300 border border-purple-700 shadow cursor-pointer';
+      UI.backtestBtnTokenWbeth.className = 'px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer';
+    }
+  }
+  if (UI.backtestInstrumentBadge && UI.backtestInstrumentVenue) {
+    const presetKey: CollateralPresetKey = backtestState.asset === 'ETH'
+      ? (backtestState.collateralToken === 'wbeth' ? 'wbeth_95' : 'wsteth_90')
+      : (backtestState.asset === 'BTC' ? 'fbtc_90' : 'jitosol_85');
+    const details = getInstrumentDetails({
+      tradedAsset: backtestState.asset,
+      mode: backtestState.mode,
+      activePreset: presetKey
+    });
+    UI.backtestInstrumentBadge.textContent = details.pairBadge;
+    UI.backtestInstrumentVenue.textContent = `${res.venueName} (${(backtestState.collateralRatio * 100).toFixed(0)}% · ${((1 - backtestState.collateralRatio) * 100).toFixed(0)}% Haircut)`;
+  }
+
   // Backtest Leverage Status & Drag
   const bLev = backtestState.leverage ?? 1.0;
+  const instaLiqLev = res.instaLiqLeverage ?? Infinity;
+
   if (UI.backtestValLeverage) {
     UI.backtestValLeverage.textContent = `${bLev.toFixed(1)}x ${bLev > 1.0 ? 'Leveraged' : '(Unlevered)'}`;
   }
@@ -517,25 +553,47 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
   if (UI.backtestInputLeverage && document.activeElement !== UI.backtestInputLeverage) {
     UI.backtestInputLeverage.value = bLev.toFixed(1);
   }
+
+  // Dynamic Instant-Liquidation Vertical Line on Leverage Slider
+  if (UI.backtestLeverageInstaLine) {
+    if (instaLiqLev !== Infinity && instaLiqLev <= 20.0) {
+      const linePct = Math.max(0, Math.min(100, ((instaLiqLev - 1.0) / 19.0) * 100));
+      UI.backtestLeverageInstaLine.style.left = `${linePct.toFixed(1)}%`;
+      UI.backtestLeverageInstaLine.classList.remove('hidden');
+      if (UI.backtestLeverageInstaLabel) {
+        UI.backtestLeverageInstaLabel.textContent = `Insta-Liq: ${instaLiqLev.toFixed(1)}x`;
+      }
+    } else {
+      UI.backtestLeverageInstaLine.classList.add('hidden');
+    }
+  }
+
   if (UI.backtestLeverageNote) {
     const debt = bLev > 1.0 ? (bLev - 1) * backtestState.capital : 0;
     const borrowInterest = res.totalBorrowInterestPaid ?? 0;
-    UI.backtestLeverageNote.innerHTML = `Debt: ${fmtUSD(debt)} | Historical Borrow Drag: -${fmtUSD(borrowInterest)} · <span class="text-amber-400 font-semibold">9.0x Ceiling</span> (wstETH 10% Haircut Limit)`;
+    if (instaLiqLev !== Infinity && bLev >= instaLiqLev) {
+      UI.backtestLeverageNote.innerHTML = `Debt: ${fmtUSD(debt)} | Historical Borrow Drag: -${fmtUSD(borrowInterest)} · <span class="text-rose-400 font-bold">⚠️ INSTA-LIQUIDATION: L ≥ ${instaLiqLev.toFixed(1)}x exhausts collateral credit on Day 1</span>`;
+    } else if (instaLiqLev !== Infinity) {
+      UI.backtestLeverageNote.innerHTML = `Debt: ${fmtUSD(debt)} | Historical Borrow Drag: -${fmtUSD(borrowInterest)} · <span class="text-amber-400 font-semibold">${instaLiqLev.toFixed(1)}x Ceiling</span> (${((1 - backtestState.collateralRatio) * 100).toFixed(0)}% Haircut Limit)`;
+    } else {
+      UI.backtestLeverageNote.innerHTML = `Debt: ${fmtUSD(debt)} | Historical Borrow Drag: -${fmtUSD(borrowInterest)}`;
+    }
   }
   const backtestLevBtns = [
     { btn: UI.backtestBtnLev10, val: 1.0 },
-    { btn: UI.backtestBtnLev15, val: 1.5 },
     { btn: UI.backtestBtnLev20, val: 2.0 },
     { btn: UI.backtestBtnLev30, val: 3.0 },
     { btn: UI.backtestBtnLev50, val: 5.0 },
-    { btn: UI.backtestBtnLev90, val: 9.0 }
+    { btn: UI.backtestBtnLev90, val: 9.0 },
+    { btn: UI.backtestBtnLev150, val: 15.0 },
+    { btn: UI.backtestBtnLev200, val: 20.0 }
   ];
   backtestLevBtns.forEach(({ btn, val }) => {
     if (!btn) return;
     if (Math.abs(bLev - val) < 0.05) {
-      btn.className = 'px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold transition';
+      btn.className = 'px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold transition';
     } else {
-      btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition';
+      btn.className = 'px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition';
     }
   });
 
@@ -558,6 +616,13 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
       UI.backtestBtnExecRetail.className = 'px-2 py-0.5 rounded font-bold transition bg-amber-500 text-black shadow cursor-pointer';
       UI.backtestBtnExecOptimized.className = 'px-2 py-0.5 rounded text-slate-400 hover:text-white transition cursor-pointer';
     }
+  }
+
+  if (UI.backtestLblExecOptimized) {
+    UI.backtestLblExecOptimized.textContent = `⚡ Optimized (${res.optimizedFeeRateBps} bps)`;
+  }
+  if (UI.backtestLblExecRetail) {
+    UI.backtestLblExecRetail.textContent = `🛒 Retail (${res.retailFeeRateBps} bps)`;
   }
 
   if (UI.backtestValResetThreshold) {
@@ -697,12 +762,15 @@ export function setBacktestAsset(asset: TradedAsset): void {
   const prevInception = getAssetInceptionDate(previousAsset);
   backtestState.asset = asset;
   if (asset === 'ETH') {
+    backtestState.collateralToken = 'wsteth';
     backtestState.collateralRatio = 0.90;
     backtestState.mode = 'unified';
   } else if (asset === 'BTC') {
-    backtestState.collateralRatio = 0.85;
+    backtestState.collateralToken = 'fbtc';
+    backtestState.collateralRatio = 0.90;
     backtestState.mode = 'unified';
   } else if (asset === 'SOL') {
+    backtestState.collateralToken = 'jitosol';
     backtestState.collateralRatio = 0.85;
     backtestState.mode = 'unified';
   }
@@ -720,6 +788,17 @@ export function setBacktestAsset(asset: TradedAsset): void {
     } else if (backtestState.startDate < inception) {
       backtestState.startDate = inception;
     }
+  }
+  backtestState.currentPage = 1;
+  updateBacktest();
+}
+
+export function setBacktestToken(token: 'wsteth' | 'wbeth'): void {
+  backtestState.collateralToken = token;
+  if (token === 'wbeth') {
+    backtestState.collateralRatio = 0.95;
+  } else {
+    backtestState.collateralRatio = 0.90;
   }
   backtestState.currentPage = 1;
   updateBacktest();
@@ -1397,6 +1476,7 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
   // Update Preset Cards highlight
   const presetBtns: Record<CollateralPresetKey, HTMLElement | null> = {
     wsteth_90: document.getElementById('btn-preset-wsteth') || document.getElementById('btn-preset-90'),
+    wbeth_95: document.getElementById('btn-preset-wbeth'),
     fbtc_90: document.getElementById('btn-preset-fbtc'),
     jitosol_85: document.getElementById('btn-preset-jitosol') || document.getElementById('btn-preset-85'),
     sanctum_inf_85: document.getElementById('btn-preset-sanctum'),
@@ -1712,10 +1792,10 @@ export function setBorrowAPR(apr: number): void {
 }
 
 export function setBacktestLeverage(lev: number): void {
-  const clamped = Math.max(1.0, Math.min(9.0, isNaN(lev) ? 1.0 : Math.round(lev * 10) / 10));
+  const clamped = Math.max(1.0, Math.min(20.0, isNaN(lev) ? 1.0 : Math.round(lev * 10) / 10));
   backtestState.leverage = clamped;
   if (UI?.backtestSliderLeverage) {
-    syncSliderMax(UI.backtestSliderLeverage, clamped, 9.0);
+    syncSliderMax(UI.backtestSliderLeverage, clamped, 20.0);
     UI.backtestSliderLeverage.value = clamped.toFixed(1);
   }
   if (UI?.backtestInputLeverage) UI.backtestInputLeverage.value = clamped.toFixed(1);
@@ -1856,6 +1936,18 @@ export function openTriadModal(): void {
 export function closeTriadModal(): void {
   if (UI.triadModal) {
     UI.triadModal.classList.add('hidden');
+  }
+}
+
+export function openExecutionModal(): void {
+  if (UI?.modalExecutionMath) {
+    UI.modalExecutionMath.classList.remove('hidden');
+  }
+}
+
+export function closeExecutionModal(): void {
+  if (UI?.modalExecutionMath) {
+    UI.modalExecutionMath.classList.add('hidden');
   }
 }
 
@@ -2080,7 +2172,10 @@ function init() {
     toggleBacktestAutoReset,
     setBacktestExecutionMode,
     setBacktestResetThreshold,
-    resetBacktestThresholdDefault
+    resetBacktestThresholdDefault,
+    setBacktestToken,
+    openExecutionModal,
+    closeExecutionModal
   });
   bindSliderListeners(
     UI,
@@ -2203,7 +2298,16 @@ function init() {
     UI.historicalModal.addEventListener('click', (e) => {
       if (e.target === UI.historicalModal) {
         closeHistoricalModal();
-      closeRateLabModal();
+        closeRateLabModal();
+      }
+    });
+  }
+
+  // Setup Execution Math Modal backdrop dismiss
+  if (UI.modalExecutionMath) {
+    UI.modalExecutionMath.addEventListener('click', (e) => {
+      if (e.target === UI.modalExecutionMath) {
+        closeExecutionModal();
       }
     });
   }
@@ -2227,6 +2331,7 @@ function init() {
     if (e.key === 'Escape') {
       closeTriadModal();
       closeHistoricalModal();
+      closeExecutionModal();
     }
   });
 

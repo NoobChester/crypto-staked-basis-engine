@@ -21,6 +21,23 @@ describe('Delta-Neutral Hedging Quantitative Core', () => {
       expect(Math.abs(res.distanceToLiqPct - 852.38)).toBeLessThan(1.0);
     });
 
+    it('calculates Binance WBETH (5% haircut, V=0.95) liquidation threshold at ~+1718.18%', () => {
+      const res = calculateOutcome(0, {
+        capital: 10000,
+        mode: 'unified',
+        collateralRatio: 0.95,
+        mmr: 0.005,
+        depegPct: 0,
+        fundingAPR: 10.0,
+        stakingAPY: 3.1
+      });
+
+      expect(res.isLiquidated).toBe(false);
+      // rLiq = (0.95 - 0.005) / (1 + 0.005 - 0.95) = 0.945 / 0.055 = 17.1818 (+1718.18%)
+      expect(Math.abs(res.rLiq - 17.1818)).toBeLessThan(0.001);
+      expect(Math.abs(res.distanceToLiqPct - 1718.18)).toBeLessThan(1.0);
+    });
+
     it('triggers liquidation on unified account when price surge exceeds threshold', () => {
       const preLiq = calculateOutcome(850, {
         capital: 10000,

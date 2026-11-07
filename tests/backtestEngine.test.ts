@@ -771,6 +771,11 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
         autoResetEnabled: false,
         autoResetThreshold: 0.80,
         executionMode: 'optimized',
+        collateralToken: 'wsteth',
+        instaLiqLeverage: 9.52,
+        venueName: 'Bybit Unified Account (UTA)',
+        retailFeeRateBps: 18,
+        optimizedFeeRateBps: 5,
         dailyTrajectory: [
           {
             day: 1,
@@ -825,6 +830,90 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
       expect(stepRow!.innerHTML).toContain('+852.4%');
 
       (globalThis as any).document = originalDoc;
+    });
+  });
+
+  describe('Binance WBETH, Venue-Accurate Fees & Instant Liquidation Invariants', () => {
+    const series = getHistoricalBacktestSeries('ETH', '2023-01-01', '2023-03-31');
+
+    it('calculates instaLiqLeverage correctly across collateral tokens', () => {
+      const resWsteth = runHistoricalBacktest(series, {
+        capital: 10000,
+        leverage: 1.0,
+        mode: 'unified',
+        collateralRatio: 0.90,
+        collateralToken: 'wsteth',
+        asset: 'ETH'
+      });
+      // 1 / (1 - 0.90 + 0.005) = 1 / 0.105 = 9.52
+      expect(resWsteth.instaLiqLeverage).toBeCloseTo(9.52, 2);
+      expect(resWsteth.venueName).toBe('Bybit Unified Account (UTA)');
+      expect(resWsteth.retailFeeRateBps).toBe(18);
+      expect(resWsteth.optimizedFeeRateBps).toBe(5);
+
+      const resWbeth = runHistoricalBacktest(series, {
+        capital: 10000,
+        leverage: 1.0,
+        mode: 'unified',
+        collateralRatio: 0.95,
+        collateralToken: 'wbeth',
+        asset: 'ETH'
+      });
+      // 1 / (1 - 0.95 + 0.005) = 1 / 0.055 = 18.18
+      expect(resWbeth.instaLiqLeverage).toBeCloseTo(18.18, 2);
+      expect(resWbeth.venueName).toBe('Binance Portfolio Margin');
+      expect(resWbeth.retailFeeRateBps).toBe(14);
+      expect(resWbeth.optimizedFeeRateBps).toBe(4);
+
+      const resIsolated = runHistoricalBacktest(series, {
+        capital: 10000,
+        leverage: 1.0,
+        mode: 'isolated',
+        splitSpot: 50,
+        asset: 'ETH'
+      });
+      expect(resIsolated.retailFeeRateBps).toBe(8);
+      expect(resIsolated.optimizedFeeRateBps).toBe(2);
+      expect(resIsolated.venueName).toBe('Hyperliquid / Web3 Custody');
+    });
+
+    it('demonstrates wstETH insta-liquidation at 10x vs WBETH solvency at 10x', () => {
+      // 10.0x exceeds wstETH limit (9.52x) -> Day 1 liquidation
+      const resWsteth10x = runHistoricalBacktest(series, {
+        capital: 10000,
+        leverage: 10.0,
+        mode: 'unified',
+        collateralRatio: 0.90,
+        collateralToken: 'wsteth',
+        asset: 'ETH'
+      });
+      expect(resWsteth10x.isLiquidated).toBe(true);
+      expect(resWsteth10x.tLiq).toBe(1);
+
+      // 10.0x is well below WBETH limit (18.18x) -> solvent on Day 1!
+      const resWbeth10x = runHistoricalBacktest(series, {
+        capital: 10000,
+        leverage: 10.0,
+        mode: 'unified',
+        collateralRatio: 0.95,
+        collateralToken: 'wbeth',
+        asset: 'ETH'
+      });
+      expect(resWbeth10x.tLiq).not.toBe(1);
+    });
+
+    it('triggers instant liquidation on WBETH when leverage reaches 19x', () => {
+      // 19.0x exceeds WBETH limit (18.18x) -> Day 1 liquidation
+      const resWbeth19x = runHistoricalBacktest(series, {
+        capital: 10000,
+        leverage: 19.0,
+        mode: 'unified',
+        collateralRatio: 0.95,
+        collateralToken: 'wbeth',
+        asset: 'ETH'
+      });
+      expect(resWbeth19x.isLiquidated).toBe(true);
+      expect(resWbeth19x.tLiq).toBe(1);
     });
   });
 });

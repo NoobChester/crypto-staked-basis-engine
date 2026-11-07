@@ -4,7 +4,7 @@
  * Implements pure mathematical path-dependent liquidation calculus, benchmark generation, and institutional risk metrics.
  */
 
-import type { MarginMode } from '../config/presets.js';
+import { type MarginMode, VENUE_FEE_SCHEDULES } from '../config/presets.js';
 import type { DailyHistoricalMarketStep } from '../data/historical/ethBeaconSeries.js';
 import { getSp500Price } from '../data/historical/sp500Series.js';
 
@@ -18,6 +18,7 @@ export interface BacktestConfig {
   mmr?: number;
   tbillRate?: number;
   asset?: string;
+  collateralToken?: 'wsteth' | 'wbeth' | 'fbtc' | 'jitosol';
   leverage?: number;
   autoResetEnabled?: boolean;
   autoResetThreshold?: number; // e.g. 0.80 for 80% MMR
@@ -88,6 +89,11 @@ export interface BacktestSummaryResult {
   autoResetEnabled: boolean;
   autoResetThreshold: number;
   executionMode: BacktestExecutionMode;
+  collateralToken: string;
+  instaLiqLeverage: number;
+  venueName: string;
+  retailFeeRateBps: number;
+  optimizedFeeRateBps: number;
 }
 
 // High-performance LRU / Memoization simulation cache
@@ -126,29 +132,31 @@ export function runHistoricalBacktest(
   const mmr = config.mmr ?? 0.005;
   const tbillRate = config.tbillRate ?? 4.35;
   const splitSpot = Math.max(1, Math.min(99, config.splitSpot ?? 50));
-  // In unified margin, leverage is physically capped by the collateral haircut solvency limit:
-  // L_max = 1 / (1 - V + mmr). Beyond this ceiling, borrowed debt exceeds recognized collateral on Day 1.
-  // For wstETH (V = 0.90, MMR = 0.005), L_max = 9.52x. At 9.0x, the position has a safe opening margin buffer.
-  const rawL = mode === 'unified' ? Math.max(1.0, config.leverage ?? 1.0) : 1.0;
-  const maxSolventL = (mode === 'unified' && V < 0.999) ? Math.floor(((1 - mmr * 2) / (1 - V + mmr)) * 10) / 10 : 100.0;
-  const L = Math.min(rawL, Math.min(9.0, maxSolventL));
+  // Physical instant liquidation threshold: L_insta = 1 / (1 - V + mmr). Beyond this ceiling, borrowed debt exceeds recognized collateral on Day 1.
+  const instaLiqLeverage = (1 - V + mmr) > 0 ? round2(1 / (1 - V + mmr)) : Infinity;
+  // Leverage range extends up to 20.0x. If L >= instaLiqLeverage, it demonstrates Day 1 liquidation.
+  const L = mode === 'unified' ? Math.max(1.0, Math.min(20.0, config.leverage ?? 1.0)) : 1.0;
   const D = mode === 'unified' ? (L - 1) * C : 0;
 
   const autoResetEnabled = config.autoResetEnabled ?? false;
   const autoResetThreshold = Math.max(0.50, Math.min(0.99, config.autoResetThreshold ?? 0.80));
   const executionMode: BacktestExecutionMode = config.executionMode ?? 'optimized';
 
-  // Fee rates:
-  // Optimized: 5 bps (0.0005) on net delta traded volume (post-only maker + CoW Swap batch auction)
-  // Retail: 18 bps (0.0018) on gross turnover (market taker + retail DEX slippage)
-  const OPTIMIZED_FEE_RATE = 0.0005;
-  const RETAIL_FEE_RATE = 0.0018;
+  // Venue-calibrated fee schedules:
+  // e.g. WBETH (Binance PM): 14 bps retail / 4 bps optimized
+  // e.g. wstETH (Bybit UTA): 18 bps retail / 5 bps optimized
+  // e.g. Isolated (Hyperliquid): 8 bps retail / 2 bps optimized
+  const token = config.collateralToken || (config.asset === 'BTC' ? 'fbtc' : (config.asset === 'SOL' ? 'jitosol' : 'wsteth'));
+  const scheduleKey = mode === 'isolated' ? 'isolated' : token;
+  const venueSchedule = VENUE_FEE_SCHEDULES[scheduleKey] || VENUE_FEE_SCHEDULES.wsteth;
+  const OPTIMIZED_FEE_RATE = venueSchedule.optimizedRate;
+  const RETAIL_FEE_RATE = venueSchedule.retailRate;
 
   // High-performance cache check: sub-millisecond retrieval on repeat configurations
   const p0 = series[0].spotPrice;
   const pN = series[series.length - 1].spotPrice;
   const assetKey = config.asset ?? '';
-  const cacheKey = `${assetKey}|${mode}|${C}|${L}|${V}|${splitSpot}|${mmr}|${tbillRate}|${p0}|${pN}|${series[0].date}|${series[series.length - 1].date}|${series.length}|${autoResetEnabled}|${autoResetThreshold}|${executionMode}`;
+  const cacheKey = `${assetKey}|${token}|${mode}|${C}|${L}|${V}|${splitSpot}|${mmr}|${tbillRate}|${p0}|${pN}|${series[0].date}|${series[series.length - 1].date}|${series.length}|${autoResetEnabled}|${autoResetThreshold}|${executionMode}`;
   const cached = backtestResultCache.get(cacheKey);
   if (cached) {
     return cached;
@@ -616,7 +624,12 @@ export function runHistoricalBacktest(
     savedFromLiquidation,
     autoResetEnabled,
     autoResetThreshold,
-    executionMode
+    executionMode,
+    collateralToken: token,
+    instaLiqLeverage,
+    venueName: venueSchedule.venueName,
+    retailFeeRateBps: Math.round(RETAIL_FEE_RATE * 10000),
+    optimizedFeeRateBps: Math.round(OPTIMIZED_FEE_RATE * 10000)
   };
 
   // Manage cache capacity & store

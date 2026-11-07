@@ -553,28 +553,39 @@
                 class="preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition cursor-pointer select-none">
                 <div class="flex items-center justify-between">
                   <div class="font-bold text-cyan-300">#1 Lido wstETH</div>
-                  <span class="text-[9px] px-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">GOLD</span>
+                  <span class="text-[9px] px-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">BYBIT</span>
                 </div>
                 <div id="subtext-preset-90" class="text-[10px] text-slate-300 mt-0.5">10% Haircut | ~3.2% Stake</div>
                 <div class="text-[9px] text-emerald-300 mt-0.5">Buffer: +852% runway</div>
               </div>
 
-              <!-- #2 FBTC -->
+              <!-- #2 Binance WBETH -->
+              <div data-action="apply-collateral-preset" data-preset="wbeth_95" id="btn-preset-wbeth" role="button" tabindex="0"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
+                <div class="flex items-center justify-between">
+                  <div class="font-bold text-yellow-300">#2 Binance WBETH</div>
+                  <span class="text-[9px] px-1 rounded bg-yellow-950 text-yellow-300 border border-yellow-700 font-bold">BINANCE PM</span>
+                </div>
+                <div id="subtext-preset-wbeth" class="text-[10px] text-slate-400 mt-0.5">5% Haircut | ~3.1% Stake</div>
+                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +1,718% runway</div>
+              </div>
+
+              <!-- #3 FBTC -->
               <div data-action="apply-collateral-preset" data-preset="fbtc_90" id="btn-preset-fbtc" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
                 <div class="flex items-center justify-between">
-                  <div class="font-bold text-amber-300">#2 Cobo FBTC</div>
+                  <div class="font-bold text-amber-300">#3 Cobo FBTC</div>
                   <span class="text-[9px] px-1 rounded bg-slate-700 text-slate-300 font-bold">100% UTA</span>
                 </div>
                 <div class="text-[10px] text-slate-400 mt-0.5">10% Haircut | ~3.0% Stake</div>
                 <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +852% (2x carry)</div>
               </div>
 
-              <!-- #3 JitoSOL -->
+              <!-- #4 JitoSOL -->
               <div data-action="apply-collateral-preset" data-preset="jitosol_85" id="btn-preset-jitosol" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none flex flex-col justify-between">
                 <div class="flex items-center justify-between gap-1">
-                  <div class="font-bold text-purple-300 truncate">#3 JitoSOL</div>
+                  <div class="font-bold text-purple-300 truncate">#4 JitoSOL</div>
                   <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[9px] font-mono shrink-0" title="Solana Inflation: Real vs Nominal">
                     <button type="button" data-action="set-sol-yield" data-yield="real" id="btn-sol-real"
                       class="px-1.5 py-0.5 rounded font-bold transition bg-amber-950 text-amber-300 border border-amber-700 shadow-sm">Real</button>
@@ -1557,6 +1568,29 @@
           </span>
         </div>
 
+        <!-- Collateral Instrument Selector & Institutional Details Strip -->
+        <div id="backtest-collateral-strip" class="col-span-1 md:col-span-12 pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-slate-400 font-bold shrink-0">COLLATERAL INSTRUMENT:</span>
+            <div id="backtest-token-selector-group" class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800 text-xs font-mono">
+              <button type="button" id="backtest-btn-token-wsteth" data-action="set-backtest-token" data-token="wsteth"
+                class="px-2.5 py-1 rounded font-bold transition bg-purple-950 text-purple-300 border border-purple-700 shadow cursor-pointer">
+                wstETH (Bybit · 90%)
+              </button>
+              <button type="button" id="backtest-btn-token-wbeth" data-action="set-backtest-token" data-token="wbeth"
+                class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer">
+                WBETH (Binance · 95%)
+              </button>
+            </div>
+          </div>
+          <div id="backtest-instrument-card" class="flex items-center gap-2.5 px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-xs font-mono shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span id="backtest-instrument-badge" class="font-bold text-white tracking-wide">wstETH / ETH-USDT PERP</span>
+            <span class="text-slate-600">|</span>
+            <span id="backtest-instrument-venue" class="text-slate-400">Bybit UTA · 10% Haircut</span>
+          </div>
+        </div>
+
         <!-- Backtest Leverage Multiplier Strip -->
         <div class="col-span-1 md:col-span-12 pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
           <div class="flex items-center gap-2">
@@ -1567,19 +1601,28 @@
             <span id="backtest-val-leverage" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-bold border border-purple-800">1.0x (Unlevered)</span>
             <span id="backtest-val-leverage-buffer" class="px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 font-bold text-xs" title="Opening baseline liquidation buffer at this leverage">Buffer: +852.4%</span>
           </div>
-          <div class="flex items-center gap-2 flex-1 max-w-xs">
-            <input type="range" id="backtest-slider-leverage" min="1.0" max="9.0" step="0.1" value="1.0" class="w-full accent-purple-500">
-            <input type="number" id="backtest-input-leverage" min="1.0" max="9.0" step="0.1" value="1.0" class="w-14 px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded text-center text-white font-mono text-xs">
+          <div class="flex items-center gap-2 flex-1 max-w-sm">
+            <div class="relative w-full flex items-center pt-2.5 pb-1">
+              <input type="range" id="backtest-slider-leverage" min="1.0" max="20.0" step="0.1" value="1.0" class="w-full accent-purple-500 z-10 cursor-pointer">
+              <!-- Dynamic Instant Liquidation Vertical Line -->
+              <div id="backtest-leverage-insta-line" class="absolute top-0 bottom-1 pointer-events-none z-20 flex flex-col items-center -translate-x-1/2 transition-all duration-300" style="left: 44.8%;">
+                <span id="backtest-leverage-insta-label" class="text-[8px] font-mono font-bold text-rose-300 bg-rose-950/90 border border-rose-600/80 px-1 py-0.2 rounded -translate-y-3 whitespace-nowrap shadow-sm">Insta-Liq: 9.5x</span>
+                <div class="w-0.5 h-full bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.9)]"></div>
+              </div>
+            </div>
+            <input type="number" id="backtest-input-leverage" min="1.0" max="20.0" step="0.1" value="1.0" class="w-14 px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded text-center text-white font-mono text-xs z-10">
           </div>
-          <div class="flex items-center gap-1">
-            <button type="button" data-action="set-backtest-leverage" data-leverage="1.0" id="backtest-btn-lev-10" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold hover:bg-purple-900 transition">1.0x</button>
-            <button type="button" data-action="set-backtest-leverage" data-leverage="2.0" id="backtest-btn-lev-20" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">2.0x</button>
-            <button type="button" data-action="set-backtest-leverage" data-leverage="3.0" id="backtest-btn-lev-30" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">3.0x</button>
-            <button type="button" data-action="set-backtest-leverage" data-leverage="5.0" id="backtest-btn-lev-50" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">5.0x</button>
-            <button type="button" data-action="set-backtest-leverage" data-leverage="9.0" id="backtest-btn-lev-90" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition" title="Institutional Solvency Ceiling: At 9.52x, wstETH 10% haircut causes immediate Day 1 liquidation. 9.0x guarantees a safe opening margin buffer.">9.0x (Ceiling)</button>
+          <div class="flex items-center gap-1 flex-wrap">
+            <button type="button" data-action="set-backtest-leverage" data-leverage="1.0" id="backtest-btn-lev-10" class="px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold hover:bg-purple-900 transition">1.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="2.0" id="backtest-btn-lev-20" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">2.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="3.0" id="backtest-btn-lev-30" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">3.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="5.0" id="backtest-btn-lev-50" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">5.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="9.0" id="backtest-btn-lev-90" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">9.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="15.0" id="backtest-btn-lev-150" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">15.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="20.0" id="backtest-btn-lev-200" class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">20.0x</button>
           </div>
-          <span id="backtest-leverage-note" class="text-[11px] text-slate-400" title="9.0x Solvency Ceiling: wstETH 10% haircut sets physical limit at 9.52x where debt ($90k) exhausts collateral credit ($90k)">
-            Debt: $0 | Historical Borrow Drag: $0.00 · <span class="text-amber-400 font-semibold">9.0x Ceiling</span> (wstETH 10% Haircut Limit)
+          <span id="backtest-leverage-note" class="text-[11px] text-slate-400">
+            Debt: $0 | Historical Borrow Drag: $0.00
           </span>
         </div>
 
@@ -1598,20 +1641,25 @@
           </div>
 
           <!-- Execution Mode (Optimized vs Retail) -->
-          <div class="flex items-center gap-1.5">
+          <div class="flex items-center gap-1.5 flex-wrap">
             <span class="text-slate-500 text-[11px] font-bold">EXECUTION:</span>
             <div class="flex items-center bg-slate-900 rounded p-0.5 border border-slate-800 text-[11px]">
               <button type="button" id="backtest-btn-exec-optimized" data-action="set-backtest-exec-mode" data-mode="optimized"
                 class="px-2 py-0.5 rounded font-bold transition bg-emerald-500 text-black shadow cursor-pointer"
-                title="Optimized Execution: 5 bps on net delta volume using post-only maker rebates and CoW Swap batch auctions (MEV-protected)">
-                ⚡ Optimized (5 bps)
+                title="Optimized Execution: post-only maker rebates and CoW Swap batch auctions (MEV-protected)">
+                <span id="backtest-lbl-exec-optimized">⚡ Optimized (5 bps)</span>
               </button>
               <button type="button" id="backtest-btn-exec-retail" data-action="set-backtest-exec-mode" data-mode="retail"
                 class="px-2 py-0.5 rounded text-slate-400 hover:text-white transition cursor-pointer"
-                title="Retail Standard: 18 bps on full position turnover using market taker orders and standard DEX slippage">
-                🛒 Retail (18 bps)
+                title="Retail Standard: market taker orders and standard DEX slippage">
+                <span id="backtest-lbl-exec-retail">🛒 Retail (18 bps)</span>
               </button>
             </div>
+            <button type="button" id="btn-open-execution-modal" data-action="open-execution-modal"
+              class="px-1.5 py-0.5 rounded bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-cyan-300 border border-slate-700/80 text-[10px] font-mono transition flex items-center gap-1 cursor-pointer"
+              title="View full Execution Math & Exchange Fee Breakdown">
+              <span class="text-cyan-400 font-bold">ⓘ</span> Execution Math
+            </button>
           </div>
 
           <!-- Threshold Slider (60% to 95%) & Default Reset Button -->
@@ -2813,6 +2861,233 @@
           </button>
         </div>
 
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- Execution Math & Exchange Fee Breakdown Modal -->
+  <div id="modal-execution-math" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="execution-modal-title">
+    <div class="relative w-full max-w-4xl bg-brand-surface border border-emerald-800/80 rounded-2xl shadow-2xl overflow-hidden my-auto modal-enter flex flex-col max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-brand-border bg-brand-card/90 flex items-start justify-between gap-4 shrink-0">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <h3 id="execution-modal-title" class="text-base sm:text-lg font-bold font-mono tracking-tight text-white flex items-center gap-2">
+              EXECUTION MATH & VENUE FEE DYNAMICS
+            </h3>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">
+              NET DELTA ROLL vs GROSS CHURN
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 font-mono">
+            How quantitative basis desks achieve 2–5 bps fee drag during margin resets vs retail 14–18 bps gross churn.
+          </p>
+        </div>
+        
+        <button data-action="close-execution-modal" id="btn-close-execution-modal" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer" aria-label="Close modal">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-5 text-xs font-mono">
+        
+        <!-- Architecture Banner -->
+        <div class="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-emerald-200/90 leading-relaxed flex items-start gap-3">
+          <div class="p-1.5 bg-emerald-900/80 rounded-lg text-emerald-300 shrink-0 mt-0.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <p class="text-[11px] sm:text-xs">
+            <strong class="text-emerald-300">Algorithmic Roll Rationale:</strong> Delta-neutral basis positions never need full spot/perp liquidation to adjust baselines. By executing only the incremental <strong>Net Delta Mismatch ($|\Delta N|$)</strong> via TWAP Post-Only maker orders and CoW Swap batch auctions, institutional desks bypass retail spread-crossing fees entirely.
+          </p>
+        </div>
+
+        <!-- Comparative Architecture Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          <!-- Pillar 1: Optimized Net Delta Roll -->
+          <div class="p-4 rounded-xl bg-brand-card border border-emerald-500/40 space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-emerald-500/20">
+              <div class="font-bold text-emerald-300 flex items-center gap-1.5 text-sm">
+                <span>⚡</span>
+                <span>Institutional Net Delta Roll</span>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700 font-bold">2 – 5 bps</span>
+            </div>
+            
+            <ul class="space-y-2 text-slate-300 text-[11px]">
+              <li class="flex items-start gap-2">
+                <span class="text-emerald-400 font-bold">▸</span>
+                <span><strong>Traded Volume:</strong> Only the net delta difference $|\Delta N| = |N_{\text{new}} - N_{\text{current}}|$. Collateral stays 100% untouched in cross-margin or cold custody.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-emerald-400 font-bold">▸</span>
+                <span><strong>Order Mechanics:</strong> Algorithmic TWAP Post-Only Maker limit orders capturing exchange rebate tiers (0 to 2 bps) with 0 bps taker penalty.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-emerald-400 font-bold">▸</span>
+                <span><strong>Slippage & MEV:</strong> CoW Swap batch auctions and private builder RPCs ensure zero frontrunning, sandwiching, or toxic flow.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-emerald-400 font-bold">▸</span>
+                <span><strong>Total Effective Drag:</strong> ~4 bps on Binance PM, ~5 bps on Bybit UTA.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Pillar 2: Retail Gross Churn -->
+          <div class="p-4 rounded-xl bg-brand-card border border-rose-500/30 space-y-3">
+            <div class="flex items-center justify-between pb-2 border-b border-rose-500/20">
+              <div class="font-bold text-rose-300 flex items-center gap-1.5 text-sm">
+                <span>🛒</span>
+                <span>Retail Gross Position Churn</span>
+              </div>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-700 font-bold">14 – 18 bps</span>
+            </div>
+            
+            <ul class="space-y-2 text-slate-300 text-[11px]">
+              <li class="flex items-start gap-2">
+                <span class="text-rose-400 font-bold">▸</span>
+                <span><strong>Traded Volume:</strong> Full position closure and re-entry ($2 \times N_0$). 100% of collateral and perp legs are churned through the order book.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-rose-400 font-bold">▸</span>
+                <span><strong>Order Mechanics:</strong> Aggressive Market Taker orders crossing the bid-ask spread on both closing and opening legs (5 to 6 bps $\times 2$).</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-rose-400 font-bold">▸</span>
+                <span><strong>Slippage & Spreads:</strong> Retail DEX swap fee (3 to 5 bps) + bid-ask spread crossing (2 to 4 bps) + potential MEV sandwich loss.</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-rose-400 font-bold">▸</span>
+                <span><strong>Total Effective Drag:</strong> ~14 bps on Binance, ~18 bps on Bybit.</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        <!-- Step-by-Step Numerical Walkthrough -->
+        <div class="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="font-bold text-cyan-300 text-xs uppercase tracking-wider flex items-center gap-2">
+              <span>📐</span>
+              <span>Concrete Walkthrough: $100,000 Portfolio with +15% ETH Rally</span>
+            </div>
+            <span class="text-[10px] text-slate-400">Initial Leverage: 3.0x ($300k spot / -$300k perp)</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-800/80">
+            <div class="space-y-1.5 text-[11px]">
+              <div class="text-emerald-400 font-bold">Institutional Net Delta Roll:</div>
+              <div class="text-slate-300">1. Spot rallies to $345,000. Short perp loss = -$45,000.</div>
+              <div class="text-slate-300">2. Manager adjusts hedge: shorts +$45,000 perp to lock new baseline.</div>
+              <div class="text-slate-400 font-mono text-[10px]">Traded Volume: $45,000</div>
+              <div class="p-2 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-300 font-bold flex justify-between items-center">
+                <span>Fee Drag (Binance 4 bps):</span>
+                <span>$18.00 (0.018% of portfolio)</span>
+              </div>
+            </div>
+
+            <div class="space-y-1.5 text-[11px]">
+              <div class="text-rose-400 font-bold">Retail Gross Churn:</div>
+              <div class="text-slate-300">1. Retail panic-closes full $345,000 short perp taker order.</div>
+              <div class="text-slate-300">2. Retail swaps/re-enters full $345,000 spot & new short perp.</div>
+              <div class="text-slate-400 font-mono text-[10px]">Traded Volume: $345,000 × 2 = $690,000</div>
+              <div class="p-2 rounded bg-rose-950/60 border border-rose-800 text-rose-300 font-bold flex justify-between items-center">
+                <span>Fee Drag (Binance 14 bps):</span>
+                <span>$966.00 (0.966% of portfolio)</span>
+              </div>
+            </div>
+          </div>
+          <div class="text-[10px] text-cyan-300 bg-cyan-950/40 p-2 rounded border border-cyan-800/50 text-center font-bold">
+            💡 Result: Net Delta Roll preserves $948.00 (+98.1% savings) in portfolio capital per rebalance!
+          </div>
+        </div>
+
+        <!-- Venue Calibration Table -->
+        <div class="space-y-2">
+          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <span>🏛️</span>
+            <span>Venue Calibration & Institutional Fee Schedules</span>
+          </div>
+          
+          <div class="overflow-x-auto rounded-xl border border-slate-800">
+            <table class="w-full text-left border-collapse text-[11px]">
+              <thead class="bg-slate-900/90 text-slate-400 text-[10px] uppercase font-mono">
+                <tr>
+                  <th class="p-2.5 border-b border-slate-800">Instrument & Venue</th>
+                  <th class="p-2.5 border-b border-slate-800">Collateral (V)</th>
+                  <th class="p-2.5 border-b border-slate-800">Insta-Liq Ceiling</th>
+                  <th class="p-2.5 border-b border-slate-800">Exchange Tier</th>
+                  <th class="p-2.5 border-b border-slate-800 text-emerald-400">⚡ Net Roll (bps)</th>
+                  <th class="p-2.5 border-b border-slate-800 text-rose-400">🛒 Retail Churn (bps)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60 text-slate-300 font-mono">
+                <tr class="hover:bg-slate-900/50">
+                  <td class="p-2.5 font-bold text-yellow-300">WBETH (Binance PM)</td>
+                  <td class="p-2.5">95% (5% Haircut)</td>
+                  <td class="p-2.5 text-yellow-400 font-bold">18.2x</td>
+                  <td class="p-2.5 text-slate-400">Maker: 2.0 / Taker: 5.0 bps</td>
+                  <td class="p-2.5 font-bold text-emerald-400">4.0 bps</td>
+                  <td class="p-2.5 font-bold text-rose-400">14.0 bps</td>
+                </tr>
+                <tr class="hover:bg-slate-900/50">
+                  <td class="p-2.5 font-bold text-purple-300">wstETH (Bybit UTA)</td>
+                  <td class="p-2.5">90% (10% Haircut)</td>
+                  <td class="p-2.5 text-purple-400 font-bold">9.5x</td>
+                  <td class="p-2.5 text-slate-400">Maker: 2.0 / Taker: 5.5 bps</td>
+                  <td class="p-2.5 font-bold text-emerald-400">5.0 bps</td>
+                  <td class="p-2.5 font-bold text-rose-400">18.0 bps</td>
+                </tr>
+                <tr class="hover:bg-slate-900/50">
+                  <td class="p-2.5 font-bold text-amber-300">FBTC (Bybit UTA)</td>
+                  <td class="p-2.5">90% (10% Haircut)</td>
+                  <td class="p-2.5 text-amber-400 font-bold">9.5x</td>
+                  <td class="p-2.5 text-slate-400">Maker: 2.0 / Taker: 5.5 bps</td>
+                  <td class="p-2.5 font-bold text-emerald-400">5.0 bps</td>
+                  <td class="p-2.5 font-bold text-rose-400">18.0 bps</td>
+                </tr>
+                <tr class="hover:bg-slate-900/50">
+                  <td class="p-2.5 font-bold text-indigo-300">JitoSOL (Bybit UTA)</td>
+                  <td class="p-2.5">85% (15% Haircut)</td>
+                  <td class="p-2.5 text-indigo-400 font-bold">6.5x</td>
+                  <td class="p-2.5 text-slate-400">Maker: 2.0 / Taker: 5.5 bps</td>
+                  <td class="p-2.5 font-bold text-emerald-400">5.0 bps</td>
+                  <td class="p-2.5 font-bold text-rose-400">18.0 bps</td>
+                </tr>
+                <tr class="hover:bg-slate-900/50">
+                  <td class="p-2.5 font-bold text-cyan-300">Isolated Margin (USDC)</td>
+                  <td class="p-2.5">100% Cash Margin</td>
+                  <td class="p-2.5 text-cyan-400 font-bold">Cash Split Dep.</td>
+                  <td class="p-2.5 text-slate-400">Maker: 1.5 / Taker: 4.5 bps</td>
+                  <td class="p-2.5 font-bold text-emerald-400">2.0 bps</td>
+                  <td class="p-2.5 font-bold text-rose-400">8.0 bps</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 border-t border-brand-border bg-brand-card/90 flex items-center justify-between gap-3 shrink-0">
+        <div class="text-[11px] font-mono text-slate-400">
+          DELTA-Q INSTITUTIONAL EXECUTION ENGINE · VENUE CALIBRATED
+        </div>
+        <button type="button" data-action="close-execution-modal" id="btn-close-execution-modal-footer" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-xs transition cursor-pointer">
+          Close
+        </button>
       </div>
 
     </div>

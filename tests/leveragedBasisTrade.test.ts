@@ -237,6 +237,11 @@ describe('Leveraged Basis Trade (Carry Spread) UI & Systems Suite', () => {
       autoResetEnabled: false,
       autoResetThreshold: 0.80,
       executionMode: 'optimized',
+      collateralToken: 'wsteth',
+      instaLiqLeverage: 9.52,
+      venueName: 'Bybit Unified Account (UTA)',
+      retailFeeRateBps: 18,
+      optimizedFeeRateBps: 5,
       dailyTrajectory: [
         {
           day: 1,

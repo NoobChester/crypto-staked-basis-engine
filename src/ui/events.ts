@@ -66,6 +66,9 @@ export interface AppActions {
   setBacktestExecutionMode?: (mode: 'optimized' | 'retail') => void;
   setBacktestResetThreshold?: (threshold: number) => void;
   resetBacktestThresholdDefault?: () => void;
+  setBacktestToken?: (token: 'wsteth' | 'wbeth') => void;
+  openExecutionModal?: () => void;
+  closeExecutionModal?: () => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -305,6 +308,19 @@ export function setupEventDelegation(actions: AppActions): void {
       }
       case 'reset-backtest-threshold-default': {
         if (actions.resetBacktestThresholdDefault) actions.resetBacktestThresholdDefault();
+        break;
+      }
+      case 'set-backtest-token': {
+        const token = target.getAttribute('data-token') as 'wsteth' | 'wbeth';
+        if (token && actions.setBacktestToken) actions.setBacktestToken(token);
+        break;
+      }
+      case 'open-execution-modal': {
+        if (actions.openExecutionModal) actions.openExecutionModal();
+        break;
+      }
+      case 'close-execution-modal': {
+        if (actions.closeExecutionModal) actions.closeExecutionModal();
         break;
       }
     }
