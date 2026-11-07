@@ -174,7 +174,9 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
     'Margin_Ratio_Pct',
     'Status',
     'Cumulative_Funding_USD',
-    'Cumulative_Staking_USD'
+    'Cumulative_Staking_USD',
+    'Borrow_APR_Pct',
+    'Cumulative_Borrow_Interest_USD'
   ];
 
   const rows = result.dailyTrajectory.map((step) => [
@@ -192,13 +194,16 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
     (step.marginRatio * 100).toFixed(2),
     `"${step.isLiquidated ? (result.tLiq === step.day ? 'LIQUIDATED_BREACH' : 'POST_LIQUIDATION_UNHEDGED') : 'SOLVENT'}"`,
     step.cumulativeFunding.toFixed(2),
-    step.cumulativeStaking.toFixed(2)
+    step.cumulativeStaking.toFixed(2),
+    (step.borrowRateAPR ?? 0).toFixed(2),
+    (step.cumulativeBorrowInterest ?? 0).toFixed(2)
   ]);
 
   const metadata = [
     `# DELTA-Q QUANT TERMINAL - MULTI-YEAR HISTORICAL BACKTEST AUDIT PACKET`,
     `# Horizon: ${result.startDate} to ${result.endDate} (${result.horizonDays} Days)`,
     `# Initial Capital: $${result.initialCapital.toFixed(2)}`,
+    `# Active Leverage: ${(result.leverage ?? 1.0).toFixed(1)}x | Total Borrow Interest Paid: $${(result.totalBorrowInterestPaid ?? 0).toFixed(2)}`,
     `# Terminal Strategy Equity: $${result.terminalStrategyEquity.toFixed(2)}`,
     `# Cumulative Net PnL: $${result.netPnL.toFixed(2)} (${result.cumulativeReturnPct.toFixed(2)}%)`,
     `# Annualized Return (CAGR): ${result.cagrPct.toFixed(2)}%`,

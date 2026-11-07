@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateOutcome, fmtUSD, fmtPct } from '../src/math/hedging.js';
+import { calculateOutcome, calculateDynamicBorrowAPR, fmtUSD, fmtPct } from '../src/math/hedging.js';
 
 describe('Delta-Neutral Hedging Quantitative Core', () => {
 
@@ -267,6 +267,135 @@ describe('Delta-Neutral Hedging Quantitative Core', () => {
       expect(res.fundingYieldTotal).toBe(-500);
       expect(res.totalPortfolioVal).toBe(9500);
       expect(res.roiPct).toBe(-5.0);
+    });
+  });
+
+  describe('Leveraged Basis Trade (Carry Spread) Engine', () => {
+    it('calculates leveraged liquidation shock thresholds across 1.0x to 5.0x correctly', () => {
+      // 1.0x unlevered wstETH (90% collateral ratio, 0.5% MMR)
+      const res1x = calculateOutcome(0, {
+        capital: 10000,
+        mode: 'unified',
+        collateralRatio: 0.90,
+        mmr: 0.005,
+        leverage: 1.0
+      });
+      expect(Math.abs(res1x.rLiq - 8.5238)).toBeLessThan(0.001);
+      expect(res1x.borrowDebt).toBe(0);
+
+      // 1.5x leverage: debtTerm = (1.5 - 1)/1.5 = 0.3333; num = 0.90 - 0.3333 - 0.005 = 0.5617; den = 1.005 - 0.90 = 0.105 -> rLiq ~5.349
+      const res1_5x = calculateOutcome(0, {
+        capital: 10000,
+        mode: 'unified',
+        collateralRatio: 0.90,
+        mmr: 0.005,
+        leverage: 1.5
+      });
+      expect(Math.abs(res1_5x.rLiq - 5.3492)).toBeLessThan(0.005);
+      expect(res1_5x.borrowDebt).toBe(5000);
+
+      // 2.0x leverage: debtTerm = 0.50; num = 0.90 - 0.50 - 0.005 = 0.395; den = 0.105 -> rLiq ~3.7619 (+376.2%)
+      const res2x = calculateOutcome(0, {
+        capital: 10000,
+        mode: 'unified',
+        collateralRatio: 0.90,
+        mmr: 0.005,
+        leverage: 2.0
+      });
+      expect(Math.abs(res2x.rLiq - 3.7619)).toBeLessThan(0.005);
+      expect(res2x.borrowDebt).toBe(10000);
+      expect(res2x.S0).toBe(20000);
+      expect(res2x.N0).toBe(20000);
+
+      // 3.0x leverage: debtTerm = 2/3 ~ 0.6667; num = 0.90 - 0.6667 - 0.005 = 0.2283; den = 0.105 -> rLiq ~2.1746 (+217.5%)
+      const res3x = calculateOutcome(0, {
+        capital: 10000,
+        mode: 'unified',
+        collateralRatio: 0.90,
+        mmr: 0.005,
+        leverage: 3.0
+      });
+      expect(Math.abs(res3x.rLiq - 2.1746)).toBeLessThan(0.005);
+      expect(res3x.borrowDebt).toBe(20000);
+
+      // 5.0x leverage: debtTerm = 4/5 = 0.80; num = 0.90 - 0.80 - 0.005 = 0.095; den = 0.105 -> rLiq ~0.9048 (+90.5%)
+      const res5x = calculateOutcome(0, {
+        capital: 10000,
+        mode: 'unified',
+        collateralRatio: 0.90,
+        mmr: 0.005,
+        leverage: 5.0
+      });
+      expect(Math.abs(res5x.rLiq - 0.9048)).toBeLessThan(0.005);
+      expect(res5x.borrowDebt).toBe(40000);
+    });
+
+    it('evaluates dynamic borrow APR kink curve across market regimes', () => {
+      // Calm regime (Funding <= 10%): sits at 6.5% base
+      expect(calculateDynamicBorrowAPR(8.0, 0)).toBe(6.5);
+      expect(calculateDynamicBorrowAPR(10.0, 0)).toBe(6.5);
+
+      // Steady contango (Funding 20%): 6.5 + 0.3 * (20 - 10) = 9.5%
+      expect(calculateDynamicBorrowAPR(20.0, 0)).toBe(9.5);
+
+      // Kink trigger (Funding 40%): 11.0 + 0.65 * (40 - 25) = 20.75%
+      expect(calculateDynamicBorrowAPR(40.0, 0)).toBe(20.75);
+
+      // Parabolic contango (Funding 80%): 11.0 + 0.65 * 55 = 46.75%
+      expect(calculateDynamicBorrowAPR(80.0, 0)).toBe(46.75);
+
+      // Price rally modifier (+100% rally adds +7.0% borrow APR surcharge)
+      const withRally = calculateDynamicBorrowAPR(40.0, 100.0);
+      expect(withRally).toBeCloseTo(27.75, 1);
+    });
+
+    it('calculates leveraged net carry yields and debt drag accurately', () => {
+      // $10,000 capital, 2.0x leverage, Staking 3.2%, Funding 10.0%, Borrow APR 6.5%
+      const res = calculateOutcome(0, {
+        capital: 10000,
+        mode: 'unified',
+        leverage: 2.0,
+        stakingAPY: 3.2,
+        fundingAPR: 10.0,
+        borrowAPR: 6.5,
+        days: 365,
+        roundtripFeePct: 0
+      });
+
+      // Spot yield on $20,000 = $640 (6.4% on equity)
+      expect(res.stakingYieldTotal).toBe(640);
+      // Perp yield on $20,000 = $2,000 (20.0% on equity)
+      expect(res.fundingYieldTotal).toBe(2000);
+      // Debt interest on $10,000 @ 6.5% = $650 (-6.5% on equity)
+      expect(res.borrowInterestTotal).toBe(650);
+      expect(res.borrowAPYDrag).toBe(6.5);
+
+      // Total Strategy APY = 2 * (3.2 + 10.0) - 1 * 6.5 = 26.4 - 6.5 = 19.9%
+      expect(res.totalStrategyAPY).toBeCloseTo(19.9, 2);
+      expect(res.netRealizedAPY).toBeCloseTo(19.9, 2);
+      expect(res.netPnL).toBeCloseTo(1990, 1);
+    });
+
+    it('settles post-liquidation state by extinguishing debt and preserving residual spot', () => {
+      // 2.0x leverage: liquidation threshold is +376.19%. S0 = $20,000, Debt D = $10,000.
+      // Trigger liquidation at +400% price rally.
+      const res = calculateOutcome(400, {
+        capital: 10000,
+        mode: 'unified',
+        collateralRatio: 0.90,
+        mmr: 0.005,
+        leverage: 2.0,
+        days: 365,
+        borrowAPR: 6.5
+      });
+
+      expect(res.isLiquidated).toBe(true);
+      expect(res.perpMarginVal).toBe(0);
+      // Spot value at +400%: $20,000 * 5 = $100,000
+      expect(res.spotVal).toBe(100000);
+      // Extinguish USD debt of $10,000 from spot: residual spot is $90,000
+      expect(res.totalPortfolioVal).toBeGreaterThan(80000);
+      expect(res.netDelta).toBe(90000); // Residual spot is naked long
     });
   });
 

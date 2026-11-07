@@ -3,7 +3,7 @@
  * @description Main application orchestrator, state store, event dispatcher, and live feed coordinator.
  */
 
-import { calculateOutcome, calculateCrisisSimulation, fmtPct, fmtUSD, type HedgingState, type CrisisSimulationResult } from './math/hedging.js';
+import { calculateOutcome, calculateCrisisSimulation, calculateDynamicBorrowAPR, fmtPct, fmtUSD, type HedgingState, type CrisisSimulationResult } from './math/hedging.js';
 import { drawCrisisTrajectory } from './ui/renderers/crisisTrajectoryRenderer.js';
 import { renderCrisisAuditTable, exportCrisisAuditCsv, renderCrisisAuditSummary } from './ui/dom.js';
 import { renderScenarioMatrix } from './ui/renderers/scenarioRenderer.js';
@@ -108,6 +108,9 @@ export const state: HedgingState & {
   btcVariant: 'lbtc',
   activePreset: 'wsteth_90',
   collateralRatio: 0.90,
+  leverage: 1.0,
+  borrowAPR: 6.5,
+  isCustomBorrowAPR: false,
   solYieldType: 'real',
   splitSpot: 50,
   isLiveFunding: true,
@@ -266,6 +269,7 @@ export function updateStressLab(): void {
 export interface BacktestState {
   asset: TradedAsset;
   capital: number;
+  leverage: number;
   mode: MarginMode;
   collateralRatio: number;
   splitSpot: number;
@@ -280,6 +284,7 @@ export interface BacktestState {
 export const backtestState: BacktestState = {
   asset: 'ETH',
   capital: 10000,
+  leverage: 1.0,
   mode: 'unified',
   collateralRatio: 0.90,
   splitSpot: 50,
@@ -327,6 +332,7 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
 
   currentBacktestResult = runHistoricalBacktest(series, {
     capital: backtestState.capital,
+    leverage: backtestState.leverage ?? 1.0,
     mode: backtestState.mode,
     collateralRatio: backtestState.collateralRatio,
     splitSpot: backtestState.splitSpot,
@@ -452,6 +458,37 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
   if (UI.backtestSliderDaysRemaining) {
     UI.backtestSliderDaysRemaining.textContent = `${res.horizonDays.toLocaleString()} Days Duration`;
   }
+
+  // Backtest Leverage Status & Drag
+  const bLev = backtestState.leverage ?? 1.0;
+  if (UI.backtestValLeverage) {
+    UI.backtestValLeverage.textContent = `${bLev.toFixed(1)}x ${bLev > 1.0 ? 'Leveraged' : '(Unlevered)'}`;
+  }
+  if (UI.backtestSliderLeverage && document.activeElement !== UI.backtestSliderLeverage) {
+    UI.backtestSliderLeverage.value = bLev.toFixed(1);
+  }
+  if (UI.backtestInputLeverage && document.activeElement !== UI.backtestInputLeverage) {
+    UI.backtestInputLeverage.value = bLev.toFixed(1);
+  }
+  if (UI.backtestLeverageNote) {
+    const debt = bLev > 1.0 ? (bLev - 1) * backtestState.capital : 0;
+    const borrowInterest = res.totalBorrowInterestPaid ?? 0;
+    UI.backtestLeverageNote.textContent = `Debt: ${fmtUSD(debt)} | Historical Borrow Drag: -${fmtUSD(borrowInterest)}`;
+  }
+  const backtestLevBtns = [
+    { btn: UI.backtestBtnLev10, val: 1.0 },
+    { btn: UI.backtestBtnLev15, val: 1.5 },
+    { btn: UI.backtestBtnLev20, val: 2.0 },
+    { btn: UI.backtestBtnLev30, val: 3.0 }
+  ];
+  backtestLevBtns.forEach(({ btn, val }) => {
+    if (!btn) return;
+    if (Math.abs(bLev - val) < 0.05) {
+      btn.className = 'px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold transition';
+    } else {
+      btn.className = 'px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition';
+    }
+  });
 
   // Render Canvas Chart
   drawBacktestChart(UI.backtestCanvas, res, backtestState.asset, backtestState.visiblePlots);
@@ -1084,6 +1121,7 @@ export function setAccountMode(mode: MarginMode): void {
     if (UI.modeUnifiedBtn) UI.modeUnifiedBtn.className = 'px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow cursor-pointer';
     if (UI.modeIsolatedBtn) UI.modeIsolatedBtn.className = 'px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer';
     if (UI.panelUnifiedPresets) UI.panelUnifiedPresets.classList.remove('hidden');
+    if (UI.panelUnifiedLeverage) UI.panelUnifiedLeverage.classList.remove('hidden');
     if (UI.panelIsolatedSplit) UI.panelIsolatedSplit.classList.add('hidden');
     if (UI.chartSubCaption) UI.chartSubCaption.textContent = 'Cross-collateralized: Spot collateral appreciation cushions perp losses';
     if (state.tradedAsset === 'BTC') {
@@ -1102,6 +1140,7 @@ export function setAccountMode(mode: MarginMode): void {
       }
     }
     if (UI.panelUnifiedPresets) UI.panelUnifiedPresets.classList.add('hidden');
+    if (UI.panelUnifiedLeverage) UI.panelUnifiedLeverage.classList.add('hidden');
     if (UI.panelIsolatedSplit) UI.panelIsolatedSplit.classList.remove('hidden');
     if (UI.chartSubCaption) UI.chartSubCaption.textContent = 'Isolated cash margin: Sharp rallies can deplete collateral and trigger liquidation';
     
@@ -1519,6 +1558,35 @@ export function setSplit(splitSpot: number): void {
   updateApp();
 }
 
+export function setLeverage(lev: number): void {
+  const clamped = Math.max(1.0, Math.min(5.0, Math.round(lev * 10) / 10));
+  state.leverage = clamped;
+  if (UI?.inputLeverage) UI.inputLeverage.value = clamped.toFixed(1);
+  updateApp();
+}
+
+export function toggleBorrowAuto(): void {
+  state.isCustomBorrowAPR = !state.isCustomBorrowAPR;
+  if (!state.isCustomBorrowAPR) {
+    state.borrowAPR = calculateDynamicBorrowAPR(state.fundingAPR, state.priceMove);
+  }
+  updateApp();
+}
+
+export function setBorrowAPR(apr: number): void {
+  state.borrowAPR = Math.max(0, apr);
+  state.isCustomBorrowAPR = true;
+  updateApp();
+}
+
+export function setBacktestLeverage(lev: number): void {
+  const clamped = Math.max(1.0, Math.min(5.0, Math.round(lev * 10) / 10));
+  backtestState.leverage = clamped;
+  if (UI?.backtestSliderLeverage) UI.backtestSliderLeverage.value = clamped.toFixed(1);
+  if (UI?.backtestInputLeverage) UI.backtestInputLeverage.value = clamped.toFixed(1);
+  updateBacktest();
+}
+
 export function applyCrisisScenario(key: CrisisScenarioKey): void {
   const scenario = CRISIS_SCENARIOS[key];
   if (!scenario) return;
@@ -1584,6 +1652,9 @@ export function resetDefaults(): void {
   state.depegPct = 0.0;
   state.capital = 10000;
   state.splitSpot = 50;
+  state.leverage = 1.0;
+  state.borrowAPR = 6.5;
+  state.isCustomBorrowAPR = false;
   state.activeCrisisScenario = null;
 
   if (UI.inputPriceMove) UI.inputPriceMove.value = '0';
@@ -1836,7 +1907,11 @@ function init() {
     setBacktestEpoch,
     setBacktestDates,
     exportBacktestCsv: exportBacktestCsvAction,
-    toggleBacktestPlot
+    toggleBacktestPlot,
+    setLeverage,
+    toggleBorrowAuto,
+    setBorrowAPR,
+    setBacktestLeverage
   });
   bindSliderListeners(
     UI,
@@ -1846,7 +1921,10 @@ function init() {
     (capital) => setStressCapital(capital),
     (capital) => setBacktestCapital(capital),
     (idx, isDragging) => setBacktestStartDateIndex(idx, isDragging),
-    (idx, isDragging) => setBacktestEndDateIndex(idx, isDragging)
+    (idx, isDragging) => setBacktestEndDateIndex(idx, isDragging),
+    (lev) => setBacktestLeverage(lev),
+    (apr) => setBorrowAPR(apr),
+    (lev) => setLeverage(lev)
   );
   initViewRouter((view) => {
     if (view === 'stress-lab') {

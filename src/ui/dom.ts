@@ -8,9 +8,28 @@ export interface UIElements {
   modeUnifiedBtn: HTMLElement | null;
   modeIsolatedBtn: HTMLElement | null;
   panelUnifiedPresets: HTMLElement | null;
+  panelUnifiedLeverage: HTMLElement | null;
   panelIsolatedSplit: HTMLElement | null;
   valCollateralRatio: HTMLElement | null;
   collateralRatioExplainer: HTMLElement | null;
+  valLeverage: HTMLElement | null;
+  inputLeverage: HTMLInputElement | null;
+  btnLev10: HTMLElement | null;
+  btnLev15: HTMLElement | null;
+  btnLev20: HTMLElement | null;
+  btnLev30: HTMLElement | null;
+  valLeveragedNotional: HTMLElement | null;
+  valBorrowDebt: HTMLElement | null;
+  valBorrowDragAnnual: HTMLElement | null;
+  badgeBorrowMode: HTMLElement | null;
+  btnToggleBorrowAuto: HTMLElement | null;
+  sliderBorrowApr: HTMLInputElement | null;
+  inputBorrowApr: HTMLInputElement | null;
+  borrowRateExplainer: HTMLElement | null;
+  boxBreakdownBorrow: HTMLElement | null;
+  breakdownBorrowRate: HTMLElement | null;
+  breakdownBorrowInterest: HTMLElement | null;
+  breakdownBorrowDebt: HTMLElement | null;
   jitosolToggleBox: HTMLElement | null;
   labelSolYieldMode: HTMLElement | null;
   btnSolNominal: HTMLElement | null;
@@ -299,6 +318,14 @@ export interface UIElements {
   backtestModeBtnUnified: HTMLElement | null;
   backtestModeBtnIsolated: HTMLElement | null;
   backtestValCollateralRatio: HTMLElement | null;
+  backtestValLeverage: HTMLElement | null;
+  backtestSliderLeverage: HTMLInputElement | null;
+  backtestInputLeverage: HTMLInputElement | null;
+  backtestLeverageNote: HTMLElement | null;
+  backtestBtnLev10: HTMLElement | null;
+  backtestBtnLev15: HTMLElement | null;
+  backtestBtnLev20: HTMLElement | null;
+  backtestBtnLev30: HTMLElement | null;
   backtestRangeBadge: HTMLElement | null;
   backtestChartHeading: HTMLElement | null;
   backtestChartSubheading: HTMLElement | null;
@@ -385,9 +412,28 @@ export function getUIElements(): UIElements {
     modeUnifiedBtn: document.getElementById('mode-btn-unified'),
     modeIsolatedBtn: document.getElementById('mode-btn-isolated'),
     panelUnifiedPresets: document.getElementById('panel-unified-presets'),
+    panelUnifiedLeverage: document.getElementById('panel-unified-leverage'),
     panelIsolatedSplit: document.getElementById('panel-isolated-split'),
     valCollateralRatio: document.getElementById('val-collateral-ratio'),
     collateralRatioExplainer: document.getElementById('collateral-ratio-explainer'),
+    valLeverage: document.getElementById('val-leverage'),
+    inputLeverage: document.getElementById('input-leverage') as HTMLInputElement | null,
+    btnLev10: document.getElementById('btn-lev-10'),
+    btnLev15: document.getElementById('btn-lev-15'),
+    btnLev20: document.getElementById('btn-lev-20'),
+    btnLev30: document.getElementById('btn-lev-30'),
+    valLeveragedNotional: document.getElementById('val-leveraged-notional'),
+    valBorrowDebt: document.getElementById('val-borrow-debt'),
+    valBorrowDragAnnual: document.getElementById('val-borrow-drag-annual'),
+    badgeBorrowMode: document.getElementById('badge-borrow-mode'),
+    btnToggleBorrowAuto: document.getElementById('btn-toggle-borrow-auto'),
+    sliderBorrowApr: document.getElementById('slider-borrow-apr') as HTMLInputElement | null,
+    inputBorrowApr: document.getElementById('input-borrow-apr') as HTMLInputElement | null,
+    borrowRateExplainer: document.getElementById('borrow-rate-explainer'),
+    boxBreakdownBorrow: document.getElementById('box-breakdown-borrow'),
+    breakdownBorrowRate: document.getElementById('breakdown-borrow-rate'),
+    breakdownBorrowInterest: document.getElementById('breakdown-borrow-interest'),
+    breakdownBorrowDebt: document.getElementById('breakdown-borrow-debt'),
     jitosolToggleBox: document.getElementById('jitosol-yield-toggle-box'),
     labelSolYieldMode: document.getElementById('label-sol-yield-mode'),
     btnSolNominal: document.getElementById('btn-sol-nominal'),
@@ -652,6 +698,14 @@ export function getUIElements(): UIElements {
     backtestModeBtnUnified: document.getElementById('backtest-mode-btn-unified'),
     backtestModeBtnIsolated: document.getElementById('backtest-mode-btn-isolated'),
     backtestValCollateralRatio: document.getElementById('backtest-val-collateral-ratio'),
+    backtestValLeverage: document.getElementById('backtest-val-leverage'),
+    backtestSliderLeverage: document.getElementById('backtest-slider-leverage') as HTMLInputElement | null,
+    backtestInputLeverage: document.getElementById('backtest-input-leverage') as HTMLInputElement | null,
+    backtestLeverageNote: document.getElementById('backtest-leverage-note'),
+    backtestBtnLev10: document.getElementById('backtest-btn-lev-10'),
+    backtestBtnLev15: document.getElementById('backtest-btn-lev-15'),
+    backtestBtnLev20: document.getElementById('backtest-btn-lev-20'),
+    backtestBtnLev30: document.getElementById('backtest-btn-lev-30'),
     backtestRangeBadge: document.getElementById('backtest-range-badge'),
     backtestChartHeading: document.getElementById('backtest-chart-heading'),
     backtestChartSubheading: document.getElementById('backtest-chart-subheading'),

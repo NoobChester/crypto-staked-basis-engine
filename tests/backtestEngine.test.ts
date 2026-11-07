@@ -651,4 +651,43 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
       expect(() => updateBacktestFast()).not.toThrow();
     });
   });
+
+  describe('Leveraged Basis Trade Historical Backtest Engine', () => {
+    it('executes leveraged backtest (2.0x) and correctly detects 2021 parabolic squeeze liquidation', () => {
+      clearBacktestSimulationCache();
+      // 2021 Bull Run: ETH rallied +497% from $733 to $4,382 in May 2021, breaching the +376.2% buffer
+      const series2021 = getHistoricalBacktestSeries('ETH', '2021-01-01', '2021-12-31');
+      const result2021 = runHistoricalBacktest(series2021, {
+        capital: 10000,
+        mode: 'unified',
+        leverage: 2.0
+      });
+
+      expect(result2021.leverage).toBe(2.0);
+      expect(result2021.isLiquidated).toBe(true);
+      expect(result2021.liquidationDate).toBe('2021-04-23');
+      expect(result2021.totalBorrowInterestPaid).toBeGreaterThan(0);
+
+      // In 2023: ETH rallied moderately (+90%), well within the +376.2% runway -> survives 100%
+      clearBacktestSimulationCache();
+      const series2023 = getHistoricalBacktestSeries('ETH', '2023-01-01', '2023-12-31');
+      const result2023_2x = runHistoricalBacktest(series2023, {
+        capital: 10000,
+        mode: 'unified',
+        leverage: 2.0
+      });
+      const result2023_1x = runHistoricalBacktest(series2023, {
+        capital: 10000,
+        mode: 'unified',
+        leverage: 1.0
+      });
+
+      expect(result2023_2x.isLiquidated).toBe(false);
+      expect(result2023_2x.totalBorrowInterestPaid).toBeGreaterThan(0);
+      expect(result2023_1x.totalBorrowInterestPaid).toBe(0);
+      // Unliquidated 2.0x harvests exactly 2x the funding of 1.0x
+      expect(result2023_2x.totalHarvestedFunding).toBeCloseTo(result2023_1x.totalHarvestedFunding * 2, 0);
+      expect(result2023_2x.totalHarvestedStaking).toBeCloseTo(result2023_1x.totalHarvestedStaking * 2, 0);
+    });
+  });
 });

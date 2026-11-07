@@ -19,6 +19,9 @@ export interface HedgingState {
   mmr: number;
   collateralRatio: number;
   splitSpot: number;
+  leverage?: number;
+  borrowAPR?: number;
+  isCustomBorrowAPR?: boolean;
   roundtripFeePct?: number;
   tbillRate?: number;
   feeTier?: string;
@@ -63,6 +66,12 @@ export interface HedgingOutcome {
   tbillRate: number;
   excessSpreadAPY: number;
   excessDollarCarry: number;
+  // Leveraged Basis Trade Metrics
+  leverage: number;
+  borrowDebt: number;
+  borrowAPR: number;
+  borrowInterestTotal: number;
+  borrowAPYDrag: number;
 }
 
 export interface CrisisSimulationStep {
@@ -106,6 +115,31 @@ export interface CrisisSimulationResult {
 }
 
 /**
+ * Calculates dynamic borrow APR using the two-slope market-responsive kink curve.
+ * Baseline calm rate: 6.5%.
+ * Contango regime (Funding 10% - 25%): rates expand steadily with borrowing demand.
+ * Mania regime (Funding > 25% or Price Rally > 30%): piecewise kink slope spikes borrow APR up to 60.0%.
+ */
+export function calculateDynamicBorrowAPR(fundingAPR: number, priceMovePct: number = 0): number {
+  const baseRate = 6.5;
+  let apr = baseRate;
+
+  if (fundingAPR > 10 && fundingAPR <= 25) {
+    apr += 0.3 * (fundingAPR - 10);
+  } else if (fundingAPR > 25) {
+    // 6.5 + 0.3 * 15 = 11.0% at the kink point
+    apr = 11.0 + 0.65 * (fundingAPR - 25);
+  }
+
+  // Price rally liquidity squeeze modifier
+  if (priceMovePct > 30) {
+    apr += 0.1 * (priceMovePct - 30);
+  }
+
+  return parseFloat(Math.max(2.5, Math.min(60.0, apr)).toFixed(2));
+}
+
+/**
  * Calculates the exact quantitative outcome of the delta-neutral hedging position.
  */
 export function calculateOutcome(
@@ -133,18 +167,29 @@ export function calculateOutcome(
 
   if (mode === 'unified') {
     // UNIFIED MARGIN MODE:
-    // 100% of capital deployed in spot. Spot acts as cross-margin for 1x short perp.
-    S0 = C;
-    N0 = C;
+    // Capital deployed with optional leverage L (1.0x to 5.0x).
+    // Spot acts as cross-margin for short perp. Extra notional financed via USD margin loan debt.
+    const L = Math.max(1.0, Math.min(5.0, customState.leverage ?? 1.0));
+    S0 = C * L;
+    N0 = C * L;
     M0 = C;
+    const D = (L - 1) * C;
     const V = customState.collateralRatio ?? 0.90;
 
-    // Unified Account liquidation threshold:
-    // S0*(1+r)*(1-depeg)*V - N0*r = N0*(1+r)*MMR
-    if (V >= 0.999 && depeg === 0) {
+    const dynamicBorrowAPR = calculateDynamicBorrowAPR(fundingAPR, priceChangePct);
+    const borrowAPR = customState.borrowAPR ?? dynamicBorrowAPR;
+    const borrowInterestTotal = D * (borrowAPR / 100) * durationYears;
+    const borrowAPYDrag = (L - 1) * borrowAPR;
+
+    // Leveraged Unified Account liquidation threshold:
+    // S0*(1+r)*(1-depeg)*V - D - N0*r = N0*(1+r)*MMR
+    // Dividing by C * L:
+    // (1+r)*(1-depeg)*V - (L-1)/L - r = (1+r)*MMR
+    if (L === 1.0 && V >= 0.999 && depeg === 0) {
       rLiq = Infinity;
     } else {
-      const num = ((1 - depeg) * V) - mmr;
+      const debtTerm = (L - 1) / L;
+      const num = ((1 - depeg) * V) - debtTerm - mmr;
       const den = 1 + mmr - ((1 - depeg) * V);
       rLiq = den <= 0 ? Infinity : (num / den);
     }
@@ -160,33 +205,35 @@ export function calculateOutcome(
       spotPnL = spotVal - S0;
       perpPnL = -N0 * r;
 
-      totalPortfolioVal = spotVal + perpPnL + fundingYieldTotal + stakingYieldTotal;
+      totalPortfolioVal = (spotVal - D) + perpPnL + fundingYieldTotal + stakingYieldTotal - borrowInterestTotal;
       netDelta = spotVal - (N0 * (1 + r));
-      perpMarginVal = spotVal * V + perpPnL;
+      perpMarginVal = spotVal * V - D + perpPnL;
     } else {
       spotVal = S0 * (1 + r) * (1 - depeg);
       spotPnL = spotVal - S0;
       depegLoss = S0 * (1 + r) * depeg;
       perpPnL = -S0 * V;
-      totalPortfolioVal = spotVal + fundingYieldTotal + stakingYieldTotal;
-      netDelta = spotVal;
+      // Extinguish USD debt from spot; remaining residual spot continues naked long
+      const residualSpot = Math.max(0, spotVal - D);
+      totalPortfolioVal = residualSpot + fundingYieldTotal + stakingYieldTotal - borrowInterestTotal;
+      netDelta = residualSpot;
       perpMarginVal = 0;
     }
 
     const netPnL = totalPortfolioVal - C;
     const roiPct = C > 0 ? (netPnL / C) * 100 : 0;
 
-    const spotWeight = 1.0;
-    const perpWeight = 1.0;
+    const spotWeight = L;
+    const perpWeight = L;
     const spotAPYContrib = stakingAPY * spotWeight;
     const perpAPYContrib = fundingAPR * perpWeight;
-    const totalStrategyAPY = spotAPYContrib + perpAPYContrib;
+    const totalStrategyAPY = (spotAPYContrib + perpAPYContrib) - borrowAPYDrag;
     const distanceToLiqPct = (rLiq === Infinity) ? Infinity : (rLiq - r) * 100;
 
-    // Fee drag calculations
-    const feeDragAPY = parseFloat((roundtripFeePct * (365 / days)).toFixed(2));
+    // Fee drag calculations scaled by leveraged notional
+    const feeDragAPY = parseFloat((roundtripFeePct * L * (365 / days)).toFixed(2));
     const netRealizedAPY = parseFloat((totalStrategyAPY - feeDragAPY).toFixed(2));
-    const netFeeDollarLoss = parseFloat((C * (roundtripFeePct / 100)).toFixed(2));
+    const netFeeDollarLoss = parseFloat((C * L * (roundtripFeePct / 100)).toFixed(2));
     const netRealizedPnL = parseFloat((netPnL - netFeeDollarLoss).toFixed(2));
     const netRealizedRoiPct = C > 0 ? parseFloat(((netRealizedPnL / C) * 100).toFixed(2)) : 0;
 
@@ -209,7 +256,12 @@ export function calculateOutcome(
       netRealizedRoiPct,
       tbillRate,
       excessSpreadAPY,
-      excessDollarCarry
+      excessDollarCarry,
+      leverage: L,
+      borrowDebt: D,
+      borrowAPR,
+      borrowInterestTotal: parseFloat(borrowInterestTotal.toFixed(2)),
+      borrowAPYDrag: parseFloat(borrowAPYDrag.toFixed(2))
     };
 
   } else {
@@ -282,7 +334,12 @@ export function calculateOutcome(
       netRealizedRoiPct,
       tbillRate,
       excessSpreadAPY,
-      excessDollarCarry
+      excessDollarCarry,
+      leverage: 1.0,
+      borrowDebt: 0,
+      borrowAPR: 0,
+      borrowInterestTotal: 0,
+      borrowAPYDrag: 0
     };
   }
 }
@@ -367,11 +424,14 @@ export function calculateCrisisSimulation(
 
   const baseSpotPrice = state.tradedAsset === 'BTC' ? 78500 : state.tradedAsset === 'SOL' ? 93.5 : 2315;
 
+  const L = mode === 'unified' ? Math.max(1.0, Math.min(5.0, state.leverage ?? 1.0)) : 1.0;
+  const D = mode === 'unified' ? (L - 1) * C : 0;
+
   let S0: number, M0: number, N0: number;
   if (mode === 'unified') {
-    S0 = C;
+    S0 = C * L;
     M0 = C;
-    N0 = C;
+    N0 = C * L;
   } else {
     const splitSpot = state.splitSpot ?? 50;
     const sFrac = Math.max(0.01, Math.min(0.99, splitSpot / 100));
@@ -384,6 +444,7 @@ export function calculateCrisisSimulation(
   const dailyTrajectory: CrisisSimulationStep[] = [];
   let cumulativeFunding = 0;
   let cumulativeStaking = 0;
+  let cumulativeBorrowInterest = 0;
   let isLiquidated = false;
   let tLiq: number | null = null;
 
@@ -431,6 +492,13 @@ export function calculateCrisisSimulation(
       cumulativeFunding += dailyFunding;
     }
 
+    // Daily borrow interest drag on USD debt
+    if (D > 0) {
+      const stepBorrowAPR = state.borrowAPR ?? calculateDynamicBorrowAPR(fundingAPR, priceShockPct);
+      const dailyBorrowInterest = D * (stepBorrowAPR / 100) * (1 / 365);
+      cumulativeBorrowInterest += dailyBorrowInterest;
+    }
+
     // Spot position valuation and de-peg discount
     const spotVal = S0 * (1 + r) * (1 - depeg);
 
@@ -441,12 +509,13 @@ export function calculateCrisisSimulation(
 
     if (mode === 'unified') {
       maintenanceMargin = N0 * (1 + r) * mmr;
-      marginEquity = spotVal * V - N0 * r;
+      marginEquity = spotVal * V - D - N0 * r;
 
-      if (V >= 0.999 && depeg === 0) {
+      if (L === 1.0 && V >= 0.999 && depeg === 0) {
         stepRLiq = Infinity;
       } else {
-        const num = ((1 - depeg) * V) - mmr;
+        const debtTerm = (L - 1) / L;
+        const num = ((1 - depeg) * V) - debtTerm - mmr;
         const den = 1 + mmr - ((1 - depeg) * V);
         stepRLiq = den <= 0 ? Infinity : (num / den);
       }
@@ -469,12 +538,13 @@ export function calculateCrisisSimulation(
     let marginRatio: number;
 
     if (isLiquidated) {
-      stepEquity = spotVal + cumulativeFunding + cumulativeStaking;
+      const residualSpot = Math.max(0, spotVal - D);
+      stepEquity = residualSpot + cumulativeFunding + cumulativeStaking - cumulativeBorrowInterest;
       marginRatio = 1.0;
     } else {
       if (mode === 'unified') {
         const perpPnL = -N0 * r;
-        stepEquity = spotVal + perpPnL + cumulativeFunding + cumulativeStaking;
+        stepEquity = (spotVal - D) + perpPnL + cumulativeFunding + cumulativeStaking - cumulativeBorrowInterest;
       } else {
         const perpMarginVal = Math.max(0, M0 - N0 * r);
         stepEquity = spotVal + perpMarginVal + cumulativeFunding + cumulativeStaking;
@@ -517,10 +587,11 @@ export function calculateCrisisSimulation(
 
   let rLiq: number;
   if (mode === 'unified') {
-    if (V >= 0.999 && terminalDepeg === 0) {
+    if (L === 1.0 && V >= 0.999 && terminalDepeg === 0) {
       rLiq = Infinity;
     } else {
-      const num = ((1 - terminalDepeg) * V) - mmr;
+      const debtTerm = (L - 1) / L;
+      const num = ((1 - terminalDepeg) * V) - debtTerm - mmr;
       const den = 1 + mmr - ((1 - terminalDepeg) * V);
       rLiq = den <= 0 ? Infinity : (num / den);
     }

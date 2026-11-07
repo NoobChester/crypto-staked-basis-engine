@@ -58,6 +58,10 @@ export interface AppActions {
   setBacktestStartDateIndex?: (index: number, isDragging?: boolean) => void;
   setBacktestEndDateIndex?: (index: number, isDragging?: boolean) => void;
   toggleBacktestPlot?: (plot: 'strategy' | 'spot' | 'tbill' | 'sp500') => void;
+  setLeverage?: (leverage: number) => void;
+  toggleBorrowAuto?: () => void;
+  setBorrowAPR?: (apr: number) => void;
+  setBacktestLeverage?: (leverage: number) => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -272,6 +276,20 @@ export function setupEventDelegation(actions: AppActions): void {
         }
         break;
       }
+      case 'set-leverage': {
+        const lev = parseFloat(target.getAttribute('data-leverage') || '1.0');
+        if (actions.setLeverage) actions.setLeverage(lev);
+        break;
+      }
+      case 'toggle-borrow-auto': {
+        if (actions.toggleBorrowAuto) actions.toggleBorrowAuto();
+        break;
+      }
+      case 'set-backtest-leverage': {
+        const lev = parseFloat(target.getAttribute('data-leverage') || '1.0');
+        if (actions.setBacktestLeverage) actions.setBacktestLeverage(lev);
+        break;
+      }
     }
   });
 }
@@ -284,7 +302,10 @@ export function bindSliderListeners(
   onStressCapital?: (capital: number) => void,
   onBacktestCapital?: (capital: number) => void,
   onBacktestStartDateIndex?: (index: number, isDragging?: boolean) => void,
-  onBacktestEndDateIndex?: (index: number, isDragging?: boolean) => void
+  onBacktestEndDateIndex?: (index: number, isDragging?: boolean) => void,
+  onBacktestLeverage?: (leverage: number) => void,
+  onBorrowAPR?: (apr: number) => void,
+  onLeverage?: (leverage: number) => void
 ): void {
   if (UI.inputPriceMove) {
     UI.inputPriceMove.addEventListener('input', (e) => {
@@ -440,6 +461,62 @@ export function bindSliderListeners(
       if (isNaN(idx)) return;
       if (endIdleTimer) clearTimeout(endIdleTimer);
       if (onBacktestEndDateIndex) onBacktestEndDateIndex(idx, false);
+    });
+  }
+
+  // Unified Leverage Slider
+  if (UI.inputLeverage) {
+    UI.inputLeverage.addEventListener('input', (e) => {
+      const val = parseFloat((e.target as HTMLInputElement).value);
+      if (!isNaN(val)) {
+        if (onLeverage) {
+          onLeverage(val);
+        } else {
+          state.leverage = val;
+          onUpdate();
+        }
+      }
+    });
+  }
+
+  // USD Borrow Rate Sliders & Inputs
+  const handleBorrowInput = (val: number) => {
+    if (!isNaN(val)) {
+      if (onBorrowAPR) {
+        onBorrowAPR(val);
+      } else {
+        state.borrowAPR = val;
+        state.isCustomBorrowAPR = true;
+        onUpdate();
+      }
+    }
+  };
+
+  if (UI.sliderBorrowApr) {
+    UI.sliderBorrowApr.addEventListener('input', (e) => {
+      handleBorrowInput(parseFloat((e.target as HTMLInputElement).value));
+    });
+  }
+  if (UI.inputBorrowApr) {
+    UI.inputBorrowApr.addEventListener('input', (e) => {
+      handleBorrowInput(parseFloat((e.target as HTMLInputElement).value));
+    });
+  }
+
+  // Backtest Leverage Slider & Number Input
+  const handleBacktestLev = (val: number) => {
+    if (!isNaN(val) && onBacktestLeverage) {
+      onBacktestLeverage(val);
+    }
+  };
+  if (UI.backtestSliderLeverage) {
+    UI.backtestSliderLeverage.addEventListener('input', (e) => {
+      handleBacktestLev(parseFloat((e.target as HTMLInputElement).value));
+    });
+  }
+  if (UI.backtestInputLeverage) {
+    UI.backtestInputLeverage.addEventListener('input', (e) => {
+      handleBacktestLev(parseFloat((e.target as HTMLInputElement).value));
     });
   }
 }

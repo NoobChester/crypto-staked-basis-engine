@@ -202,6 +202,18 @@ export function drawChart(
   ctx.textAlign = 'left';
   ctx.fillText('ENTRY BASE: $' + state.capital.toLocaleString(), pad.left + 8, yBase - 8);
 
+  // Leveraged Basis Annotation
+  if (state.leverage && state.leverage > 1.0) {
+    ctx.fillStyle = '#c084fc';
+    ctx.font = 'bold 9px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(
+      `LEVERAGED BASIS: ${state.leverage.toFixed(1)}x · DEBT: $${Math.round(currentRes.borrowDebt).toLocaleString()}`,
+      pad.left + 8,
+      pad.top + 16
+    );
+  }
+
   // Draw Liquidation Cliff (if it falls within the [xMin, xMax] window)
   const rLiqPct = currentRes.rLiq * 100;
   if (rLiqPct <= xMax && rLiqPct > -100) {
@@ -337,11 +349,11 @@ export function drawChart(
 
   ctx.fillStyle = areaGradient || 'rgba(6, 182, 212, 0.1)';
   ctx.beginPath();
-  ctx.moveTo(toCanvasX(-100), pad.top + plotH);
+  ctx.moveTo(toCanvasX(xMin), pad.top + plotH);
   for (let i = 0; i < pnlPoints.length; i++) {
     ctx.lineTo(toCanvasX(pnlPoints[i].x), toCanvasY(pnlPoints[i].y));
   }
-  ctx.lineTo(toCanvasX(100), pad.top + plotH);
+  ctx.lineTo(toCanvasX(xMax), pad.top + plotH);
   ctx.closePath();
   ctx.fill();
 
@@ -455,10 +467,19 @@ export function setupChartInteractions(
     if (tooltipEls.ttVal) tooltipEls.ttVal.textContent = `Portfolio: ${fmtUSD(res.totalPortfolioVal)}`;
     if (tooltipEls.ttRoi) tooltipEls.ttRoi.textContent = `ROI: ${fmtPct(res.roiPct)}`;
     if (tooltipEls.ttStatus) {
-      tooltipEls.ttStatus.textContent = res.isLiquidated
-        ? 'Status: 100% Unhedged Long'
-        : (currentState.mode === 'unified' ? 'Status: Cross-Margin Protected' : 'Status: Isolated Hedged');
-      tooltipEls.ttStatus.className = res.isLiquidated ? 'text-[10px] text-rose-400 font-bold' : 'text-[10px] text-cyan-400';
+      if (res.isLiquidated) {
+        tooltipEls.ttStatus.textContent = 'Status: 100% Unhedged Long';
+        tooltipEls.ttStatus.className = 'text-[10px] text-rose-400 font-bold';
+      } else if (currentState.mode === 'unified') {
+        const lev = currentState.leverage ?? 1.0;
+        tooltipEls.ttStatus.textContent = lev > 1.0
+          ? `Status: ${lev.toFixed(1)}x Leveraged (${res.borrowAPR.toFixed(1)}% Borrow APR)`
+          : 'Status: Cross-Margin Protected';
+        tooltipEls.ttStatus.className = lev > 1.0 ? 'text-[10px] text-purple-400 font-medium' : 'text-[10px] text-cyan-400';
+      } else {
+        tooltipEls.ttStatus.textContent = 'Status: Isolated Hedged';
+        tooltipEls.ttStatus.className = 'text-[10px] text-cyan-400';
+      }
     }
 
     const confStats = typeof getConfidenceStats === 'function'

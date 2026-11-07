@@ -388,6 +388,16 @@
               <div id="breakdown-excess-dollar-carry" class="text-sm font-bold text-indigo-300 mt-0.5">+$208.23</div>
               <div class="text-[10px] text-slate-400 mt-0.5 font-mono">Alpha vs 4.35% Cash</div>
             </div>
+
+            <!-- USD Borrow Cost Decomposition (Visible when Leverage > 1.0x) -->
+            <div id="box-breakdown-borrow" class="hidden p-3 bg-brand-surface/70 rounded-xl border border-purple-900/40">
+              <div class="text-slate-400 text-[11px] flex items-center justify-between">
+                <span>USD Borrow Cost</span>
+                <span id="breakdown-borrow-rate" class="text-[10px] text-purple-400 font-mono">6.5% APR</span>
+              </div>
+              <div id="breakdown-borrow-interest" class="text-sm font-bold text-rose-400 mt-0.5">-$0.00</div>
+              <div id="breakdown-borrow-debt" class="text-[10px] text-slate-400 mt-0.5 font-mono">Debt: $0 (1.0x)</div>
+            </div>
           </div>
         </div>
 
@@ -637,6 +647,76 @@
                 <span class="text-cyan-400 block text-[9px] uppercase font-bold">Quantitative Verdict:</span>
                 <p id="ci-verdict" class="mt-0.5 text-[10px] font-semibold leading-relaxed">For a 7-figure delta-neutral carry trade, wstETH is the cleanest, most sleep-at-night asset in crypto.</p>
               </div>
+            </div>
+          </div>
+
+          <!-- UNIFIED LEVERAGE CONTROL (Visible in Unified Cross-Margin Mode) -->
+          <div id="panel-unified-leverage" class="space-y-3 p-3.5 rounded-xl bg-brand-surface/70 border border-purple-900/40">
+            <div class="flex items-center justify-between text-xs">
+              <label class="font-bold text-purple-300 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                Leveraged Carry Spread (USD Margin Loan)
+                <span class="text-[9px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-400 border border-purple-800">EXPAND BASIS</span>
+              </label>
+              <span id="val-leverage" class="font-mono text-purple-300 font-bold">1.0x (Unlevered)</span>
+            </div>
+
+            <!-- Leverage Slider & Quick Buttons -->
+            <div class="space-y-1.5">
+              <input type="range" id="input-leverage" min="1.0" max="5.0" step="0.1" value="1.0" class="w-full accent-purple-500">
+              <div class="flex items-center justify-between gap-1.5">
+                <button type="button" data-action="set-leverage" data-leverage="1.0" id="btn-lev-10" class="w-full py-1 text-[11px] font-mono rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold transition">1.0x</button>
+                <button type="button" data-action="set-leverage" data-leverage="1.5" id="btn-lev-15" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">1.5x</button>
+                <button type="button" data-action="set-leverage" data-leverage="2.0" id="btn-lev-20" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">2.0x</button>
+                <button type="button" data-action="set-leverage" data-leverage="3.0" id="btn-lev-30" class="w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition">3.0x</button>
+              </div>
+            </div>
+
+            <!-- Position Breakdown KPI Pills -->
+            <div class="grid grid-cols-3 gap-2 text-center font-mono text-[10px] pt-1">
+              <div class="p-1.5 rounded-lg bg-brand-dark/80 border border-slate-800">
+                <span class="text-slate-500 block text-[9px] uppercase">Total Notional</span>
+                <span id="val-leveraged-notional" class="font-bold text-white">$10,000</span>
+              </div>
+              <div class="p-1.5 rounded-lg bg-brand-dark/80 border border-slate-800">
+                <span class="text-slate-500 block text-[9px] uppercase">USD Borrow Debt</span>
+                <span id="val-borrow-debt" class="font-bold text-amber-400">$0</span>
+              </div>
+              <div class="p-1.5 rounded-lg bg-brand-dark/80 border border-slate-800">
+                <span class="text-slate-500 block text-[9px] uppercase">Borrow APY Drag</span>
+                <span id="val-borrow-drag-annual" class="font-bold text-rose-400">0.00%</span>
+              </div>
+            </div>
+
+            <!-- Borrow Cost Controls (Dynamic Kink Curve vs Manual Override) -->
+            <div class="p-2.5 rounded-xl bg-brand-dark/60 border border-slate-800/80 space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-1.5">
+                  <span class="text-slate-300 font-semibold text-[11px]">USD Borrow Rate (APR)</span>
+                  <span id="badge-borrow-mode" class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono">AUTO-KINK</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <button type="button" id="btn-toggle-borrow-auto" data-action="toggle-borrow-auto"
+                    class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-700 hover:bg-cyan-900 transition">
+                    Market-Linked
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <div class="relative flex-1">
+                  <input type="range" id="slider-borrow-apr" min="0" max="30" step="0.25" value="6.5" class="w-full">
+                </div>
+                <div class="flex items-center gap-1 w-20 shrink-0">
+                  <input type="number" id="input-borrow-apr" min="0" max="100" step="0.1" value="6.5"
+                    class="w-full px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded text-right text-xs font-mono text-white focus:outline-none focus:border-cyan-500">
+                  <span class="text-xs font-mono text-slate-400">%</span>
+                </div>
+              </div>
+
+              <p id="borrow-rate-explainer" class="text-[10px] text-slate-400 font-mono leading-relaxed">
+                Dynamic Kink Curve: Base 6.5% APR + Contango surge during market rallies.
+              </p>
             </div>
           </div>
 
@@ -1474,6 +1554,30 @@
           </div>
           <span id="backtest-val-collateral-ratio" class="text-[11px] font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300">
             Valuation: <strong class="text-white">90%</strong>
+          </span>
+        </div>
+
+        <!-- Backtest Leverage Multiplier Strip -->
+        <div class="col-span-1 md:col-span-12 pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400 font-bold flex items-center gap-1">
+              <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+              LEVERAGE:
+            </span>
+            <span id="backtest-val-leverage" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-bold border border-purple-800">1.0x (Unlevered)</span>
+          </div>
+          <div class="flex items-center gap-2 flex-1 max-w-xs">
+            <input type="range" id="backtest-slider-leverage" min="1.0" max="5.0" step="0.1" value="1.0" class="w-full accent-purple-500">
+            <input type="number" id="backtest-input-leverage" min="1.0" max="5.0" step="0.1" value="1.0" class="w-14 px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded text-center text-white font-mono text-xs">
+          </div>
+          <div class="flex items-center gap-1">
+            <button type="button" data-action="set-backtest-leverage" data-leverage="1.0" id="backtest-btn-lev-10" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold hover:bg-purple-900 transition">1.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="1.5" id="backtest-btn-lev-15" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">1.5x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="2.0" id="backtest-btn-lev-20" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">2.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="3.0" id="backtest-btn-lev-30" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">3.0x</button>
+          </div>
+          <span id="backtest-leverage-note" class="text-[11px] text-slate-400">
+            Debt: $0 | Historical Borrow Drag: $0.00
           </span>
         </div>
       </div>

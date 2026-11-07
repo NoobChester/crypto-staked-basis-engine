@@ -108,6 +108,10 @@ ${activePlots.sp500 ? `          <div class="flex items-center justify-between g
             <span>S&amp;P 500 Index:</span>
             <span>${fmtUSD(step.sp500BenchmarkEquity)}</span>
           </div>` : ''}
+${step.borrowRateAPR && activeChartState?.result?.leverage && activeChartState.result.leverage > 1.0 ? `          <div class="flex items-center justify-between gap-3 text-purple-400 font-medium">
+            <span>USD Borrow APR:</span>
+            <span>${fmtPct(step.borrowRateAPR)} (-${fmtUSD(step.cumulativeBorrowInterest || 0)})</span>
+          </div>` : ''}
           <div class="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
             <span>Spot: $${step.spotPrice.toLocaleString()}</span>
             <span>Funding: ${fmtPct(step.fundingAPR)}</span>
@@ -276,6 +280,22 @@ export function drawBacktestChart(
 
     ctx.fillStyle = '#64748b';
     ctx.fillText(dateStr.slice(0, 7), x, height - padding.bottom + 8);
+  }
+
+  // Active Leverage Annotation
+  if (result.leverage && result.leverage > 1.0) {
+    ctx.save();
+    ctx.fillStyle = '#c084fc';
+    ctx.font = 'bold 10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    const debt = (result.leverage - 1) * result.initialCapital;
+    ctx.fillText(
+      `LEVERAGED BASIS: ${result.leverage.toFixed(1)}x · USD DEBT: $${Math.round(debt).toLocaleString()}`,
+      padding.left + 10,
+      padding.top + 8
+    );
+    ctx.restore();
   }
 
   // Curve 3: US T-Bills Risk-Free Rate (Emerald Dashed Line)

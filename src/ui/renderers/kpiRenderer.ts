@@ -206,8 +206,13 @@ export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcom
       UI.stateBadge.textContent = 'UNHEDGED SPOT LONG';
       UI.stateBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-rose-950 text-rose-300 border border-rose-800 font-bold font-mono';
     } else if (state.mode === 'unified') {
-      UI.stateBadge.textContent = 'CROSS-COLLATERALIZED HEDGE';
-      UI.stateBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold font-mono';
+      if (state.leverage && state.leverage > 1.0) {
+        UI.stateBadge.textContent = `LEVERAGED BASIS (${state.leverage.toFixed(1)}x)`;
+        UI.stateBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-purple-950 text-purple-300 border border-purple-800 font-bold font-mono';
+      } else {
+        UI.stateBadge.textContent = 'CROSS-COLLATERALIZED HEDGE';
+        UI.stateBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold font-mono';
+      }
     } else {
       UI.stateBadge.textContent = 'ISOLATED DELTA NEUTRAL';
       UI.stateBadge.className = 'px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold font-mono';
@@ -308,6 +313,83 @@ export function renderUI(UI: UIElements, state: HedgingState, res: HedgingOutcom
 
   if (UI.instCollateralNoteText && inst.note) {
     UI.instCollateralNoteText.textContent = inst.note;
+  }
+
+  // Render Unified Leveraged Carry Spread Controls
+  if (UI.panelUnifiedLeverage) {
+    if (state.mode === 'unified') {
+      UI.panelUnifiedLeverage.classList.remove('hidden');
+    } else {
+      UI.panelUnifiedLeverage.classList.add('hidden');
+    }
+  }
+
+  const lev = state.leverage ?? 1.0;
+  if (UI.valLeverage) {
+    UI.valLeverage.textContent = `${lev.toFixed(1)}x ${lev > 1.0 ? 'Leveraged' : '(Unlevered)'}`;
+  }
+  if (UI.inputLeverage && (typeof document === 'undefined' || document.activeElement !== UI.inputLeverage)) {
+    UI.inputLeverage.value = lev.toFixed(1);
+  }
+  if (UI.valLeveragedNotional) {
+    UI.valLeveragedNotional.textContent = fmtUSD(res.S0);
+  }
+  if (UI.valBorrowDebt) {
+    UI.valBorrowDebt.textContent = fmtUSD(res.borrowDebt);
+  }
+  if (UI.valBorrowDragAnnual) {
+    UI.valBorrowDragAnnual.textContent = `-${res.borrowAPYDrag.toFixed(2)}% APY`;
+    UI.valBorrowDragAnnual.className = `font-bold ${res.borrowAPYDrag > 0 ? 'text-rose-400' : 'text-slate-400'}`;
+  }
+  if (UI.sliderBorrowApr && (typeof document === 'undefined' || document.activeElement !== UI.sliderBorrowApr)) {
+    UI.sliderBorrowApr.value = res.borrowAPR.toFixed(1);
+  }
+  if (UI.inputBorrowApr && (typeof document === 'undefined' || document.activeElement !== UI.inputBorrowApr)) {
+    UI.inputBorrowApr.value = res.borrowAPR.toFixed(1);
+  }
+  if (UI.badgeBorrowMode) {
+    UI.badgeBorrowMode.textContent = state.isCustomBorrowAPR ? 'MANUAL OVERRIDE' : 'AUTO-KINK';
+    UI.badgeBorrowMode.className = state.isCustomBorrowAPR
+      ? 'text-[9px] px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800 font-mono font-bold'
+      : 'text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-mono font-bold';
+  }
+  if (UI.btnToggleBorrowAuto) {
+    UI.btnToggleBorrowAuto.textContent = state.isCustomBorrowAPR ? 'Switch to Auto-Kink' : 'Market-Linked';
+  }
+  if (UI.borrowRateExplainer) {
+    if (state.isCustomBorrowAPR) {
+      UI.borrowRateExplainer.textContent = `Manual Override: Fixed USD borrow rate locked at ${res.borrowAPR.toFixed(1)}% APR.`;
+    } else {
+      UI.borrowRateExplainer.textContent = `Dynamic Kink Curve: Base 6.5% APR + Contango surge during market rallies (${res.borrowAPR.toFixed(1)}% APR active).`;
+    }
+  }
+
+  // Quick leverage button active styles
+  const quickLevBtns = [
+    { btn: UI.btnLev10, val: 1.0 },
+    { btn: UI.btnLev15, val: 1.5 },
+    { btn: UI.btnLev20, val: 2.0 },
+    { btn: UI.btnLev30, val: 3.0 }
+  ];
+  quickLevBtns.forEach(({ btn, val }) => {
+    if (!btn) return;
+    if (Math.abs(lev - val) < 0.05) {
+      btn.className = 'w-full py-1 text-[11px] font-mono rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold transition';
+    } else {
+      btn.className = 'w-full py-1 text-[11px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition';
+    }
+  });
+
+  // Balance Sheet Borrow Breakdown
+  if (UI.boxBreakdownBorrow) {
+    if (lev > 1.0) {
+      UI.boxBreakdownBorrow.classList.remove('hidden');
+      if (UI.breakdownBorrowRate) UI.breakdownBorrowRate.textContent = `${res.borrowAPR.toFixed(1)}% APR`;
+      if (UI.breakdownBorrowInterest) UI.breakdownBorrowInterest.textContent = `-${fmtUSD(res.borrowInterestTotal)}`;
+      if (UI.breakdownBorrowDebt) UI.breakdownBorrowDebt.textContent = `Debt: ${fmtUSD(res.borrowDebt)} (${lev.toFixed(1)}x)`;
+    } else {
+      UI.boxBreakdownBorrow.classList.add('hidden');
+    }
   }
 
   // Render Collateral Intelligence Card

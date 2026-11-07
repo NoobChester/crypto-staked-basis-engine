@@ -16,6 +16,7 @@ export interface BacktestConfig {
   mmr?: number;
   tbillRate?: number;
   asset?: string;
+  leverage?: number;
 }
 
 export interface BacktestStepResult {
@@ -35,6 +36,9 @@ export interface BacktestStepResult {
   isLiquidated: boolean;
   cumulativeFunding: number;
   cumulativeStaking: number;
+  borrowRateAPR: number;
+  cumulativeBorrowInterest: number;
+  borrowDebt: number;
 }
 
 export interface BacktestSummaryResult {
@@ -52,6 +56,8 @@ export interface BacktestSummaryResult {
   sortinoRatio: number;
   totalHarvestedFunding: number;
   totalHarvestedStaking: number;
+  totalBorrowInterestPaid: number;
+  leverage: number;
   isLiquidated: boolean;
   liquidationDate: string | null;
   liquidationPrice: number | null;
@@ -98,12 +104,14 @@ export function runHistoricalBacktest(
   const mmr = config.mmr ?? 0.005;
   const tbillRate = config.tbillRate ?? 4.35;
   const splitSpot = Math.max(1, Math.min(99, config.splitSpot ?? 50));
+  const L = mode === 'unified' ? Math.max(1.0, Math.min(5.0, config.leverage ?? 1.0)) : 1.0;
+  const D = mode === 'unified' ? (L - 1) * C : 0;
 
   // High-performance cache check: sub-millisecond retrieval on repeat configurations
   const p0 = series[0].spotPrice;
   const pN = series[series.length - 1].spotPrice;
   const assetKey = config.asset ?? '';
-  const cacheKey = `${assetKey}|${mode}|${C}|${V}|${splitSpot}|${mmr}|${tbillRate}|${p0}|${pN}|${series[0].date}|${series[series.length - 1].date}|${series.length}`;
+  const cacheKey = `${assetKey}|${mode}|${C}|${L}|${V}|${splitSpot}|${mmr}|${tbillRate}|${p0}|${pN}|${series[0].date}|${series[series.length - 1].date}|${series.length}`;
   const cached = backtestResultCache.get(cacheKey);
   if (cached) {
     return cached;
@@ -111,9 +119,9 @@ export function runHistoricalBacktest(
 
   let S0: number, M0: number, N0: number;
   if (mode === 'unified') {
-    S0 = C;
+    S0 = C * L;
     M0 = C;
-    N0 = C;
+    N0 = C * L;
   } else {
     const sFrac = splitSpot / 100;
     S0 = C * sFrac;
@@ -126,6 +134,7 @@ export function runHistoricalBacktest(
   const trajectory: BacktestStepResult[] = [];
   let cumFunding = 0;
   let cumStaking = 0;
+  let cumBorrowInterest = 0;
   let isLiquidated = false;
   let tLiq: number | null = null;
   let liquidationDate: string | null = null;
@@ -147,6 +156,14 @@ export function runHistoricalBacktest(
       cumFunding += dailyFunding;
     }
 
+    // Borrow interest on USD margin loan debt
+    const borrowRate = step.borrowAPR ?? 6.5;
+    let dailyBorrowInterest = 0;
+    if (D > 0) {
+      dailyBorrowInterest = D * (borrowRate / 100) * (1 / 365);
+      cumBorrowInterest += dailyBorrowInterest;
+    }
+
     // Spot position valuation including depeg discount
     const spotVal = S0 * (1 + r) * (1 - depeg);
 
@@ -156,7 +173,7 @@ export function runHistoricalBacktest(
 
     if (mode === 'unified') {
       maintenanceMargin = N0 * (1 + r) * mmr;
-      marginEquity = spotVal * V - N0 * r;
+      marginEquity = spotVal * V - D - N0 * r;
     } else {
       maintenanceMargin = N0 * (1 + r) * mmr;
       marginEquity = M0 - N0 * r;
@@ -177,13 +194,14 @@ export function runHistoricalBacktest(
     let marginRatio: number;
 
     if (isLiquidated) {
-      // In post-liquidation state, short perp was forfeited; position is naked spot
-      strategyEquity = spotVal + cumFunding + cumStaking;
+      // In post-liquidation state, derivative closed, debt extinguished via spot sale, remaining spot is naked long
+      const residualSpot = Math.max(0, spotVal - D);
+      strategyEquity = residualSpot + cumFunding + cumStaking - cumBorrowInterest;
       marginRatio = 1.0;
     } else {
       if (mode === 'unified') {
         const perpPnL = -N0 * r;
-        strategyEquity = spotVal + perpPnL + cumFunding + cumStaking;
+        strategyEquity = (spotVal - D) + perpPnL + cumFunding + cumStaking - cumBorrowInterest;
       } else {
         const perpMarginVal = Math.max(0, M0 - N0 * r);
         strategyEquity = spotVal + perpMarginVal + cumFunding + cumStaking;
@@ -213,7 +231,10 @@ export function runHistoricalBacktest(
       marginRatio: round4(marginRatio),
       isLiquidated,
       cumulativeFunding: round2(cumFunding),
-      cumulativeStaking: round2(cumStaking)
+      cumulativeStaking: round2(cumStaking),
+      borrowRateAPR: borrowRate,
+      cumulativeBorrowInterest: round2(cumBorrowInterest),
+      borrowDebt: D
     });
   }
 
@@ -312,6 +333,8 @@ export function runHistoricalBacktest(
     sortinoRatio,
     totalHarvestedFunding: lastStep.cumulativeFunding,
     totalHarvestedStaking: lastStep.cumulativeStaking,
+    totalBorrowInterestPaid: round2(cumBorrowInterest),
+    leverage: L,
     isLiquidated,
     liquidationDate,
     liquidationPrice,
