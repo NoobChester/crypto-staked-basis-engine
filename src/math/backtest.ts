@@ -119,7 +119,7 @@ export function runHistoricalBacktest(
   const mmr = config.mmr ?? 0.005;
   const tbillRate = config.tbillRate ?? 4.35;
   const splitSpot = Math.max(1, Math.min(99, config.splitSpot ?? 50));
-  const L = mode === 'unified' ? Math.max(1.0, Math.min(5.0, config.leverage ?? 1.0)) : 1.0;
+  const L = mode === 'unified' ? Math.max(1.0, config.leverage ?? 1.0) : 1.0;
   const D = mode === 'unified' ? (L - 1) * C : 0;
 
   const autoResetEnabled = config.autoResetEnabled ?? false;

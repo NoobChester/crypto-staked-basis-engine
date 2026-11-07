@@ -167,9 +167,9 @@ export function calculateOutcome(
 
   if (mode === 'unified') {
     // UNIFIED MARGIN MODE:
-    // Capital deployed with optional leverage L (1.0x to 5.0x).
+    // Capital deployed with optional leverage L (>= 1.0x).
     // Spot acts as cross-margin for short perp. Extra notional financed via USD margin loan debt.
-    const L = Math.max(1.0, Math.min(5.0, customState.leverage ?? 1.0));
+    const L = Math.max(1.0, customState.leverage ?? 1.0);
     S0 = C * L;
     N0 = C * L;
     M0 = C;
@@ -427,7 +427,7 @@ export function calculateCrisisSimulation(
 
   const baseSpotPrice = state.tradedAsset === 'BTC' ? 78500 : state.tradedAsset === 'SOL' ? 93.5 : 2315;
 
-  const L = mode === 'unified' ? Math.max(1.0, Math.min(5.0, state.leverage ?? 1.0)) : 1.0;
+  const L = mode === 'unified' ? Math.max(1.0, state.leverage ?? 1.0) : 1.0;
   const D = mode === 'unified' ? (L - 1) * C : 0;
 
   let S0: number, M0: number, N0: number;

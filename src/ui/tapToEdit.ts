@@ -22,8 +22,8 @@ export function sanitizeInputNumber(
   const parsed = typeof raw === 'number' ? raw : parseFloat(raw.toString().replace(/[^0-9.-]/g, ''));
   if (isNaN(parsed)) return min;
 
-  // Clamp within min and max
-  const clamped = Math.max(min, Math.min(max, parsed));
+  // Clamp within min and optional max
+  const clamped = max === Infinity ? Math.max(min, parsed) : Math.max(min, Math.min(max, parsed));
 
   // Round to step precision if step is finite
   if (step > 0) {
@@ -53,14 +53,22 @@ export function openTapToEditPopover(target: TapToEditTarget): void {
   if (inputEl) {
     inputEl.value = target.currentValue.toString();
     inputEl.min = target.min.toString();
-    inputEl.max = target.max.toString();
+    if (target.max !== Infinity) {
+      inputEl.max = target.max.toString();
+    } else {
+      inputEl.removeAttribute('max');
+    }
     inputEl.step = target.step.toString();
     setTimeout(() => {
       inputEl.focus();
       inputEl.select();
     }, 50);
   }
-  if (boundsEl) boundsEl.textContent = `Range: ${target.min} to ${target.max} ${target.unit}`;
+  if (boundsEl) {
+    boundsEl.textContent = target.max === Infinity
+      ? `Minimum: ${target.min} ${target.unit}`
+      : `Range: ${target.min} to ${target.max} ${target.unit}`;
+  }
   if (unitEl) unitEl.textContent = target.unit;
 
   popoverContainer?.classList.remove('hidden');

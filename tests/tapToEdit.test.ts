@@ -24,4 +24,10 @@ describe('Tap-to-Edit Input Sanitizer & Bounds Engine', () => {
   it('returns min bound when input is completely invalid NaN string', () => {
     expect(sanitizeInputNumber('invalid_text', 50, 500, 1)).toBe(50);
   });
+
+  it('supports max: Infinity for uncapped inputs without artificial restriction', () => {
+    expect(sanitizeInputNumber('50000000', 1, Infinity, 1)).toBe(50000000);
+    expect(sanitizeInputNumber('1000000000', 1, Infinity, 1)).toBe(1000000000);
+    expect(sanitizeInputNumber('-50', 1, Infinity, 1)).toBe(1);
+  });
 });

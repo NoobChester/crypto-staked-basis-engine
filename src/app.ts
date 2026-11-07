@@ -301,7 +301,8 @@ export const backtestState: BacktestState = {
     strategy: true,
     spot: true,
     tbill: true,
-    sp500: true
+    sp500: true,
+    resets: true
   },
   autoResetEnabled: false,
   autoResetThreshold: 0.80,
@@ -700,8 +701,19 @@ export function setBacktestAsset(asset: TradedAsset): void {
   updateBacktest();
 }
 
+export function syncSliderMax(slider: HTMLInputElement | null, val: number, defaultMax: number): void {
+  if (!slider) return;
+  const currentMax = parseFloat(slider.max) || defaultMax;
+  const targetMax = Math.max(defaultMax, val);
+  if (targetMax !== currentMax) {
+    slider.max = targetMax.toString();
+  }
+}
+
 export function setBacktestCapital(capital: number): void {
-  backtestState.capital = capital;
+  const safeCap = Math.max(1, isNaN(capital) ? 10000 : capital);
+  backtestState.capital = safeCap;
+  if (UI?.backtestInputCapital) UI.backtestInputCapital.value = safeCap.toString();
   updateBacktest();
 }
 
@@ -785,10 +797,11 @@ export function setBacktestEndDateIndex(index: number, isDragging = false): void
 
 export function toggleBacktestPlot(plot: keyof VisiblePlots): void {
   const current = backtestState.visiblePlots[plot];
-  if (current) {
-    // Keep at least 1 curve active
-    const activeCount = Object.values(backtestState.visiblePlots).filter(Boolean).length;
-    if (activeCount <= 1) return;
+  if (plot !== 'resets' && current) {
+    // Keep at least 1 actual curve active
+    const curvePlots: (keyof VisiblePlots)[] = ['strategy', 'spot', 'tbill', 'sp500'];
+    const activeCurves = curvePlots.filter(p => backtestState.visiblePlots[p]).length;
+    if (activeCurves <= 1) return;
   }
   backtestState.visiblePlots[plot] = !current;
   updateBacktestPlotTogglesUI();
@@ -800,6 +813,7 @@ export function toggleBacktestPlot(plot: keyof VisiblePlots): void {
 export function updateBacktestPlotTogglesUI(): void {
   if (!UI) return;
   const { strategy, spot, tbill, sp500 } = backtestState.visiblePlots;
+  const resets = backtestState.visiblePlots.resets !== false;
 
   // Strategy Button & Badge
   if (UI.btnTogglePlotStrategy && UI.badgeTogglePlotStrategy) {
@@ -851,6 +865,22 @@ export function updateBacktestPlotTogglesUI(): void {
       UI.badgeTogglePlotTbill.textContent = 'OFF';
       UI.badgeTogglePlotTbill.className = 'text-[10px] px-1 rounded bg-slate-800 text-slate-500 border border-slate-700 font-normal';
     }
+  }
+
+  // Auto-Reset Lines Button & Badge & Count
+  if (UI.btnTogglePlotResets && UI.badgeTogglePlotResets) {
+    if (resets) {
+      UI.btnTogglePlotResets.className = 'px-2.5 py-1 rounded-lg border border-amber-500/80 bg-amber-950/60 text-amber-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-amber-900/60 shadow-sm';
+      UI.badgeTogglePlotResets.textContent = 'ON';
+      UI.badgeTogglePlotResets.className = 'text-[10px] px-1 rounded bg-amber-900/80 text-amber-200 border border-amber-700/60 font-bold';
+    } else {
+      UI.btnTogglePlotResets.className = 'px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-slate-500 font-normal flex items-center gap-2 cursor-pointer transition opacity-50 line-through hover:opacity-75';
+      UI.badgeTogglePlotResets.textContent = 'OFF';
+      UI.badgeTogglePlotResets.className = 'text-[10px] px-1 rounded bg-slate-800 text-slate-500 border border-slate-700 font-normal';
+    }
+  }
+  if (UI.backtestLegendResetsCount) {
+    UI.backtestLegendResetsCount.textContent = (currentBacktestResult?.totalResetsCount ?? 0).toString();
   }
 }
 
@@ -1411,17 +1441,22 @@ export function setSolYieldType(yieldType: SolYieldType): void {
 }
 
 export function setCapital(cap: number): void {
-  state.capital = cap;
-  if (UI.inputCapital) UI.inputCapital.value = cap.toString();
-  if (UI.valCapital) UI.valCapital.textContent = '$' + cap.toLocaleString();
+  const safeCap = Math.max(1, isNaN(cap) ? 10000 : cap);
+  state.capital = safeCap;
+  if (UI?.inputCapital) UI.inputCapital.value = safeCap.toString();
+  if (UI?.valCapital) UI.valCapital.textContent = '$' + safeCap.toLocaleString();
   updateApp();
 }
 
 export function setPriceChange(pct: number): void {
-  state.priceMove = pct;
+  const safePct = Math.max(-100, isNaN(pct) ? 0 : pct);
+  state.priceMove = safePct;
   state.activeCrisisScenario = null;
-  if (UI?.inputPriceMove) UI.inputPriceMove.value = pct.toString();
-  if (UI?.valPriceMove) UI.valPriceMove.textContent = fmtPct(pct);
+  if (UI?.inputPriceMove) {
+    syncSliderMax(UI.inputPriceMove, safePct, 200);
+    UI.inputPriceMove.value = safePct.toString();
+  }
+  if (UI?.valPriceMove) UI.valPriceMove.textContent = fmtPct(safePct);
   updateApp();
 }
 
@@ -1586,13 +1621,17 @@ export async function setForwardEngine(engine: 'sqmc' | 'dated_basis'): Promise<
 }
 
 export async function setDays(days: number): Promise<void> {
-  state.days = days;
-  if (UI.inputDays) UI.inputDays.value = days.toString();
-  if (UI.valDays) UI.valDays.textContent = `${days} Days`;
+  const safeDays = Math.max(1, isNaN(days) ? 90 : Math.round(days));
+  state.days = safeDays;
+  if (UI?.inputDays) {
+    syncSliderMax(UI.inputDays, safeDays, 365);
+    UI.inputDays.value = safeDays.toString();
+  }
+  if (UI?.valDays) UI.valDays.textContent = `${safeDays} Days`;
 
   // Dynamic Forward Tenor Matching via active engine (SQMC or Dated Basis)
   try {
-    await evaluateForwardHorizon(days);
+    await evaluateForwardHorizon(safeDays);
   } catch {
     // fallback if forward calculation fails
   }
@@ -1619,9 +1658,12 @@ export function setSplit(splitSpot: number): void {
 }
 
 export function setLeverage(lev: number): void {
-  const clamped = Math.max(1.0, Math.min(5.0, Math.round(lev * 10) / 10));
+  const clamped = Math.max(1.0, isNaN(lev) ? 1.0 : Math.round(lev * 10) / 10);
   state.leverage = clamped;
-  if (UI?.inputLeverage) UI.inputLeverage.value = clamped.toFixed(1);
+  if (UI?.inputLeverage) {
+    syncSliderMax(UI.inputLeverage, clamped, 5.0);
+    UI.inputLeverage.value = clamped.toFixed(1);
+  }
   updateApp();
 }
 
@@ -1634,15 +1676,24 @@ export function toggleBorrowAuto(): void {
 }
 
 export function setBorrowAPR(apr: number): void {
-  state.borrowAPR = Math.max(0, apr);
+  const safeApr = Math.max(0, isNaN(apr) ? 0 : apr);
+  state.borrowAPR = safeApr;
   state.isCustomBorrowAPR = true;
+  if (UI?.sliderBorrowApr) {
+    syncSliderMax(UI.sliderBorrowApr, safeApr, 30);
+    UI.sliderBorrowApr.value = safeApr.toString();
+  }
+  if (UI?.inputBorrowApr) UI.inputBorrowApr.value = safeApr.toString();
   updateApp();
 }
 
 export function setBacktestLeverage(lev: number): void {
-  const clamped = Math.max(1.0, Math.min(5.0, Math.round(lev * 10) / 10));
+  const clamped = Math.max(1.0, isNaN(lev) ? 1.0 : Math.round(lev * 10) / 10);
   backtestState.leverage = clamped;
-  if (UI?.backtestSliderLeverage) UI.backtestSliderLeverage.value = clamped.toFixed(1);
+  if (UI?.backtestSliderLeverage) {
+    syncSliderMax(UI.backtestSliderLeverage, clamped, 5.0);
+    UI.backtestSliderLeverage.value = clamped.toFixed(1);
+  }
   if (UI?.backtestInputLeverage) UI.backtestInputLeverage.value = clamped.toFixed(1);
   updateBacktest();
 }
@@ -1685,7 +1736,9 @@ export function applyCrisisScenario(key: CrisisScenarioKey): void {
 }
 
 export function setStressCapital(capital: number): void {
-  stressLabState.capital = capital;
+  const safeCap = Math.max(1, isNaN(capital) ? 10000 : capital);
+  stressLabState.capital = safeCap;
+  if (UI?.stressInputCapital) UI.stressInputCapital.value = safeCap.toString();
   updateStressLab();
 }
 
@@ -2083,12 +2136,12 @@ function init() {
   }
 
   initTapToEdit([
-    { id: 'val-capital', field: 'Capital ($)', currentValue: state.capital, min: 100, max: 10000000, step: 500, unit: 'USD', onCommit: (v) => setCapital(v) },
-    { id: 'val-price-move', field: 'Price Shock', currentValue: state.priceMove, min: -100, max: 200, step: 0.5, unit: '%', onCommit: (v) => setPriceChange(v) },
-    { id: 'val-days', field: 'Holding Days', currentValue: state.days, min: 1, max: 730, step: 1, unit: 'Days', onCommit: (v) => setDays(v) },
-    { id: 'val-funding', field: 'Funding Rate', currentValue: state.fundingAPR, min: -100, max: 200, step: 0.5, unit: '% APR', onCommit: (v) => { state.fundingAPR = v; state.isLiveFunding = false; updateRateSourceBadge('manual'); updateApp(); } },
-    { id: 'val-staking', field: 'Staking Yield', currentValue: state.stakingAPY, min: 0, max: 30, step: 0.1, unit: '% APY', onCommit: (v) => { state.stakingAPY = v; state.isLiveStaking = false; updateApp(); } },
-    { id: 'val-depeg', field: 'LST De-Peg Discount', currentValue: state.depegPct, min: 0, max: 50, step: 0.1, unit: '% Discount', onCommit: (v) => setDepeg(v) }
+    { id: 'val-capital', field: 'Capital ($)', currentValue: state.capital, min: 1, max: Infinity, step: 1, unit: 'USD', onCommit: (v) => setCapital(v) },
+    { id: 'val-price-move', field: 'Price Shock', currentValue: state.priceMove, min: -100, max: Infinity, step: 0.5, unit: '%', onCommit: (v) => setPriceChange(v) },
+    { id: 'val-days', field: 'Holding Days', currentValue: state.days, min: 1, max: Infinity, step: 1, unit: 'Days', onCommit: (v) => setDays(v) },
+    { id: 'val-funding', field: 'Funding Rate', currentValue: state.fundingAPR, min: -100, max: Infinity, step: 0.5, unit: '% APR', onCommit: (v) => { state.fundingAPR = v; state.isLiveFunding = false; updateRateSourceBadge('manual'); updateApp(); } },
+    { id: 'val-staking', field: 'Staking Yield', currentValue: state.stakingAPY, min: 0, max: Infinity, step: 0.1, unit: '% APY', onCommit: (v) => { state.stakingAPY = v; state.isLiveStaking = false; updateApp(); } },
+    { id: 'val-depeg', field: 'LST De-Peg Discount', currentValue: state.depegPct, min: 0, max: 100, step: 0.1, unit: '% Discount', onCommit: (v) => setDepeg(v) }
   ]);
 
     setupChartInteractions(UI.canvas, UI, () => state, getConfidenceStats);

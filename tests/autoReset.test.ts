@@ -7,6 +7,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { runHistoricalBacktest } from '../src/math/backtest.js';
+import { calculateOutcome } from '../src/math/hedging.js';
+import { syncSliderMax } from '../src/app.js';
 import { getHistoricalBacktestSeries } from '../src/services/marketData/backtestService.js';
 import type { DailyHistoricalMarketStep } from '../src/data/historical/ethBeaconSeries.js';
 
@@ -183,5 +185,61 @@ describe('Auto Baseline Reset (Rebalance Engine) Quantitative Calculus', () => {
     expect(autoResetResult.isLiquidated).toBe(false);
     expect(autoResetResult.totalResetsCount).toBeGreaterThan(0);
     expect(autoResetResult.terminalStrategyEquity).toBeGreaterThan(autoResetResult.initialCapital);
+  });
+
+  it('supports uncapped leverage > 5.0x (e.g. 6.0x) and uncapped capital (e.g. $50M)', () => {
+    const moderateRallySeries: DailyHistoricalMarketStep[] = [
+      { date: '2024-01-01', timestamp: 1704067200000, spotPrice: 1000, fundingAPR: 15.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
+      { date: '2024-01-02', timestamp: 1704153600000, spotPrice: 1100, fundingAPR: 20.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
+      { date: '2024-01-03', timestamp: 1704240000000, spotPrice: 1250, fundingAPR: 25.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
+      { date: '2024-01-04', timestamp: 1704326400000, spotPrice: 1450, fundingAPR: 30.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
+      { date: '2024-01-05', timestamp: 1704412800000, spotPrice: 1700, fundingAPR: 35.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
+    ];
+
+    const highLevResult = runHistoricalBacktest(moderateRallySeries, {
+      capital: 50_000_000,
+      mode: 'unified',
+      leverage: 6.0,
+      collateralRatio: 0.90,
+      mmr: 0.005,
+      autoResetEnabled: true,
+      autoResetThreshold: 0.80,
+      executionMode: 'optimized'
+    });
+
+    expect(highLevResult.initialCapital).toBe(50_000_000);
+    expect(highLevResult.leverage).toBe(6.0);
+    expect(highLevResult.totalResetsCount).toBeGreaterThan(0);
+    expect(highLevResult.isLiquidated).toBe(false);
+  });
+
+  it('supports uncapped leverage and price shocks in calculateOutcome without 5.0x or 200% ceiling', () => {
+    const outcome = calculateOutcome(500, {
+      capital: 10_000_000,
+      mode: 'unified',
+      leverage: 8.0,
+      collateralRatio: 0.90,
+      mmr: 0.005,
+      fundingAPR: 12.0,
+      stakingAPY: 3.5,
+      depegPct: 0.0,
+      days: 365,
+      borrowAPR: 6.5,
+      isCustomBorrowAPR: true
+    } as any);
+
+    expect(outcome.leverage).toBe(8.0);
+    expect(outcome.S0).toBe(80_000_000);
+    expect(outcome.N0).toBe(80_000_000);
+  });
+
+  it('dynamically expands slider max without restricting user entries', () => {
+    const mockSlider = { max: '5.0' } as HTMLInputElement;
+    syncSliderMax(mockSlider, 8.5, 5.0);
+    expect(mockSlider.max).toBe('8.5');
+
+    // When value is below default max, max stays at defaultMax
+    syncSliderMax(mockSlider, 3.0, 5.0);
+    expect(mockSlider.max).toBe('5');
   });
 });

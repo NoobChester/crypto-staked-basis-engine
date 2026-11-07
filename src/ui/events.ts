@@ -57,7 +57,7 @@ export interface AppActions {
   exportBacktestCsv?: () => void;
   setBacktestStartDateIndex?: (index: number, isDragging?: boolean) => void;
   setBacktestEndDateIndex?: (index: number, isDragging?: boolean) => void;
-  toggleBacktestPlot?: (plot: 'strategy' | 'spot' | 'tbill' | 'sp500') => void;
+  toggleBacktestPlot?: (plot: 'strategy' | 'spot' | 'tbill' | 'sp500' | 'resets') => void;
   setLeverage?: (leverage: number) => void;
   toggleBorrowAuto?: () => void;
   setBorrowAPR?: (apr: number) => void;
@@ -274,7 +274,7 @@ export function setupEventDelegation(actions: AppActions): void {
         break;
       }
       case 'toggle-backtest-plot': {
-        const plot = target.getAttribute('data-plot') as 'strategy' | 'spot' | 'tbill' | 'sp500';
+        const plot = target.getAttribute('data-plot') as 'strategy' | 'spot' | 'tbill' | 'sp500' | 'resets';
         if (plot && actions.toggleBacktestPlot) {
           actions.toggleBacktestPlot(plot);
         }
@@ -336,7 +336,7 @@ export function bindSliderListeners(
 
   if (UI.inputCapital) {
     UI.inputCapital.addEventListener('input', (e) => {
-      const val = Math.max(100, parseFloat((e.target as HTMLInputElement).value) || 1000);
+      const val = Math.max(1, parseFloat((e.target as HTMLInputElement).value) || 1);
       state.capital = val;
       if (UI.valCapital) UI.valCapital.textContent = fmtUSD(val);
       onUpdate();
@@ -408,14 +408,14 @@ export function bindSliderListeners(
   }
   if (UI.stressInputCapital) {
     UI.stressInputCapital.addEventListener('input', (e) => {
-      const val = Math.max(100, parseFloat((e.target as HTMLInputElement).value) || 1000);
+      const val = Math.max(1, parseFloat((e.target as HTMLInputElement).value) || 1);
       if (onStressCapital) onStressCapital(val);
     });
   }
   if (UI.backtestInputCapital) {
     let backtestCapTimer: ReturnType<typeof setTimeout> | null = null;
     UI.backtestInputCapital.addEventListener('input', (e) => {
-      const val = Math.max(100, parseFloat((e.target as HTMLInputElement).value) || 1000);
+      const val = Math.max(1, parseFloat((e.target as HTMLInputElement).value) || 1);
       if (backtestCapTimer) clearTimeout(backtestCapTimer);
       backtestCapTimer = setTimeout(() => {
         if (onBacktestCapital) onBacktestCapital(val);
