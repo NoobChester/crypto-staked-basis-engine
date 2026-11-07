@@ -44,6 +44,8 @@ export interface BacktestStepResult {
   borrowRateAPR: number;
   cumulativeBorrowInterest: number;
   borrowDebt: number;
+  liquidationBufferPct: number;
+  liquidationPrice: number | null;
   isResetStep?: boolean;
   resetFeePaid?: number;
   resetBaselinePrice?: number | null;
@@ -71,6 +73,11 @@ export interface BacktestSummaryResult {
   liquidationDate: string | null;
   liquidationPrice: number | null;
   tLiq: number | null;
+  terminalLiquidationBufferPct: number;
+  minLiquidationBufferPct: number;
+  minLiquidationBufferDate: string;
+  terminalLiquidationPrice: number | null;
+  baselineLiquidationBufferPct: number;
   spotBenchmarkReturnPct: number;
   tbillBenchmarkReturnPct: number;
   sp500BenchmarkReturnPct: number;
@@ -172,6 +179,29 @@ export function runHistoricalBacktest(
   let liquidationDepeg = 0;
   let residualSpotEquityAtLiq = 0;
 
+  // Baseline liquidation buffer at opening (r=0, actual opening depeg)
+  const initialDepeg = (series[0]?.depegPct || 0) / 100;
+  let initialRLiq = Infinity;
+  if (mode === 'unified') {
+    if (L === 1.0 && V >= 0.999 && initialDepeg === 0) {
+      initialRLiq = Infinity;
+    } else {
+      const debtRatio = S0 > 0 ? (D / S0) : 0;
+      const num = (1 - initialDepeg) * V - debtRatio - mmr;
+      const den = 1 + mmr - (1 - initialDepeg) * V;
+      initialRLiq = den <= 0 ? Infinity : (num <= 0 ? 0 : num / den);
+    }
+  } else {
+    const marginDebtRatio = N0 > 0 ? (M0 / N0) : 0;
+    const num = marginDebtRatio - mmr;
+    const den = 1 + mmr;
+    initialRLiq = num <= 0 ? 0 : num / den;
+  }
+  const baselineLiquidationBufferPct = (initialRLiq === Infinity) ? Infinity : round2(initialRLiq * 100);
+
+  let minBufferPct = Infinity;
+  let minBufferDate = series[0].date;
+
   // State-preserving epoch baseline tracking for auto-reset
   let currentS0 = S0;
   let currentM0 = M0;
@@ -246,6 +276,34 @@ export function runHistoricalBacktest(
         }
 
         if (equityBeforeReset > 0) {
+          // Track closest distance to liquidation before auto-reset restored baseline
+          let preResetRLiq = Infinity;
+          if (mode === 'unified') {
+            if (L === 1.0 && V >= 0.999 && depeg === 0) {
+              preResetRLiq = Infinity;
+            } else {
+              const debtRatio = currentS0 > 0 ? (currentD / currentS0) : 0;
+              const num = (1 - depeg) * V - debtRatio - mmr;
+              const den = 1 + mmr - (1 - depeg) * V;
+              preResetRLiq = den <= 0 ? Infinity : (num <= 0 ? 0 : num / den);
+            }
+          } else {
+            const marginDebtRatio = currentN0 > 0 ? (currentM0 / currentN0) : 0;
+            const num = marginDebtRatio - mmr;
+            const den = 1 + mmr;
+            preResetRLiq = num <= 0 ? 0 : num / den;
+          }
+          if (preResetRLiq !== Infinity) {
+            const preResetLiqPrice = epochBaselinePrice * (1 + preResetRLiq);
+            const preResetBuffer = preResetLiqPrice > step.spotPrice
+              ? ((preResetLiqPrice - step.spotPrice) / step.spotPrice) * 100
+              : 0;
+            if (preResetBuffer < minBufferPct) {
+              minBufferPct = round2(preResetBuffer);
+              minBufferDate = step.date;
+            }
+          }
+
           let fee = 0;
           let volume = 0;
           const oldSpotNotional = currentS0 * (1 + r_epoch);
@@ -338,6 +396,48 @@ export function runHistoricalBacktest(
       }
     }
 
+    // Step Liquidation Buffer & Liquidation Price
+    let stepRLiq = Infinity;
+    if (mode === 'unified') {
+      if (L === 1.0 && V >= 0.999 && depeg === 0) {
+        stepRLiq = Infinity;
+      } else {
+        const debtRatio = currentS0 > 0 ? (currentD / currentS0) : 0;
+        const num = (1 - depeg) * V - debtRatio - mmr;
+        const den = 1 + mmr - (1 - depeg) * V;
+        stepRLiq = den <= 0 ? Infinity : (num <= 0 ? 0 : num / den);
+      }
+    } else {
+      const marginDebtRatio = currentN0 > 0 ? (currentM0 / currentN0) : 0;
+      const num = marginDebtRatio - mmr;
+      const den = 1 + mmr;
+      stepRLiq = num <= 0 ? 0 : num / den;
+    }
+
+    let stepLiqPrice: number | null = null;
+    let stepLiquidationBufferPct: number;
+
+    if (isLiquidated) {
+      stepLiquidationBufferPct = 0;
+      stepLiqPrice = liquidationPrice;
+      minBufferPct = 0;
+      minBufferDate = liquidationDate || step.date;
+    } else if (stepRLiq === Infinity) {
+      stepLiquidationBufferPct = Infinity;
+      stepLiqPrice = null;
+    } else {
+      stepLiqPrice = round2(epochBaselinePrice * (1 + stepRLiq));
+      const buffer = stepLiqPrice > step.spotPrice
+        ? ((stepLiqPrice - step.spotPrice) / step.spotPrice) * 100
+        : 0;
+      stepLiquidationBufferPct = round2(buffer);
+
+      if (stepLiquidationBufferPct < minBufferPct) {
+        minBufferPct = stepLiquidationBufferPct;
+        minBufferDate = step.date;
+      }
+    }
+
     // Mark-to-market Strategy Equity
     let strategyEquity: number;
 
@@ -392,6 +492,8 @@ export function runHistoricalBacktest(
       borrowRateAPR: borrowRate,
       cumulativeBorrowInterest: round2(cumBorrowInterest),
       borrowDebt: currentD,
+      liquidationBufferPct: stepLiquidationBufferPct,
+      liquidationPrice: stepLiqPrice,
       isResetStep,
       resetFeePaid,
       resetBaselinePrice,
@@ -500,6 +602,11 @@ export function runHistoricalBacktest(
     liquidationDate,
     liquidationPrice,
     tLiq,
+    terminalLiquidationBufferPct: isLiquidated ? 0 : (lastStep ? lastStep.liquidationBufferPct : 0),
+    minLiquidationBufferPct: Number.isFinite(minBufferPct) ? round2(minBufferPct) : Infinity,
+    minLiquidationBufferDate: minBufferDate,
+    terminalLiquidationPrice: isLiquidated ? liquidationPrice : (lastStep ? lastStep.liquidationPrice : null),
+    baselineLiquidationBufferPct,
     spotBenchmarkReturnPct,
     tbillBenchmarkReturnPct,
     sp500BenchmarkReturnPct,

@@ -19,7 +19,7 @@ export function renderBacktestLedger(
   if (!result || !result.dailyTrajectory || result.dailyTrajectory.length === 0) {
     const tr = document.createElement('tr');
     tr.className = 'border-b border-slate-800 text-slate-500 text-center';
-    tr.innerHTML = `<td colspan="9" class="py-4 text-xs font-mono">No backtest simulation data available.</td>`;
+    tr.innerHTML = `<td colspan="10" class="py-4 text-xs font-mono">No backtest simulation data available.</td>`;
     tbody.appendChild(tr);
     return;
   }
@@ -37,7 +37,7 @@ export function renderBacktestLedger(
       const milestoneTr = document.createElement('tr');
       milestoneTr.className = 'bg-gradient-to-r from-amber-950/70 via-purple-950/80 to-slate-900 border-y-2 border-amber-500/80 text-white font-mono';
       milestoneTr.innerHTML = `
-        <td colspan="9" class="py-2.5 px-3 text-center">
+        <td colspan="10" class="py-2.5 px-3 text-center">
           <div class="inline-flex items-center gap-2 flex-wrap justify-center">
             <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping"></span>
             <span class="text-amber-300 font-bold uppercase tracking-wide">⚡ REGIME SHIFT MILESTONE: BABYLON RESTAKING ERA ACTIVATION (AUG 15, 2024)</span>
@@ -88,6 +88,22 @@ export function renderBacktestLedger(
       ? `<span class="text-slate-500 font-medium" title="Pure Cash-and-Carry Era (Proof-of-Work: 0% Protocol Staking Yield)">0.0% <span class="text-[9px] text-slate-500 font-normal">PoW</span></span>`
       : `<span class="text-cyan-300">${step.stakingAPY.toFixed(1)}%</span>`;
 
+    const bufferColor = step.isLiquidated
+      ? 'text-rose-400 font-bold'
+      : (step.liquidationBufferPct === Infinity
+        ? 'text-emerald-400 font-bold'
+        : (step.liquidationBufferPct < 20
+          ? 'text-rose-400 font-bold'
+          : (step.liquidationBufferPct < 50 ? 'text-amber-400 font-semibold' : 'text-emerald-400 font-semibold')));
+
+    const bufferText = step.isLiquidated
+      ? '0.0%'
+      : (step.liquidationBufferPct === Infinity ? '∞' : `+${step.liquidationBufferPct.toFixed(1)}%`);
+
+    const bufferTitle = step.liquidationPrice
+      ? `Remaining Rally Runway: ${bufferText} · Liquidation Trigger: $${Math.round(step.liquidationPrice).toLocaleString()}`
+      : (step.liquidationBufferPct === Infinity ? 'Zero Liquidation Risk (Inverse 1:1 Margin)' : 'Liquidated');
+
     tr.innerHTML = `
       <td class="py-2.5 px-3 text-slate-400 font-bold">D${step.day}</td>
       <td class="py-2.5 px-3 text-slate-400 text-[11px]">${step.date}</td>
@@ -97,6 +113,7 @@ export function renderBacktestLedger(
       <td class="py-2.5 px-3">${stakingDisplay}</td>
       <td class="py-2.5 px-3 text-amber-300">${step.depegPct.toFixed(2)}%</td>
       <td class="py-2.5 px-3 font-bold text-cyan-400">${fmtUSD(step.strategyEquity)}</td>
+      <td class="py-2.5 px-3 ${bufferColor}" title="${bufferTitle}">${bufferText}</td>
       <td class="py-2.5 px-3">${statusPill}</td>
     `;
 
@@ -172,6 +189,8 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
     'Staking_APY_Pct',
     'Depeg_Discount_Pct',
     'Strategy_Equity_USD',
+    'Liquidation_Buffer_Pct',
+    'Liquidation_Price_USD',
     'Spot_Benchmark_USD',
     'TBill_Benchmark_USD',
     'SP500_Benchmark_USD',
@@ -194,6 +213,8 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
     step.stakingAPY.toFixed(2),
     step.depegPct.toFixed(2),
     step.strategyEquity.toFixed(2),
+    step.liquidationBufferPct === Infinity ? '"Infinity"' : step.liquidationBufferPct.toFixed(2),
+    step.liquidationPrice !== null ? step.liquidationPrice.toFixed(2) : '"N/A"',
     step.spotBenchmarkEquity.toFixed(2),
     step.tbillBenchmarkEquity.toFixed(2),
     step.sp500BenchmarkEquity.toFixed(2),
@@ -212,6 +233,7 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
     `# Horizon: ${result.startDate} to ${result.endDate} (${result.horizonDays} Days)`,
     `# Initial Capital: $${result.initialCapital.toFixed(2)}`,
     `# Active Leverage: ${(result.leverage ?? 1.0).toFixed(1)}x | Total Borrow Interest Paid: $${(result.totalBorrowInterestPaid ?? 0).toFixed(2)}`,
+    `# Liquidation Buffer: Terminal ${result.terminalLiquidationBufferPct === Infinity ? 'Infinity' : `+${result.terminalLiquidationBufferPct.toFixed(2)}%`} | Min Trough: ${result.minLiquidationBufferPct === Infinity ? 'Infinity' : `+${result.minLiquidationBufferPct.toFixed(2)}%`} (Date: ${result.minLiquidationBufferDate})`,
     `# Auto-Reset Engine: ${result.autoResetEnabled ? `ENABLED (${result.executionMode.toUpperCase()} mode @ ${(result.autoResetThreshold * 100).toFixed(0)}% MMR)` : 'DISABLED'}`,
     `# Total Resets: ${result.totalResetsCount} | Total Reset Fees Deducted: $${result.totalResetFeesPaid.toFixed(2)}`,
     `# Terminal Strategy Equity: $${result.terminalStrategyEquity.toFixed(2)}`,

@@ -219,6 +219,11 @@ describe('Leveraged Basis Trade (Carry Spread) UI & Systems Suite', () => {
       liquidationDate: null,
       liquidationPrice: null,
       tLiq: null,
+      terminalLiquidationBufferPct: 376.2,
+      minLiquidationBufferPct: 376.2,
+      minLiquidationBufferDate: '2021-01-01',
+      terminalLiquidationPrice: 3476.19,
+      baselineLiquidationBufferPct: 376.2,
       leverage: 2.0,
       totalBorrowInterestPaid: 10.68,
       spotBenchmarkReturnPct: 5.2,
@@ -252,7 +257,9 @@ describe('Leveraged Basis Trade (Carry Spread) UI & Systems Suite', () => {
           cumulativeStaking: 0,
           borrowDebt: 10000,
           borrowRateAPR: 18.5,
-          cumulativeBorrowInterest: 5.07
+          cumulativeBorrowInterest: 5.07,
+          liquidationBufferPct: 376.2,
+          liquidationPrice: 3476.19
         }
       ]
     };

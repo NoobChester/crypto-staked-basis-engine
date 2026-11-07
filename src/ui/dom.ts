@@ -359,6 +359,8 @@ export interface UIElements {
   backtestKpiFunding: HTMLElement | null;
   backtestKpiSolvencyStatus: HTMLElement | null;
   backtestKpiSolvencyDetails: HTMLElement | null;
+  backtestKpiBufferBadge: HTMLElement | null;
+  backtestValLeverageBuffer: HTMLElement | null;
   backtestLegendSpotReturn: HTMLElement | null;
   backtestLegendTbillReturn: HTMLElement | null;
   backtestLegendSp500Return: HTMLElement | null;
@@ -752,6 +754,8 @@ export function getUIElements(): UIElements {
     backtestKpiFunding: document.getElementById('backtest-kpi-funding'),
     backtestKpiSolvencyStatus: document.getElementById('backtest-kpi-solvency-status'),
     backtestKpiSolvencyDetails: document.getElementById('backtest-kpi-solvency-details'),
+    backtestKpiBufferBadge: document.getElementById('backtest-kpi-buffer-badge'),
+    backtestValLeverageBuffer: document.getElementById('backtest-val-leverage-buffer'),
     backtestLegendSpotReturn: document.getElementById('backtest-legend-spot-return'),
     backtestLegendTbillReturn: document.getElementById('backtest-legend-tbill-return'),
     backtestLegendSp500Return: document.getElementById('backtest-legend-sp500-return'),

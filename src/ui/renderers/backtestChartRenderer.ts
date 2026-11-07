@@ -117,6 +117,12 @@ ${step.borrowRateAPR && activeChartState?.result?.leverage && activeChartState.r
             <span>USD Borrow APR:</span>
             <span>${fmtPct(step.borrowRateAPR)} (-${fmtUSD(step.cumulativeBorrowInterest || 0)})</span>
           </div>` : ''}
+          <div class="pt-1 border-t border-slate-800 text-[10px] flex justify-between items-center font-medium">
+            <span class="text-slate-400">Liq Buffer:</span>
+            <span class="${step.isLiquidated ? 'text-rose-400 font-bold' : (step.liquidationBufferPct === Infinity ? 'text-emerald-400 font-bold' : (step.liquidationBufferPct < 20 ? 'text-rose-400 font-bold' : (step.liquidationBufferPct < 50 ? 'text-amber-400 font-semibold' : 'text-emerald-400 font-semibold')))}">
+              ${step.isLiquidated ? '0.0% (Liquidated)' : (step.liquidationBufferPct === Infinity ? '∞ (Zero Risk)' : `+${step.liquidationBufferPct.toFixed(1)}%`)}${step.liquidationPrice ? ` ($${Math.round(step.liquidationPrice).toLocaleString()})` : ''}
+            </span>
+          </div>
           <div class="pt-1 border-t border-slate-800 text-[10px] text-slate-400 flex justify-between">
             <span>Spot: $${step.spotPrice.toLocaleString()}</span>
             <span>Funding: ${fmtPct(step.fundingAPR)}</span>
@@ -129,7 +135,7 @@ ${step.borrowRateAPR && activeChartState?.result?.leverage && activeChartState.r
       `;
 
       // Position tooltip smoothly
-      const tooltipW = 240;
+      const tooltipW = 260;
       let leftPos = mouseX + 15;
       if (leftPos + tooltipW > dims.width) {
         leftPos = mouseX - tooltipW - 15;

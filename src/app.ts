@@ -425,13 +425,31 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
       UI.backtestKpiSolvencyStatus.className = 'text-base sm:text-lg font-bold font-mono text-emerald-400';
     }
   }
+  if (UI.backtestKpiBufferBadge) {
+    if (res.isLiquidated) {
+      UI.backtestKpiBufferBadge.textContent = 'Buffer: 0.0%';
+      UI.backtestKpiBufferBadge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800/60';
+    } else if (res.terminalLiquidationBufferPct === Infinity) {
+      UI.backtestKpiBufferBadge.textContent = 'Buffer: ∞';
+      UI.backtestKpiBufferBadge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60';
+    } else {
+      const buf = res.terminalLiquidationBufferPct;
+      UI.backtestKpiBufferBadge.textContent = `Buffer: +${buf.toFixed(1)}%`;
+      if (buf < 20) {
+        UI.backtestKpiBufferBadge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-400 border border-rose-800/60';
+      } else if (buf < 50) {
+        UI.backtestKpiBufferBadge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-400 border border-amber-800/60';
+      } else {
+        UI.backtestKpiBufferBadge.className = 'text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60';
+      }
+    }
+  }
   if (UI.backtestKpiSolvencyDetails) {
     if (res.isLiquidated && res.tLiq) {
-      UI.backtestKpiSolvencyDetails.textContent = `Margin breached on ${res.liquidationDate ?? ''}`;
-    } else if (res.savedFromLiquidation) {
-      UI.backtestKpiSolvencyDetails.textContent = `Auto-reset avoided liquidation · Fees: -${fmtUSD(res.totalResetFeesPaid)}`;
+      UI.backtestKpiSolvencyDetails.textContent = `Breached on ${res.liquidationDate ?? ''} at ${res.liquidationPrice ? fmtUSD(res.liquidationPrice) : ''}`;
     } else {
-      UI.backtestKpiSolvencyDetails.textContent = `Zero liquidation across ${res.horizonDays} days`;
+      const minBufStr = res.minLiquidationBufferPct === Infinity ? '∞' : `+${res.minLiquidationBufferPct.toFixed(1)}% (${res.minLiquidationBufferDate})`;
+      UI.backtestKpiSolvencyDetails.textContent = `Min Trough: ${minBufStr}`;
     }
   }
   if (UI.backtestKpiResetsSummary) {
@@ -488,6 +506,10 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
   const bLev = backtestState.leverage ?? 1.0;
   if (UI.backtestValLeverage) {
     UI.backtestValLeverage.textContent = `${bLev.toFixed(1)}x ${bLev > 1.0 ? 'Leveraged' : '(Unlevered)'}`;
+  }
+  if (UI.backtestValLeverageBuffer) {
+    const baseBuf = res.baselineLiquidationBufferPct;
+    UI.backtestValLeverageBuffer.textContent = baseBuf === Infinity ? 'Buffer: ∞' : `Buffer: +${baseBuf.toFixed(1)}%`;
   }
   if (UI.backtestSliderLeverage && document.activeElement !== UI.backtestSliderLeverage) {
     UI.backtestSliderLeverage.value = bLev.toFixed(1);

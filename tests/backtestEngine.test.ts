@@ -698,5 +698,133 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
       expect(result2023_2x.totalHarvestedFunding).toBeCloseTo(result2023_1x.totalHarvestedFunding * 2, 0);
       expect(result2023_2x.totalHarvestedStaking).toBeCloseTo(result2023_1x.totalHarvestedStaking * 2, 0);
     });
+
+    it('accurately computes baseline, step, trough, and terminal liquidation buffers across solvent and liquidated regimes', () => {
+      clearBacktestSimulationCache();
+      const series2023 = getHistoricalBacktestSeries('ETH', '2023-01-01', '2023-12-31');
+
+      // 1.0x Unlevered wstETH opening buffer with actual series2023[0].depegPct
+      const res1x = runHistoricalBacktest(series2023, { capital: 10000, mode: 'unified', leverage: 1.0 });
+      expect(res1x.baselineLiquidationBufferPct).toBeGreaterThan(500);
+      expect(res1x.terminalLiquidationBufferPct).toBeGreaterThan(0);
+      expect(res1x.minLiquidationBufferPct).toBeGreaterThan(0);
+      expect(res1x.isLiquidated).toBe(false);
+
+      // 2.0x Leveraged wstETH
+      const res2x = runHistoricalBacktest(series2023, { capital: 10000, mode: 'unified', leverage: 2.0 });
+      expect(res2x.baselineLiquidationBufferPct).toBeGreaterThan(300);
+      expect(res2x.minLiquidationBufferPct).toBeLessThan(res2x.baselineLiquidationBufferPct);
+      expect(res2x.minLiquidationBufferPct).toBeGreaterThan(0);
+      expect(res2x.minLiquidationBufferDate).toBeDefined();
+
+      // Verify each trajectory step has liquidation buffer and price
+      expect(res2x.dailyTrajectory[0].liquidationBufferPct).toBeCloseTo(res2x.baselineLiquidationBufferPct, 1);
+      expect(res2x.dailyTrajectory[0].liquidationPrice).toBeGreaterThan(res2x.dailyTrajectory[0].spotPrice);
+
+      // Liquidated scenario: 2021 bull run breaches 2.0x leverage
+      clearBacktestSimulationCache();
+      const series2021 = getHistoricalBacktestSeries('ETH', '2021-01-01', '2021-12-31');
+      const resLiq = runHistoricalBacktest(series2021, { capital: 10000, mode: 'unified', leverage: 2.0 });
+      expect(resLiq.isLiquidated).toBe(true);
+      expect(resLiq.terminalLiquidationBufferPct).toBe(0);
+      expect(resLiq.minLiquidationBufferPct).toBe(0);
+      expect(resLiq.terminalLiquidationPrice).toBe(resLiq.liquidationPrice);
+
+      // Isolated 50/50 split -> (1.0 - 0.005) / 1.005 = +99.0% buffer
+      const resIso = runHistoricalBacktest(series2023, { capital: 10000, mode: 'isolated', splitSpot: 50 });
+      expect(resIso.baselineLiquidationBufferPct).toBeCloseTo(99.0, 1);
+    });
+
+    it('renders liquidation buffer column in ledger table and exports it in CSV format', () => {
+      const mockSummary: BacktestSummaryResult = {
+        startDate: '2023-01-01',
+        endDate: '2023-01-03',
+        horizonDays: 3,
+        initialCapital: 10000,
+        terminalStrategyEquity: 10050,
+        netPnL: 50,
+        cumulativeReturnPct: 0.5,
+        cagrPct: 6.2,
+        maxDrawdownPct: 0.1,
+        maxDrawdownTroughDate: '2023-01-02',
+        sharpeRatio: 2.5,
+        sortinoRatio: 3.5,
+        totalHarvestedFunding: 40,
+        totalHarvestedStaking: 10,
+        totalBorrowInterestPaid: 0,
+        leverage: 1.0,
+        isLiquidated: false,
+        liquidationDate: null,
+        liquidationPrice: null,
+        tLiq: null,
+        terminalLiquidationBufferPct: 852.4,
+        minLiquidationBufferPct: 840.1,
+        minLiquidationBufferDate: '2023-01-02',
+        terminalLiquidationPrice: 11424,
+        baselineLiquidationBufferPct: 852.4,
+        spotBenchmarkReturnPct: 2.1,
+        tbillBenchmarkReturnPct: 0.04,
+        sp500BenchmarkReturnPct: 0.3,
+        totalResetsCount: 0,
+        totalResetFeesPaid: 0,
+        savedFromLiquidation: false,
+        autoResetEnabled: false,
+        autoResetThreshold: 0.80,
+        executionMode: 'optimized',
+        dailyTrajectory: [
+          {
+            day: 1,
+            date: '2023-01-01',
+            timestamp: 1672531200000,
+            spotPrice: 1200,
+            priceReturnPct: 0,
+            fundingAPR: 10,
+            stakingAPY: 4,
+            depegPct: 0,
+            strategyEquity: 10000,
+            spotBenchmarkEquity: 10000,
+            tbillBenchmarkEquity: 10000,
+            sp500BenchmarkEquity: 10000,
+            marginRatio: 0.05,
+            isLiquidated: false,
+            cumulativeFunding: 0,
+            cumulativeStaking: 0,
+            borrowRateAPR: 0,
+            cumulativeBorrowInterest: 0,
+            borrowDebt: 0,
+            liquidationBufferPct: 852.4,
+            liquidationPrice: 11424
+          }
+        ]
+      };
+
+      const createdElements: { innerHTML: string; className: string }[] = [];
+      const originalDoc = (globalThis as any).document;
+      (globalThis as any).document = {
+        createElement: vi.fn((_tag: string) => {
+          const el = {
+            innerHTML: '',
+            className: '',
+            setAttribute: vi.fn(),
+            appendChild: vi.fn()
+          };
+          createdElements.push(el);
+          return el;
+        }),
+        createDocumentFragment: vi.fn(() => ({
+          appendChild: vi.fn()
+        }))
+      };
+
+      const mockTbody = { innerHTML: '', appendChild: vi.fn() } as unknown as HTMLElement;
+      renderBacktestLedger(mockTbody, mockSummary, 1, 10, 'ETH');
+
+      // Assert row contains buffer
+      const stepRow = createdElements.find(el => el.innerHTML.includes('2023-01-01'));
+      expect(stepRow).toBeDefined();
+      expect(stepRow!.innerHTML).toContain('+852.4%');
+
+      (globalThis as any).document = originalDoc;
+    });
   });
 });

@@ -1565,6 +1565,7 @@
               LEVERAGE:
             </span>
             <span id="backtest-val-leverage" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-bold border border-purple-800">1.0x (Unlevered)</span>
+            <span id="backtest-val-leverage-buffer" class="px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 font-bold text-xs" title="Opening baseline liquidation buffer at this leverage">Buffer: +852.4%</span>
           </div>
           <div class="flex items-center gap-2 flex-1 max-w-xs">
             <input type="range" id="backtest-slider-leverage" min="1.0" max="9.0" step="0.1" value="1.0" class="w-full accent-purple-500">
@@ -1817,7 +1818,10 @@
 
         <!-- Card 6: Margin Solvency Verdict -->
         <div class="bg-brand-card rounded-2xl border border-brand-border p-3.5 space-y-1">
-          <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Solvency Verdict</span>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Solvency Verdict</span>
+            <span id="backtest-kpi-buffer-badge" class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/60" title="Terminal remaining liquidation buffer">Buffer: +852.4%</span>
+          </div>
           <div id="backtest-kpi-solvency-status" class="text-sm font-bold font-mono text-emerald-400 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span> SOLVENT
           </div>
@@ -1999,6 +2003,7 @@
                 <th class="py-2.5 px-3">Staking APY</th>
                 <th class="py-2.5 px-3">Depeg %</th>
                 <th class="py-2.5 px-3">Strategy Equity</th>
+                <th class="py-2.5 px-3">Liq Buffer</th>
                 <th class="py-2.5 px-3">Status</th>
               </tr>
             </thead>
