@@ -326,6 +326,8 @@ export interface UIElements {
   backtestBtnLev15: HTMLElement | null;
   backtestBtnLev20: HTMLElement | null;
   backtestBtnLev30: HTMLElement | null;
+  backtestBtnLev50: HTMLElement | null;
+  backtestBtnLev90: HTMLElement | null;
   backtestBtnAutoResetToggle: HTMLElement | null;
   backtestBtnExecOptimized: HTMLElement | null;
   backtestBtnExecRetail: HTMLElement | null;
@@ -717,6 +719,8 @@ export function getUIElements(): UIElements {
     backtestBtnLev15: document.getElementById('backtest-btn-lev-15'),
     backtestBtnLev20: document.getElementById('backtest-btn-lev-20'),
     backtestBtnLev30: document.getElementById('backtest-btn-lev-30'),
+    backtestBtnLev50: document.getElementById('backtest-btn-lev-50'),
+    backtestBtnLev90: document.getElementById('backtest-btn-lev-90'),
     backtestBtnAutoResetToggle: document.getElementById('backtest-btn-autoreset-toggle'),
     backtestBtnExecOptimized: document.getElementById('backtest-btn-exec-optimized'),
     backtestBtnExecRetail: document.getElementById('backtest-btn-exec-retail'),

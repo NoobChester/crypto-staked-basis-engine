@@ -187,30 +187,47 @@ describe('Auto Baseline Reset (Rebalance Engine) Quantitative Calculus', () => {
     expect(autoResetResult.terminalStrategyEquity).toBeGreaterThan(autoResetResult.initialCapital);
   });
 
-  it('supports uncapped leverage > 5.0x (e.g. 6.0x) and uncapped capital (e.g. $50M)', () => {
-    const moderateRallySeries: DailyHistoricalMarketStep[] = [
-      { date: '2024-01-01', timestamp: 1704067200000, spotPrice: 1000, fundingAPR: 15.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
-      { date: '2024-01-02', timestamp: 1704153600000, spotPrice: 1100, fundingAPR: 20.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
-      { date: '2024-01-03', timestamp: 1704240000000, spotPrice: 1250, fundingAPR: 25.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
-      { date: '2024-01-04', timestamp: 1704326400000, spotPrice: 1450, fundingAPR: 30.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
-      { date: '2024-01-05', timestamp: 1704412800000, spotPrice: 1700, fundingAPR: 35.0, stakingAPY: 3.5, depegPct: 0.0, borrowAPR: 6.5 },
-    ];
-
-    const highLevResult = runHistoricalBacktest(moderateRallySeries, {
-      capital: 50_000_000,
+  it('supports up to 9.0x institutional leverage ceiling for wstETH without Day 1 liquidation', () => {
+    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-10-31');
+    const res9 = runHistoricalBacktest(ethSeries, {
+      capital: 10000,
       mode: 'unified',
-      leverage: 6.0,
+      leverage: 9.0,
       collateralRatio: 0.90,
       mmr: 0.005,
+      asset: 'ETH',
       autoResetEnabled: true,
       autoResetThreshold: 0.80,
       executionMode: 'optimized'
     });
 
-    expect(highLevResult.initialCapital).toBe(50_000_000);
-    expect(highLevResult.leverage).toBe(6.0);
-    expect(highLevResult.totalResetsCount).toBeGreaterThan(0);
-    expect(highLevResult.isLiquidated).toBe(false);
+    expect(res9.isLiquidated).toBe(false);
+    expect(res9.tLiq).toBeNull();
+    expect(res9.totalResetsCount).toBeGreaterThan(0);
+    expect(res9.leverage).toBe(9.0);
+  });
+
+  it('calculates realistic fee drag (5 bps on perp roll + spot net trim, 18 bps on gross retail)', () => {
+    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-10-31');
+    const res2_opt = runHistoricalBacktest(ethSeries, {
+      capital: 10000,
+      mode: 'unified',
+      leverage: 2.0,
+      collateralRatio: 0.90,
+      mmr: 0.005,
+      asset: 'ETH',
+      autoResetEnabled: true,
+      autoResetThreshold: 0.80,
+      executionMode: 'optimized'
+    });
+
+    const resetStep = res2_opt.dailyTrajectory.find(s => s.isResetStep);
+    expect(resetStep).toBeDefined();
+    if (resetStep) {
+      // Fee should be 5 bps on traded volume (which includes rolling the new perp contract)
+      expect(resetStep.resetFeePaid).toBeGreaterThan(10.0); // Never pennies on a multi-thousand dollar position
+      expect(resetStep.resetVolumeTraded).toBeGreaterThan(resetStep.strategyEquity);
+    }
   });
 
   it('supports uncapped leverage and price shocks in calculateOutcome without 5.0x or 200% ceiling', () => {

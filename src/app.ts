@@ -498,13 +498,15 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
   if (UI.backtestLeverageNote) {
     const debt = bLev > 1.0 ? (bLev - 1) * backtestState.capital : 0;
     const borrowInterest = res.totalBorrowInterestPaid ?? 0;
-    UI.backtestLeverageNote.textContent = `Debt: ${fmtUSD(debt)} | Historical Borrow Drag: -${fmtUSD(borrowInterest)}`;
+    UI.backtestLeverageNote.innerHTML = `Debt: ${fmtUSD(debt)} | Historical Borrow Drag: -${fmtUSD(borrowInterest)} · <span class="text-amber-400 font-semibold">9.0x Ceiling</span> (wstETH 10% Haircut Limit)`;
   }
   const backtestLevBtns = [
     { btn: UI.backtestBtnLev10, val: 1.0 },
     { btn: UI.backtestBtnLev15, val: 1.5 },
     { btn: UI.backtestBtnLev20, val: 2.0 },
-    { btn: UI.backtestBtnLev30, val: 3.0 }
+    { btn: UI.backtestBtnLev30, val: 3.0 },
+    { btn: UI.backtestBtnLev50, val: 5.0 },
+    { btn: UI.backtestBtnLev90, val: 9.0 }
   ];
   backtestLevBtns.forEach(({ btn, val }) => {
     if (!btn) return;
@@ -1688,10 +1690,10 @@ export function setBorrowAPR(apr: number): void {
 }
 
 export function setBacktestLeverage(lev: number): void {
-  const clamped = Math.max(1.0, isNaN(lev) ? 1.0 : Math.round(lev * 10) / 10);
+  const clamped = Math.max(1.0, Math.min(9.0, isNaN(lev) ? 1.0 : Math.round(lev * 10) / 10));
   backtestState.leverage = clamped;
   if (UI?.backtestSliderLeverage) {
-    syncSliderMax(UI.backtestSliderLeverage, clamped, 5.0);
+    syncSliderMax(UI.backtestSliderLeverage, clamped, 9.0);
     UI.backtestSliderLeverage.value = clamped.toFixed(1);
   }
   if (UI?.backtestInputLeverage) UI.backtestInputLeverage.value = clamped.toFixed(1);

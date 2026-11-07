@@ -119,7 +119,12 @@ export function runHistoricalBacktest(
   const mmr = config.mmr ?? 0.005;
   const tbillRate = config.tbillRate ?? 4.35;
   const splitSpot = Math.max(1, Math.min(99, config.splitSpot ?? 50));
-  const L = mode === 'unified' ? Math.max(1.0, config.leverage ?? 1.0) : 1.0;
+  // In unified margin, leverage is physically capped by the collateral haircut solvency limit:
+  // L_max = 1 / (1 - V + mmr). Beyond this ceiling, borrowed debt exceeds recognized collateral on Day 1.
+  // For wstETH (V = 0.90, MMR = 0.005), L_max = 9.52x. At 9.0x, the position has a safe opening margin buffer.
+  const rawL = mode === 'unified' ? Math.max(1.0, config.leverage ?? 1.0) : 1.0;
+  const maxSolventL = (mode === 'unified' && V < 0.999) ? Math.floor(((1 - mmr * 2) / (1 - V + mmr)) * 10) / 10 : 100.0;
+  const L = Math.min(rawL, Math.min(9.0, maxSolventL));
   const D = mode === 'unified' ? (L - 1) * C : 0;
 
   const autoResetEnabled = config.autoResetEnabled ?? false;
@@ -249,28 +254,30 @@ export function runHistoricalBacktest(
           if (mode === 'unified') {
             const newNotional = equityBeforeReset * L;
             if (executionMode === 'optimized') {
-              // Optimized: 5 bps on net delta volume (trimmed spot + new perp delta)
-              const netSpotTrim = Math.max(0, oldSpotNotional - newNotional);
-              const netPerpTrim = Math.max(0, oldPerpNotional - newNotional);
-              volume = netSpotTrim + netPerpTrim;
+              // Optimized: 5 bps on net traded volume (net spot trimmed/added + new short perp contract established at new baseline)
+              const netSpotVolume = Math.abs(oldSpotNotional - newNotional);
+              const perpRollVolume = newNotional;
+              volume = netSpotVolume + perpRollVolume;
               fee = volume * OPTIMIZED_FEE_RATE;
             } else {
-              // Retail: 18 bps on full gross turnover (close all + open all)
+              // Retail: 18 bps on full gross turnover (close all old spot & perp + open all new spot & perp)
               volume = (oldSpotNotional + oldPerpNotional) + (newNotional * 2);
-              fee = (volume / 2) * RETAIL_FEE_RATE;
+              fee = volume * RETAIL_FEE_RATE;
             }
           } else {
             const sFrac = splitSpot / 100;
             const newSpotNotional = equityBeforeReset * sFrac;
             const newPerpNotional = newSpotNotional;
             if (executionMode === 'optimized') {
-              const netSpotTrim = Math.max(0, oldSpotNotional - newSpotNotional);
-              const netPerpTrim = Math.max(0, oldPerpNotional - newPerpNotional);
-              volume = netSpotTrim + netPerpTrim;
+              // Optimized: 5 bps on net traded volume (net spot trimmed/added + new short perp contract established at new baseline)
+              const netSpotVolume = Math.abs(oldSpotNotional - newSpotNotional);
+              const perpRollVolume = newPerpNotional;
+              volume = netSpotVolume + perpRollVolume;
               fee = volume * OPTIMIZED_FEE_RATE;
             } else {
+              // Retail: 18 bps on full gross turnover (close all old spot & perp + open all new spot & perp)
               volume = (oldSpotNotional + oldPerpNotional) + (newSpotNotional + newPerpNotional);
-              fee = (volume / 2) * RETAIL_FEE_RATE;
+              fee = volume * RETAIL_FEE_RATE;
             }
           }
 

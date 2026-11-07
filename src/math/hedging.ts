@@ -169,12 +169,15 @@ export function calculateOutcome(
     // UNIFIED MARGIN MODE:
     // Capital deployed with optional leverage L (>= 1.0x).
     // Spot acts as cross-margin for short perp. Extra notional financed via USD margin loan debt.
-    const L = Math.max(1.0, customState.leverage ?? 1.0);
+    // Constrained by collateral haircut solvency limit: L_max = 1 / (1 - V + mmr). For wstETH, max ceiling is 9.0x.
+    const V = customState.collateralRatio ?? 0.90;
+    const maxSolventL = V < 0.999 ? Math.floor(((1 - mmr * 2) / (1 - V + mmr)) * 10) / 10 : 100.0;
+    const rawL = Math.max(1.0, customState.leverage ?? 1.0);
+    const L = Math.min(rawL, Math.min(9.0, maxSolventL));
     S0 = C * L;
     N0 = C * L;
     M0 = C;
     const D = (L - 1) * C;
-    const V = customState.collateralRatio ?? 0.90;
 
     const dynamicBorrowAPR = calculateDynamicBorrowAPR(fundingAPR, priceChangePct);
     const borrowAPR = customState.borrowAPR ?? dynamicBorrowAPR;
@@ -427,7 +430,9 @@ export function calculateCrisisSimulation(
 
   const baseSpotPrice = state.tradedAsset === 'BTC' ? 78500 : state.tradedAsset === 'SOL' ? 93.5 : 2315;
 
-  const L = mode === 'unified' ? Math.max(1.0, state.leverage ?? 1.0) : 1.0;
+  const rawL = mode === 'unified' ? Math.max(1.0, state.leverage ?? 1.0) : 1.0;
+  const maxSolventL = (mode === 'unified' && V < 0.999) ? Math.floor(((1 - mmr * 2) / (1 - V + mmr)) * 10) / 10 : 100.0;
+  const L = Math.min(rawL, Math.min(9.0, maxSolventL));
   const D = mode === 'unified' ? (L - 1) * C : 0;
 
   let S0: number, M0: number, N0: number;

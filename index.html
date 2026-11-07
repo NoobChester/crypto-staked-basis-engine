@@ -1567,17 +1567,18 @@
             <span id="backtest-val-leverage" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-bold border border-purple-800">1.0x (Unlevered)</span>
           </div>
           <div class="flex items-center gap-2 flex-1 max-w-xs">
-            <input type="range" id="backtest-slider-leverage" min="1.0" max="5.0" step="0.1" value="1.0" class="w-full accent-purple-500">
-            <input type="number" id="backtest-input-leverage" min="1.0" step="0.1" value="1.0" class="w-14 px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded text-center text-white font-mono text-xs">
+            <input type="range" id="backtest-slider-leverage" min="1.0" max="9.0" step="0.1" value="1.0" class="w-full accent-purple-500">
+            <input type="number" id="backtest-input-leverage" min="1.0" max="9.0" step="0.1" value="1.0" class="w-14 px-1.5 py-0.5 bg-slate-900 border border-slate-800 rounded text-center text-white font-mono text-xs">
           </div>
           <div class="flex items-center gap-1">
             <button type="button" data-action="set-backtest-leverage" data-leverage="1.0" id="backtest-btn-lev-10" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold hover:bg-purple-900 transition">1.0x</button>
-            <button type="button" data-action="set-backtest-leverage" data-leverage="1.5" id="backtest-btn-lev-15" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">1.5x</button>
             <button type="button" data-action="set-backtest-leverage" data-leverage="2.0" id="backtest-btn-lev-20" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">2.0x</button>
             <button type="button" data-action="set-backtest-leverage" data-leverage="3.0" id="backtest-btn-lev-30" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">3.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="5.0" id="backtest-btn-lev-50" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition">5.0x</button>
+            <button type="button" data-action="set-backtest-leverage" data-leverage="9.0" id="backtest-btn-lev-90" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white transition" title="Institutional Solvency Ceiling: At 9.52x, wstETH 10% haircut causes immediate Day 1 liquidation. 9.0x guarantees a safe opening margin buffer.">9.0x (Ceiling)</button>
           </div>
-          <span id="backtest-leverage-note" class="text-[11px] text-slate-400">
-            Debt: $0 | Historical Borrow Drag: $0.00
+          <span id="backtest-leverage-note" class="text-[11px] text-slate-400" title="9.0x Solvency Ceiling: wstETH 10% haircut sets physical limit at 9.52x where debt ($90k) exhausts collateral credit ($90k)">
+            Debt: $0 | Historical Borrow Drag: $0.00 · <span class="text-amber-400 font-semibold">9.0x Ceiling</span> (wstETH 10% Haircut Limit)
           </span>
         </div>
 
