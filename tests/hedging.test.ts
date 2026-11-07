@@ -376,7 +376,7 @@ describe('Delta-Neutral Hedging Quantitative Core', () => {
       expect(res.netPnL).toBeCloseTo(1990, 1);
     });
 
-    it('settles post-liquidation state by extinguishing debt and preserving residual spot', () => {
+    it('settles post-liquidation state by extinguishing debt and preserving residual spot without artificial PnL spikes', () => {
       // 2.0x leverage: liquidation threshold is +376.19%. S0 = $20,000, Debt D = $10,000.
       // Trigger liquidation at +400% price rally.
       const res = calculateOutcome(400, {
@@ -393,9 +393,39 @@ describe('Delta-Neutral Hedging Quantitative Core', () => {
       expect(res.perpMarginVal).toBe(0);
       // Spot value at +400%: $20,000 * 5 = $100,000
       expect(res.spotVal).toBe(100000);
-      // Extinguish USD debt of $10,000 from spot: residual spot is $90,000
-      expect(res.totalPortfolioVal).toBeGreaterThan(80000);
-      expect(res.netDelta).toBe(90000); // Residual spot is naked long
+      // In unified cross-margin, exchange settles short perp loss (-$75,238) and USD debt ($10,000)
+      // from spot collateral ($95,238 at rLiq), leaving residual spot equity of $10,000.
+      // Above rLiq (+376.19%), residual spot gains +5% to $10,500 at +400%.
+      // Total portfolio value is residual spot ($10,500) + net carry yield ($1,990) = ~$12,490.
+      expect(res.totalPortfolioVal).toBeCloseTo(12490, 0);
+      expect(res.netDelta).toBeCloseTo(10500, 0); // Residual spot is naked long
+      expect(res.perpPnL).toBeCloseTo(-75238.1, 1); // Realized loss settled at liquidation shock
+    });
+
+    it('guarantees continuous equity across the liquidation boundary (zero PnL spike)', () => {
+      const opts = {
+        capital: 10000,
+        mode: 'unified' as const,
+        collateralRatio: 0.90,
+        mmr: 0.005,
+        leverage: 1.5,
+        days: 365,
+        borrowAPR: 6.5
+      };
+
+      const baseline = calculateOutcome(0, opts);
+      const rLiqPct = baseline.rLiq * 100;
+
+      // Just before liquidation
+      const pre = calculateOutcome(rLiqPct - 0.1, opts);
+      // Just after liquidation
+      const post = calculateOutcome(rLiqPct + 0.1, opts);
+
+      expect(pre.isLiquidated).toBe(false);
+      expect(post.isLiquidated).toBe(true);
+
+      // Equity must be continuous across the boundary within small delta (< $10)
+      expect(Math.abs(post.totalPortfolioVal - pre.totalPortfolioVal)).toBeLessThan(10);
     });
   });
 

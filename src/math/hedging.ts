@@ -212,9 +212,12 @@ export function calculateOutcome(
       spotVal = S0 * (1 + r) * (1 - depeg);
       spotPnL = spotVal - S0;
       depegLoss = S0 * (1 + r) * depeg;
-      perpPnL = -S0 * V;
-      // Extinguish USD debt from spot; remaining residual spot continues naked long
-      const residualSpot = Math.max(0, spotVal - D);
+      perpPnL = -N0 * rLiq;
+      // In unified cross-margin, exchange sells spot collateral to settle short perp loss (-N0 * rLiq) and debt D
+      const spotValAtLiq = S0 * (1 + rLiq) * (1 - depeg);
+      const residualSpotAtLiq = Math.max(0, spotValAtLiq - (N0 * rLiq + D));
+      // Remaining residual spot continues naked long above liquidation threshold
+      const residualSpot = rLiq > -1 ? residualSpotAtLiq * ((1 + r) / (1 + rLiq)) : 0;
       totalPortfolioVal = residualSpot + fundingYieldTotal + stakingYieldTotal - borrowInterestTotal;
       netDelta = residualSpot;
       perpMarginVal = 0;
@@ -447,6 +450,9 @@ export function calculateCrisisSimulation(
   let cumulativeBorrowInterest = 0;
   let isLiquidated = false;
   let tLiq: number | null = null;
+  let residualSpotEquityAtLiq = 0;
+  let liqSpotPrice = 0;
+  let liqDepeg = 0;
 
   const rampDays = 5;
   const halfLifeDays = scenario.halfLifeDays ?? 7;
@@ -530,6 +536,11 @@ export function calculateCrisisSimulation(
       if (marginEquity < maintenanceMargin || (stepRLiq !== Infinity && r >= stepRLiq)) {
         isLiquidated = true;
         tLiq = d;
+        liqSpotPrice = spotPrice;
+        liqDepeg = depeg;
+        if (mode === 'unified') {
+          residualSpotEquityAtLiq = Math.max(0, spotVal - (N0 * r + D));
+        }
       }
     }
 
@@ -538,8 +549,15 @@ export function calculateCrisisSimulation(
     let marginRatio: number;
 
     if (isLiquidated) {
-      const residualSpot = Math.max(0, spotVal - D);
-      stepEquity = residualSpot + cumulativeFunding + cumulativeStaking - cumulativeBorrowInterest;
+      if (mode === 'unified') {
+        const priceRatio = (liqSpotPrice > 0)
+          ? (spotPrice * (1 - depeg)) / (liqSpotPrice * (1 - liqDepeg))
+          : 1.0;
+        const residualSpot = residualSpotEquityAtLiq * priceRatio;
+        stepEquity = residualSpot + cumulativeFunding + cumulativeStaking - cumulativeBorrowInterest;
+      } else {
+        stepEquity = spotVal + cumulativeFunding + cumulativeStaking;
+      }
       marginRatio = 1.0;
     } else {
       if (mode === 'unified') {

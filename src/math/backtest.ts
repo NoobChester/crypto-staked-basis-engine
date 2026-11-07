@@ -139,6 +139,8 @@ export function runHistoricalBacktest(
   let tLiq: number | null = null;
   let liquidationDate: string | null = null;
   let liquidationPrice: number | null = null;
+  let liquidationDepeg = 0;
+  let residualSpotEquityAtLiq = 0;
 
   for (let i = 0; i < series.length; i++) {
     const step = series[i];
@@ -156,10 +158,10 @@ export function runHistoricalBacktest(
       cumFunding += dailyFunding;
     }
 
-    // Borrow interest on USD margin loan debt
+    // Borrow interest on USD margin loan debt (stops once debt is settled upon liquidation)
     const borrowRate = step.borrowAPR ?? 6.5;
     let dailyBorrowInterest = 0;
-    if (D > 0) {
+    if (D > 0 && !isLiquidated) {
       dailyBorrowInterest = D * (borrowRate / 100) * (1 / 365);
       cumBorrowInterest += dailyBorrowInterest;
     }
@@ -186,6 +188,11 @@ export function runHistoricalBacktest(
         tLiq = day;
         liquidationDate = step.date;
         liquidationPrice = step.spotPrice;
+        liquidationDepeg = depeg;
+        if (mode === 'unified') {
+          // In unified mode, the exchange sells spot collateral to settle short perp loss (-N0 * r) and repay USD debt D
+          residualSpotEquityAtLiq = Math.max(0, spotVal - (N0 * r + D));
+        }
       }
     }
 
@@ -194,9 +201,17 @@ export function runHistoricalBacktest(
     let marginRatio: number;
 
     if (isLiquidated) {
-      // In post-liquidation state, derivative closed, debt extinguished via spot sale, remaining spot is naked long
-      const residualSpot = Math.max(0, spotVal - D);
-      strategyEquity = residualSpot + cumFunding + cumStaking - cumBorrowInterest;
+      if (mode === 'unified') {
+        // In post-liquidation state, derivative closed, debt extinguished via spot sale, remaining residual spot continues naked long
+        const priceRatio = (liquidationPrice && liquidationPrice > 0)
+          ? (step.spotPrice * (1 - depeg)) / (liquidationPrice * (1 - liquidationDepeg))
+          : 1.0;
+        const residualSpot = residualSpotEquityAtLiq * priceRatio;
+        strategyEquity = residualSpot + cumFunding + cumStaking - cumBorrowInterest;
+      } else {
+        // In isolated mode, spot in custody was untouched; only cash margin M0 was wiped out
+        strategyEquity = spotVal + cumFunding + cumStaking;
+      }
       marginRatio = 1.0;
     } else {
       if (mode === 'unified') {

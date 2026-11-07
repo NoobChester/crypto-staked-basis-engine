@@ -668,6 +668,15 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
       expect(result2021.liquidationDate).toBe('2021-04-23');
       expect(result2021.totalBorrowInterestPaid).toBeGreaterThan(0);
 
+      // Verify no artificial PnL spike across liquidation boundary
+      const liqIdx = result2021.dailyTrajectory.findIndex(s => s.day === result2021.tLiq);
+      expect(liqIdx).toBeGreaterThan(0);
+      const preLiqStep = result2021.dailyTrajectory[liqIdx - 1];
+      const liqStep = result2021.dailyTrajectory[liqIdx];
+      // Equity before and at liquidation must be continuous without unhedged spot jumps
+      expect(Math.abs(liqStep.strategyEquity - preLiqStep.strategyEquity)).toBeLessThan(500);
+      expect(liqStep.strategyEquity).toBeLessThan(15000); // Definitely not $100,000+!
+
       // In 2023: ETH rallied moderately (+90%), well within the +376.2% runway -> survives 100%
       clearBacktestSimulationCache();
       const series2023 = getHistoricalBacktestSeries('ETH', '2023-01-01', '2023-12-31');
