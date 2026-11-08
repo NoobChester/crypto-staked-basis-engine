@@ -42,25 +42,25 @@
 
   <!-- Header Section -->
   <header class="border-b border-brand-border bg-brand-surface/80 backdrop-blur-md sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center space-x-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-cyan-500/30">
-          <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3 flex items-center justify-between gap-2 sm:gap-4">
+      <div class="flex items-center space-x-2.5 sm:space-x-3 shrink-0">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-cyan-500/30 shrink-0">
+          <svg class="w-4 h-4 sm:w-5 sm:h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
           </svg>
         </div>
         <div>
-          <div class="flex items-center gap-2">
-            <h1 class="font-bold text-lg tracking-tight text-white flex items-center gap-2">
-              DELTA-Q <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60 font-mono">QUANT TERMINAL</span>
+          <div class="flex items-center gap-1.5 sm:gap-2">
+            <h1 class="font-bold text-base sm:text-lg tracking-tight text-white flex items-center gap-1.5 sm:gap-2">
+              DELTA-Q <span class="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60 font-mono">QUANT TERMINAL</span>
             </h1>
           </div>
-          <p class="text-xs text-slate-400 font-mono">Cross-Margin Unified Account vs Isolated Cash Hedging Engine</p>
+          <p class="text-xs text-slate-400 font-mono hidden sm:block">Cross-Margin Unified Account vs Isolated Cash Hedging Engine</p>
         </div>
       </div>
 
-      <!-- Top-Level View Navigation Switcher -->
-      <nav id="top-view-nav" class="flex items-center bg-brand-card p-1 rounded-xl border border-brand-border text-xs font-mono shadow-inner order-3 sm:order-2" aria-label="Terminal Views">
+      <!-- Top-Level View Navigation Switcher (Desktop Only: lg+) -->
+      <nav id="top-view-nav" class="hidden lg:flex items-center bg-brand-card p-1 rounded-xl border border-brand-border text-xs font-mono shadow-inner" aria-label="Terminal Views">
         <button id="nav-btn-terminal" type="button" data-action="set-view" data-view="terminal"
           class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow cursor-pointer">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,21 +81,30 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           Historical Backtester
-          <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 font-bold hidden md:inline-block">2020-NOW</span>
+          <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 font-bold hidden xl:inline-block">2020-NOW</span>
+        </button>
+        <button id="nav-btn-rate-lab" type="button" data-action="set-view" data-view="rate-lab"
+          class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+          Rate &amp; Yield Lab
         </button>
       </nav>
 
-      <!-- Account Mode Switcher Tabs -->
-      <div class="flex items-center bg-brand-card p-1 rounded-xl border border-brand-border text-xs font-mono order-2 sm:order-3">
+      <!-- Account Mode Switcher Tabs (Responsive Compact Pill on Mobile) -->
+      <div class="flex items-center bg-brand-card p-0.5 sm:p-1 rounded-xl border border-brand-border text-xs font-mono shrink-0">
         <button id="mode-btn-unified" data-action="set-mode" data-mode="unified" 
-          class="px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-          Unified Margin (Cross-Collateral)
+          class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg font-bold transition flex items-center gap-1 sm:gap-1.5 bg-cyan-500 text-black shadow cursor-pointer">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          <span class="hidden sm:inline">Unified Margin (Cross-Collateral)</span>
+          <span class="sm:hidden font-mono text-[11px] font-bold">Unified</span>
         </button>
         <button id="mode-btn-isolated" data-action="set-mode" data-mode="isolated" 
-          class="px-3.5 py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1.5">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          Isolated Margin (USDC)
+          class="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-1 sm:gap-1.5 cursor-pointer">
+          <svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span class="hidden sm:inline">Isolated Margin (USDC)</span>
+          <span class="sm:hidden font-mono text-[11px] font-bold">Isolated</span>
         </button>
       </div>
     </div>
@@ -107,15 +116,15 @@
     <div id="view-live-terminal" class="space-y-5">
 
     <!-- Market Feed Status Ribbon -->
-    <div id="market-feed-bar" class="bg-brand-card/90 rounded-2xl p-3 px-4 border border-brand-border backdrop-blur-sm flex flex-wrap items-center justify-between gap-3 text-xs font-mono shadow-sm">
-      <div class="flex items-center gap-3 flex-wrap min-w-0">
+    <div id="market-feed-bar" class="bg-brand-card/90 rounded-2xl p-2 px-3 sm:p-3 sm:px-4 border border-brand-border backdrop-blur-sm flex flex-wrap items-center justify-between gap-2 sm:gap-3 text-xs font-mono shadow-sm">
+      <div class="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
         <!-- Live status pulse badge -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <span class="relative flex h-2.5 w-2.5">
             <span id="feed-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span id="feed-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
           </span>
-          <span id="feed-status-badge" class="font-bold text-white tracking-wider text-[11px] flex items-center gap-1.5">
+          <span id="feed-status-badge" class="font-bold text-white tracking-wider text-[11px] hidden sm:inline">
             LIVE MARKET FEEDS
           </span>
           <span id="feed-status-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
@@ -125,51 +134,64 @@
 
         <!-- Venue Switcher Pill in Top Feed Ribbon -->
         <div class="flex items-center bg-slate-900/90 rounded p-0.5 border border-slate-700/80 text-[10px] font-mono shrink-0">
-          <span class="text-slate-500 text-[9px] px-1.5">VENUE:</span>
+          <span class="text-slate-500 text-[9px] px-1.5 hidden sm:inline">VENUE:</span>
           <button type="button" data-action="set-venue" data-venue="binance" id="feed-venue-btn-binance"
-            class="px-2 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer">Binance</button>
+            class="px-1.5 sm:px-2 py-0.5 rounded font-bold transition bg-cyan-950 text-cyan-300 border border-cyan-700 shadow-sm cursor-pointer">Binance</button>
           <button type="button" data-action="set-venue" data-venue="hyperliquid" id="feed-venue-btn-hyperliquid"
-            class="px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Hyperliquid</button>
+            class="px-1.5 sm:px-2 py-0.5 rounded transition text-slate-400 hover:text-white cursor-pointer">Hyperliquid</button>
         </div>
 
         <!-- Live Ticker for Active Asset / Pair -->
-        <div class="hidden sm:flex items-center gap-2.5 text-slate-300 text-[11px] border-l border-slate-800 pl-3">
-          <span id="feed-perp-info" class="flex items-center gap-1">
+        <div class="flex items-center gap-2 text-slate-300 text-[11px] border-l border-slate-800 pl-2 sm:pl-3">
+          <span id="feed-perp-info" class="hidden md:flex items-center gap-1">
             <span class="text-slate-500">Perp Funding:</span>
             <span id="feed-live-funding-val" class="text-emerald-400 font-bold font-mono">+10.95% APR</span>
             <span id="feed-funding-source" class="text-[9px] text-slate-500">(Binance)</span>
           </span>
-          <span class="text-slate-700">•</span>
-          <span id="feed-spot-info" class="flex items-center gap-1">
+          <span class="text-slate-700 hidden md:inline">•</span>
+          <span id="feed-spot-info" class="hidden md:flex items-center gap-1">
             <span class="text-slate-500">Spot Staking:</span>
             <span id="feed-live-staking-val" class="text-cyan-400 font-bold font-mono">+2.30% APY</span>
             <span id="feed-staking-source" class="text-[9px] text-slate-500">(Lido)</span>
           </span>
-          <span class="text-slate-700">•</span>
+          <span class="text-slate-700 hidden md:inline">•</span>
           <span id="feed-price-info" class="flex items-center gap-1">
-            <span class="text-slate-500">Mark:</span>
-            <span id="feed-live-price-val" class="text-white font-bold font-mono">$2,316.99</span>
+            <span class="text-slate-500 text-[10px]">Mark:</span>
+            <span id="feed-live-price-val" class="text-white font-bold font-mono text-[11px]">$2,316.99</span>
           </span>
         </div>
       </div>
 
       <!-- Live Sync Controls -->
-      <div class="flex items-center gap-2 shrink-0">
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <span id="feed-last-updated" class="text-[10px] text-slate-500 hidden md:inline">Syncing feeds...</span>
         <button id="btn-open-historical-modal" data-action="open-historical-modal" 
-          class="px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition flex items-center gap-1.5 text-[11px] font-mono cursor-pointer" title="View multi-venue historical funding rates and carry analytics">
-          <svg class="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          class="px-2 sm:px-2.5 py-1 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700/60 transition flex items-center gap-1 text-[11px] font-mono cursor-pointer" title="View multi-venue historical funding rates and carry analytics">
+          <svg class="w-3.5 h-3.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
           </svg>
-          <span class="hidden sm:inline">Historical Carry</span> Analytics
+          <span class="hidden sm:inline">Historical Carry</span>
         </button>
         <button id="btn-refresh-feed" data-action="refresh-live-rates" 
-          class="px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 transition flex items-center gap-1.5 text-[11px] font-mono cursor-pointer" title="Fetch latest funding rates and staking yields">
-          <svg id="refresh-icon" class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          class="px-2 sm:px-2.5 py-1 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-700/60 transition flex items-center gap-1 text-[11px] font-mono cursor-pointer" title="Fetch latest funding rates and staking yields">
+          <svg id="refresh-icon" class="w-3.5 h-3.5 text-cyan-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
-          <span id="refresh-btn-label">Sync Live Rates</span>
+          <span id="refresh-btn-label" class="hidden sm:inline">Sync Live Rates</span>
         </button>
+      </div>
+    </div>
+
+    <!-- Mobile Sticky Mini-HUD (Pins on Mobile Scroll Past Chart) -->
+    <div id="mobile-sticky-hud" class="sticky top-[49px] z-30 lg:hidden bg-slate-950/95 backdrop-blur-md border border-slate-800 rounded-xl p-2 px-3 shadow-lg flex items-center justify-between font-mono text-xs cursor-pointer transition-all">
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+        <span class="text-[10px] text-slate-400 font-bold uppercase">Live Impact:</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="hud-val-apy" class="font-bold text-emerald-400 text-xs">+14.2% APY</span>
+        <span id="hud-val-buffer" class="font-bold text-cyan-300 text-xs">Liq: +852.4%</span>
+        <span id="hud-val-pnl" class="font-bold text-slate-300 text-xs">+$1,420</span>
       </div>
     </div>
 
@@ -1186,7 +1208,7 @@
                 MULTI-DAY HISTORICAL REPLAYS
               </span>
             </div>
-            <p class="text-xs text-slate-400 font-mono mt-0.5">
+            <p class="text-xs text-slate-400 font-mono mt-0.5 hidden sm:block">
               Path-dependent simulation, peak trough drawdown, and parity recovery accounting across extreme historical crises.
             </p>
           </div>
@@ -1505,13 +1527,13 @@
                 BEACON INCEPTION (DEC 2020) — PRESENT
               </span>
             </div>
-            <p class="text-xs text-slate-300 font-mono mt-0.5">
+            <p class="text-xs text-slate-300 font-mono mt-0.5 hidden sm:block">
               Simulate delta-neutral staked basis performance across 6 years of market cycles, bull contango, liquidity freezes, and re-pegs.
             </p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="hidden sm:flex items-center gap-2">
           <button type="button" data-action="set-view" data-view="terminal"
             class="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition text-xs font-mono flex items-center gap-1.5 cursor-pointer">
             ← Live Terminal
@@ -2065,6 +2087,281 @@
 
     </div> <!-- End View 3: Multi-Year Historical Backtester (#view-backtest) -->
 
+    <!-- View 4: Institutional Rate & Yield Lab (#view-rate-lab) -->
+    <div id="view-rate-lab" class="hidden space-y-5">
+      
+      <!-- Rate Lab Header Banner -->
+      <div class="bg-brand-card/90 rounded-2xl p-4 sm:p-5 border border-brand-border backdrop-blur-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-3.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
+            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-base sm:text-lg font-bold font-mono text-white tracking-tight">INSTITUTIONAL RATE &amp; YIELD LAB</h2>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700" data-bind="rl-asset">ETH</span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700">SQMC SOBOL</span>
+            </div>
+            <p class="text-xs text-slate-400 font-mono mt-0.5 hidden sm:block">Joe &amp; Kuo Low-Discrepancy Engine • Brownian Bridge • Mean-Reverting Jump Diffusion • Futures Term Structure</p>
+          </div>
+        </div>
+
+        <div class="hidden sm:flex items-center gap-2">
+          <button type="button" data-action="set-view" data-view="terminal"
+            class="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition text-xs font-mono flex items-center gap-1.5 cursor-pointer">
+            ← Live Terminal
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Rate Lab Container Card -->
+      <div class="relative w-full bg-brand-surface border border-cyan-800/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+        
+        <!-- Navigation Tabs & Engine Selector -->
+        <div class="px-4 sm:px-5 py-2.5 bg-slate-950/70 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <button type="button" data-action="rate-lab-tab" data-tab="ou_stochastic" class="px-3 py-1.5 rounded-lg bg-cyan-950 text-cyan-300 border border-cyan-700 font-mono text-xs font-bold transition shadow-sm cursor-pointer">
+              Model B: OU Stochastic (SQMC)
+            </button>
+            <button type="button" data-action="rate-lab-tab" data-tab="regimes" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 font-mono text-xs transition cursor-pointer">
+              Model A: Discrete Regimes
+            </button>
+            <button type="button" data-action="rate-lab-tab" data-tab="term_structure" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 font-mono text-xs transition cursor-pointer">
+              Model C: Futures Term Structure
+            </button>
+            <button type="button" data-action="rate-lab-tab" data-tab="staking" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 font-mono text-xs transition cursor-pointer">
+              Companion Staking Model
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-mono text-slate-400">Engine:</span>
+            <div class="flex rounded-lg border border-slate-800 bg-slate-900 p-0.5">
+              <button type="button" id="btn-rl-engine-sqmc" data-action="set-sim-engine" data-engine="sqmc_sobol" class="px-2 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 text-[10px] font-mono font-bold cursor-pointer">
+                SQMC Sobol (N=512)
+              </button>
+              <button type="button" id="btn-rl-engine-mc" data-action="set-sim-engine" data-engine="pseudo_mc" class="px-2 py-1 rounded bg-slate-900 text-slate-400 hover:bg-slate-800 text-[10px] font-mono cursor-pointer">
+                Pseudo-MC (N=1.5k)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Workspace Body -->
+        <div class="p-4 sm:p-5 flex flex-col lg:flex-row gap-5">
+          
+          <!-- Left: Canvas Visualizer & Content Panels -->
+          <div class="flex-1 flex flex-col space-y-3 min-w-0">
+            
+            <!-- Canvas Container -->
+            <div id="rl-panel-canvas-container" class="relative rounded-xl border border-slate-800 bg-slate-950/80 p-3 flex flex-col flex-1 min-h-[320px]">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-[11px] font-mono text-slate-300 font-semibold flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                  <span id="rl-canvas-title">Stochastic Carry Trajectories &amp; 90% Confidence Envelope</span>
+                </span>
+                <span class="text-[10px] font-mono text-slate-400 hidden sm:inline">Hover canvas for day-by-day quantiles</span>
+              </div>
+              <canvas id="rate-lab-canvas" class="w-full h-64 sm:h-72 rounded-lg cursor-crosshair"></canvas>
+            </div>
+
+            <!-- Panel: Regimes Breakdown -->
+            <div id="rl-panel-regimes" class="hidden rounded-xl border border-slate-800 bg-slate-950/80 p-4 space-y-4 flex-1">
+              <div class="flex items-center justify-between">
+                <h4 class="text-xs font-mono font-bold text-white uppercase tracking-wider">Discrete Operational Regimes &amp; Duration Shock</h4>
+                <span id="rl-regime-bleed-summary" class="text-xs font-mono font-bold text-emerald-400">--</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div data-action="rl-select-regime" data-regime="contango" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-left font-mono transition cursor-pointer flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-bold text-purple-400">Bull Contango</span>
+                      <span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">+32.5% APR</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1.5">Elevated speculative long demand; high positive carry windfall for short hedge.</p>
+                  </div>
+                  <div class="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400">
+                    Duration: <span class="text-white font-semibold">30 Days</span>
+                  </div>
+                </div>
+                <div data-action="rl-select-regime" data-regime="baseline" class="p-3 rounded-xl bg-cyan-950/80 border-cyan-500 ring-1 ring-cyan-400/50 text-left font-mono transition shadow-lg cursor-pointer flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-bold text-cyan-300">Baseline Carry</span>
+                      <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">+9.2% APR</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1.5">Equilibrium cost-of-capital basis anchored to benchmark borrowing rates.</p>
+                  </div>
+                  <div class="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400">
+                    Duration: <span class="text-white font-semibold">90 Days</span>
+                  </div>
+                </div>
+                <div data-action="rl-select-regime" data-regime="backwardation" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-left font-mono transition cursor-pointer flex flex-col justify-between">
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-bold text-rose-400">Backwardation</span>
+                      <span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">-14.0% APR</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1.5">Post-cascade spot discount; negative carry drag during liquidation recovery.</p>
+                  </div>
+                  <div class="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400">
+                    Duration: <span class="text-white font-semibold">14 Days</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Panel: Term Structure Table -->
+            <div id="rl-panel-term-structure" class="hidden rounded-xl border border-slate-800 bg-slate-950/80 p-3 space-y-2">
+              <div class="flex items-center justify-between text-xs font-mono">
+                <span class="font-bold text-slate-300">Active Deliverable Futures Tenors</span>
+                <span class="text-cyan-400 text-[10px]">Deribit / Institutional Feed</span>
+              </div>
+              <div class="overflow-x-auto max-h-48 overflow-y-auto">
+                <table class="w-full text-left">
+                  <thead class="text-[10px] text-slate-400 border-b border-slate-800">
+                    <tr>
+                      <th class="py-1 px-3">Contract</th>
+                      <th class="py-1 px-3">Expiry</th>
+                      <th class="py-1 px-3">Futures Mid</th>
+                      <th class="py-1 px-3">Annualized Basis</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rl-term-structure-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Panel: Staking Decomposition -->
+            <div id="rl-panel-staking" class="hidden rounded-xl border border-slate-800 bg-slate-950/80 p-4 space-y-4 flex-1">
+              <h4 class="text-xs font-mono font-bold text-white uppercase tracking-wider">Spot Staking Structural Decomposition</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                  <span class="text-[10px] font-mono text-slate-400 uppercase">Consensus Issuance (1/√N)</span>
+                  <div id="rl-staking-issuance" class="text-base font-mono font-bold text-cyan-300 mt-1">--</div>
+                  <p class="text-[9px] text-slate-500 mt-1">Algorithmic network emission curve diluting with validator count.</p>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                  <span class="text-[10px] font-mono text-slate-400 uppercase">MEV Priority Tips</span>
+                  <div id="rl-staking-mev" class="text-base font-mono font-bold text-purple-300 mt-1">--</div>
+                  <p class="text-[9px] text-slate-500 mt-1">Execution layer fees scaling with market volatility.</p>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                  <span class="text-[10px] font-mono text-slate-400 uppercase">Total Net Staking APY</span>
+                  <div id="rl-staking-total" class="text-base font-mono font-bold text-emerald-400 mt-1">--</div>
+                  <div id="rl-staking-pendle" class="text-[9px] font-mono text-cyan-400 mt-1">--</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right: Quant Parameter Controls -->
+          <div class="w-full lg:w-80 shrink-0 flex flex-col space-y-4">
+            
+            <!-- Simulation Horizon Slider -->
+            <div class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <label class="font-mono font-semibold text-slate-300">Simulation Horizon</label>
+                <span id="val-rl-horizon" class="font-mono text-cyan-300 font-bold">30 Days</span>
+              </div>
+              <input type="range" id="input-rl-horizon" min="7" max="180" step="1" value="30" class="w-full">
+              <div class="flex justify-between gap-1 pt-0.5">
+                <button type="button" data-action="set-rate-lab-horizon" data-days="7" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">7d</button>
+                <button type="button" data-action="set-rate-lab-horizon" data-days="14" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">14d</button>
+                <button type="button" data-action="set-rate-lab-horizon" data-days="30" class="w-full py-0.5 text-[9px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800 transition cursor-pointer">30d</button>
+                <button type="button" data-action="set-rate-lab-horizon" data-days="90" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">90d</button>
+                <button type="button" data-action="set-rate-lab-horizon" data-days="180" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">180d</button>
+              </div>
+            </div>
+
+            <!-- OU Calibrated Parameters (Sliders) -->
+            <div id="rl-controls-ou" class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">Calibrated OU Parameters</span>
+                <button type="button" id="btn-rl-reset-calib" class="text-[9px] font-mono text-cyan-400 hover:underline cursor-pointer">Reset OLS</button>
+              </div>
+
+              <!-- Long-Term Mean Anchor (mu) -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <label class="text-[11px] font-mono text-slate-400">Mean Anchor (μ)</label>
+                  <span id="val-rl-mu" class="font-mono text-cyan-300 font-bold text-[11px]">+10.8% APR</span>
+                </div>
+                <input type="range" id="input-rl-mu" min="-10" max="40" step="0.5" value="10.8" class="w-full">
+              </div>
+
+              <!-- Reversion Speed (theta) -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <label class="text-[11px] font-mono text-slate-400">Reversion Speed (θ)</label>
+                  <span id="val-rl-theta" class="font-mono text-cyan-300 font-bold text-[11px]">0.085 (τ: 8.2d)</span>
+                </div>
+                <input type="range" id="input-rl-theta" min="0.01" max="0.30" step="0.005" value="0.085" class="w-full">
+              </div>
+
+              <!-- Instantaneous Volatility (sigma) -->
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <label class="text-[11px] font-mono text-slate-400">Volatility (σ)</label>
+                  <span id="val-rl-sigma" class="font-mono text-cyan-300 font-bold text-[11px]">±18.2%</span>
+                </div>
+                <input type="range" id="input-rl-sigma" min="5" max="45" step="0.5" value="18.2" class="w-full">
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Institutional Risk KPI Strip & Action Footer -->
+        <div class="px-4 sm:px-5 py-3 border-t border-brand-border bg-brand-card/95 flex flex-wrap items-center justify-between gap-4 shrink-0">
+          
+          <!-- Risk Metrics Summary -->
+          <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
+            <div>
+              <span class="text-[10px] text-slate-400 block uppercase">Expected Carry</span>
+              <span id="rl-kpi-expected-carry" class="font-bold text-cyan-300 text-sm">--</span>
+            </div>
+            <div class="border-l border-slate-800 pl-3">
+              <span class="text-[10px] text-slate-400 block uppercase">Neg Carry Prob</span>
+              <span id="rl-kpi-neg-prob" class="font-bold text-emerald-400 text-sm">--</span>
+            </div>
+            <div class="border-l border-slate-800 pl-3">
+              <span class="text-[10px] text-slate-400 block uppercase">95% Funding VaR</span>
+              <span id="rl-kpi-var95" class="font-bold text-slate-300 text-sm">--</span>
+            </div>
+            <div class="border-l border-slate-800 pl-3">
+              <span class="text-[10px] text-slate-400 block uppercase">Reversion Half-Life</span>
+              <span id="rl-kpi-halflife" class="font-bold text-cyan-400 text-sm">--</span>
+            </div>
+            <div class="border-l border-slate-800 pl-3">
+              <span class="text-[10px] text-slate-400 block uppercase">Net Staking APY</span>
+              <span id="rl-kpi-staking-yield" class="font-bold text-emerald-400 text-sm">--</span>
+            </div>
+          </div>
+
+          <!-- Primary Action Buttons -->
+          <div class="flex items-center gap-2">
+            <button type="button" id="btn-rl-stress-test" class="px-3.5 py-2 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-700/80 font-mono text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
+              <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              <span>Stochastic Margin Stress Test</span>
+            </button>
+            
+            <button type="button" id="btn-rl-apply-rates" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-mono text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-950/50">
+              <svg class="w-4 h-4 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+              <span>Apply Rates to Terminal</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div> <!-- End View 4: Institutional Rate & Yield Lab (#view-rate-lab) -->
+
   </main>
 
   <!-- Institutional Triad Whitelist Explainer Modal (Strategy 1) -->
@@ -2598,274 +2895,6 @@
     </div>
   </div>
 
-  <!-- Institutional Rate Lab Full-Screen Modal -->
-  <div id="rate-lab-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true">
-    <div class="relative w-full max-w-5xl bg-brand-surface border border-cyan-800/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[94vh] modal-enter modal-bottom-sheet">
-      
-      <!-- Modal Header -->
-      <div class="px-5 py-3.5 border-b border-brand-border flex items-center justify-between bg-brand-card/90 shrink-0">
-        <div class="flex items-center gap-3">
-          <div class="p-2 rounded-xl bg-cyan-950/80 border border-cyan-700/80 text-cyan-400">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h3 class="text-base font-bold text-white font-mono tracking-tight">INSTITUTIONAL RATE LAB</h3>
-              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700" data-bind="rl-asset">ETH</span>
-              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700">SQMC SOBOL</span>
-            </div>
-            <p class="text-xs text-slate-400 mt-0.5 font-mono">Joe &amp; Kuo Low-Discrepancy Engine • Brownian Bridge • Mean-Reverting Jump Diffusion • Futures Term Structure</p>
-          </div>
-        </div>
-        <button type="button" data-action="close-rate-lab" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition cursor-pointer" aria-label="Close Rate Lab">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-
-      <!-- Navigation Tabs & Engine Selector -->
-      <div class="px-5 py-2.5 bg-slate-950/70 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div class="flex items-center gap-1.5">
-          <button type="button" data-action="rate-lab-tab" data-tab="ou_stochastic" class="px-3 py-1.5 rounded-lg bg-cyan-950 text-cyan-300 border border-cyan-700 font-mono text-xs font-bold transition shadow-sm cursor-pointer">
-            Model B: OU Stochastic (SQMC)
-          </button>
-          <button type="button" data-action="rate-lab-tab" data-tab="regimes" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 font-mono text-xs transition cursor-pointer">
-            Model A: Discrete Regimes
-          </button>
-          <button type="button" data-action="rate-lab-tab" data-tab="term_structure" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 font-mono text-xs transition cursor-pointer">
-            Model C: Futures Term Structure
-          </button>
-          <button type="button" data-action="rate-lab-tab" data-tab="staking" class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-800 font-mono text-xs transition cursor-pointer">
-            Companion Staking Model
-          </button>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <span class="text-[10px] font-mono text-slate-400">Engine:</span>
-          <div class="flex rounded-lg border border-slate-800 bg-slate-900 p-0.5">
-            <button type="button" id="btn-rl-engine-sqmc" data-action="set-sim-engine" data-engine="sqmc_sobol" class="px-2 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 text-[10px] font-mono font-bold cursor-pointer">
-              SQMC Sobol (N=512)
-            </button>
-            <button type="button" id="btn-rl-engine-mc" data-action="set-sim-engine" data-engine="pseudo_mc" class="px-2 py-1 rounded bg-slate-900 text-slate-400 hover:bg-slate-800 text-[10px] font-mono cursor-pointer">
-              Pseudo-MC (N=1.5k)
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Main Modal Body -->
-      <div class="p-5 overflow-y-auto flex-1 flex flex-col lg:flex-row gap-5 min-h-0">
-        
-        <!-- Left: Canvas Visualizer & Content Panels -->
-        <div class="flex-1 flex flex-col space-y-3 min-w-0">
-          
-          <!-- Canvas Container -->
-          <div id="rl-panel-canvas-container" class="relative rounded-xl border border-slate-800 bg-slate-950/80 p-3 flex flex-col flex-1 min-h-[280px]">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[11px] font-mono text-slate-300 font-semibold flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
-                <span id="rl-canvas-title">Stochastic Carry Trajectories &amp; 90% Confidence Envelope</span>
-              </span>
-              <span class="text-[10px] font-mono text-slate-400">Hover canvas for day-by-day quantiles</span>
-            </div>
-            <canvas id="rate-lab-canvas" class="w-full h-64 sm:h-72 rounded-lg cursor-crosshair"></canvas>
-          </div>
-
-          <!-- Panel: Regimes Breakdown -->
-          <div id="rl-panel-regimes" class="hidden rounded-xl border border-slate-800 bg-slate-950/80 p-4 space-y-4 flex-1">
-            <div class="flex items-center justify-between">
-              <h4 class="text-xs font-mono font-bold text-white uppercase tracking-wider">Discrete Operational Regimes &amp; Duration Shock</h4>
-              <span id="rl-regime-bleed-summary" class="text-xs font-mono font-bold text-emerald-400">--</span>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div data-action="rl-select-regime" data-regime="contango" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-left font-mono transition cursor-pointer flex flex-col justify-between">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-purple-400">Bull Contango</span>
-                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">+32.5% APR</span>
-                  </div>
-                  <p class="text-[10px] text-slate-400 mt-1.5">Elevated speculative long demand; high positive carry windfall for short hedge.</p>
-                </div>
-                <div class="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400">
-                  Duration: <span class="text-white font-semibold">30 Days</span>
-                </div>
-              </div>
-              <div data-action="rl-select-regime" data-regime="baseline" class="p-3 rounded-xl bg-cyan-950/80 border-cyan-500 ring-1 ring-cyan-400/50 text-left font-mono transition shadow-lg cursor-pointer flex flex-col justify-between">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-cyan-300">Baseline Carry</span>
-                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">+9.2% APR</span>
-                  </div>
-                  <p class="text-[10px] text-slate-400 mt-1.5">Equilibrium cost-of-capital basis anchored to benchmark borrowing rates.</p>
-                </div>
-                <div class="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400">
-                  Duration: <span class="text-white font-semibold">90 Days</span>
-                </div>
-              </div>
-              <div data-action="rl-select-regime" data-regime="backwardation" class="p-3 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-slate-700 text-left font-mono transition cursor-pointer flex flex-col justify-between">
-                <div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-rose-400">Backwardation</span>
-                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800">-14.0% APR</span>
-                  </div>
-                  <p class="text-[10px] text-slate-400 mt-1.5">Post-cascade spot discount; negative carry drag during liquidation recovery.</p>
-                </div>
-                <div class="mt-3 pt-2 border-t border-slate-800 text-[10px] text-slate-400">
-                  Duration: <span class="text-white font-semibold">14 Days</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Panel: Term Structure Table -->
-          <div id="rl-panel-term-structure" class="hidden rounded-xl border border-slate-800 bg-slate-950/80 p-3 space-y-2">
-            <div class="flex items-center justify-between text-xs font-mono">
-              <span class="font-bold text-slate-300">Active Deliverable Futures Tenors</span>
-              <span class="text-cyan-400 text-[10px]">Deribit / Institutional Feed</span>
-            </div>
-            <div class="overflow-x-auto max-h-36 overflow-y-auto">
-              <table class="w-full text-left">
-                <thead class="text-[10px] text-slate-400 border-b border-slate-800">
-                  <tr>
-                    <th class="py-1 px-3">Contract</th>
-                    <th class="py-1 px-3">Expiry</th>
-                    <th class="py-1 px-3">Futures Mid</th>
-                    <th class="py-1 px-3">Annualized Basis</th>
-                  </tr>
-                </thead>
-                <tbody id="rl-term-structure-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Panel: Staking Decomposition -->
-          <div id="rl-panel-staking" class="hidden rounded-xl border border-slate-800 bg-slate-950/80 p-4 space-y-4 flex-1">
-            <h4 class="text-xs font-mono font-bold text-white uppercase tracking-wider">Spot Staking Structural Decomposition</h4>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                <span class="text-[10px] font-mono text-slate-400 uppercase">Consensus Issuance (1/√N)</span>
-                <div id="rl-staking-issuance" class="text-base font-mono font-bold text-cyan-300 mt-1">--</div>
-                <p class="text-[9px] text-slate-500 mt-1">Algorithmic network emission curve diluting with validator count.</p>
-              </div>
-              <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                <span class="text-[10px] font-mono text-slate-400 uppercase">MEV Priority Tips</span>
-                <div id="rl-staking-mev" class="text-base font-mono font-bold text-purple-300 mt-1">--</div>
-                <p class="text-[9px] text-slate-500 mt-1">Execution layer fees scaling with market volatility.</p>
-              </div>
-              <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
-                <span class="text-[10px] font-mono text-slate-400 uppercase">Total Net Staking APY</span>
-                <div id="rl-staking-total" class="text-base font-mono font-bold text-emerald-400 mt-1">--</div>
-                <div id="rl-staking-pendle" class="text-[9px] font-mono text-cyan-400 mt-1">--</div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Right: Quant Parameter Controls -->
-        <div class="w-full lg:w-80 shrink-0 flex flex-col space-y-4">
-          
-          <!-- Simulation Horizon Slider -->
-          <div class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 space-y-2">
-            <div class="flex items-center justify-between text-xs">
-              <label class="font-mono font-semibold text-slate-300">Simulation Horizon</label>
-              <span id="val-rl-horizon" class="font-mono text-cyan-300 font-bold">30 Days</span>
-            </div>
-            <input type="range" id="input-rl-horizon" min="7" max="180" step="1" value="30" class="w-full">
-            <div class="flex justify-between gap-1 pt-0.5">
-              <button type="button" data-action="set-rate-lab-horizon" data-days="7" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">7d</button>
-              <button type="button" data-action="set-rate-lab-horizon" data-days="14" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">14d</button>
-              <button type="button" data-action="set-rate-lab-horizon" data-days="30" class="w-full py-0.5 text-[9px] font-mono rounded bg-cyan-950 text-cyan-300 border border-cyan-800 transition cursor-pointer">30d</button>
-              <button type="button" data-action="set-rate-lab-horizon" data-days="90" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">90d</button>
-              <button type="button" data-action="set-rate-lab-horizon" data-days="180" class="w-full py-0.5 text-[9px] font-mono rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer">180d</button>
-            </div>
-          </div>
-
-          <!-- OU Calibrated Parameters (Sliders) -->
-          <div id="rl-controls-ou" class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/60 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold">Calibrated OU Parameters</span>
-              <button type="button" id="btn-rl-reset-calib" class="text-[9px] font-mono text-cyan-400 hover:underline cursor-pointer">Reset OLS</button>
-            </div>
-
-            <!-- Long-Term Mean Anchor (mu) -->
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-xs">
-                <label class="text-[11px] font-mono text-slate-400">Mean Anchor (μ)</label>
-                <span id="val-rl-mu" class="font-mono text-cyan-300 font-bold text-[11px]">+10.8% APR</span>
-              </div>
-              <input type="range" id="input-rl-mu" min="-10" max="40" step="0.5" value="10.8" class="w-full">
-            </div>
-
-            <!-- Reversion Speed (theta) -->
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-xs">
-                <label class="text-[11px] font-mono text-slate-400">Reversion Speed (θ)</label>
-                <span id="val-rl-theta" class="font-mono text-cyan-300 font-bold text-[11px]">0.085 (τ: 8.2d)</span>
-              </div>
-              <input type="range" id="input-rl-theta" min="0.01" max="0.30" step="0.005" value="0.085" class="w-full">
-            </div>
-
-            <!-- Instantaneous Volatility (sigma) -->
-            <div class="space-y-1">
-              <div class="flex items-center justify-between text-xs">
-                <label class="text-[11px] font-mono text-slate-400">Volatility (σ)</label>
-                <span id="val-rl-sigma" class="font-mono text-cyan-300 font-bold text-[11px]">±18.2%</span>
-              </div>
-              <input type="range" id="input-rl-sigma" min="5" max="45" step="0.5" value="18.2" class="w-full">
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
-      <!-- Institutional Risk KPI Strip & Modal Footer -->
-      <div class="px-5 py-3 border-t border-brand-border bg-brand-card/95 flex flex-wrap items-center justify-between gap-4 shrink-0">
-        
-        <!-- Risk Metrics Summary -->
-        <div class="flex flex-wrap items-center gap-4 text-xs font-mono">
-          <div>
-            <span class="text-[10px] text-slate-400 block uppercase">Expected Carry</span>
-            <span id="rl-kpi-expected-carry" class="font-bold text-cyan-300 text-sm">--</span>
-          </div>
-          <div class="border-l border-slate-800 pl-3">
-            <span class="text-[10px] text-slate-400 block uppercase">Neg Carry Prob</span>
-            <span id="rl-kpi-neg-prob" class="font-bold text-emerald-400 text-sm">--</span>
-          </div>
-          <div class="border-l border-slate-800 pl-3">
-            <span class="text-[10px] text-slate-400 block uppercase">95% Funding VaR</span>
-            <span id="rl-kpi-var95" class="font-bold text-slate-300 text-sm">--</span>
-          </div>
-          <div class="border-l border-slate-800 pl-3">
-            <span class="text-[10px] text-slate-400 block uppercase">Reversion Half-Life</span>
-            <span id="rl-kpi-halflife" class="font-bold text-cyan-400 text-sm">--</span>
-          </div>
-          <div class="border-l border-slate-800 pl-3">
-            <span class="text-[10px] text-slate-400 block uppercase">Net Staking APY</span>
-            <span id="rl-kpi-staking-yield" class="font-bold text-emerald-400 text-sm">--</span>
-          </div>
-        </div>
-
-        <!-- Primary Action Buttons -->
-        <div class="flex items-center gap-2">
-          <button type="button" id="btn-rl-stress-test" class="px-3.5 py-2 rounded-lg bg-indigo-950 hover:bg-indigo-900 text-indigo-300 hover:text-white border border-indigo-700/80 font-mono text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm">
-            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-            <span>Stochastic Margin Stress Test</span>
-          </button>
-          
-          <button type="button" id="btn-rl-apply-rates" class="px-4 py-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-slate-950 font-mono text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg shadow-cyan-950/50">
-            <svg class="w-4 h-4 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-            <span>Apply Rates to Terminal</span>
-          </button>
-        </div>
-
-      </div>
-
-    </div>
-  </div>
-
 
   <!-- Execution Math & Exchange Fee Breakdown Modal -->
   <div id="modal-execution-math" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="execution-modal-title">
@@ -3095,18 +3124,22 @@
 
 
   <!-- Fixed Mobile Bottom App Bar (< 1024px) -->
-  <nav id="mobile-bottom-bar" class="fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800 flex items-center justify-around h-14 px-2 lg:hidden shadow-2xl pb-safe">
-    <button type="button" data-action="set-mobile-tab" data-tab="chart" class="flex-1 py-1 flex flex-col items-center justify-center text-cyan-400 cursor-pointer transition">
+  <nav id="mobile-bottom-bar" class="fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 backdrop-blur-lg border-t border-slate-800 flex items-center justify-around h-14 px-1 lg:hidden shadow-2xl pb-safe" aria-label="Mobile Navigation">
+    <button type="button" data-action="set-view" data-view="terminal" class="flex-1 py-1 flex flex-col items-center justify-center text-cyan-400 cursor-pointer transition">
       <svg class="tab-icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
-      <span class="tab-label text-[10px] font-mono mt-0.5 font-bold text-cyan-300">Chart</span>
+      <span class="tab-label text-[10px] font-mono mt-0.5 font-bold text-cyan-300">Terminal</span>
     </button>
-    <button type="button" data-action="set-mobile-tab" data-tab="controls" class="flex-1 py-1 flex flex-col items-center justify-center text-slate-400 cursor-pointer transition">
-      <svg class="tab-icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-      <span class="tab-label text-[10px] font-mono mt-0.5">Controls</span>
-    </button>
-    <button type="button" data-action="set-mobile-tab" data-tab="stress" class="flex-1 py-1 flex flex-col items-center justify-center text-slate-400 cursor-pointer transition">
+    <button type="button" data-action="set-view" data-view="stress-lab" class="flex-1 py-1 flex flex-col items-center justify-center text-slate-400 cursor-pointer transition">
       <svg class="tab-icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
       <span class="tab-label text-[10px] font-mono mt-0.5">Stress Lab</span>
+    </button>
+    <button type="button" data-action="set-view" data-view="backtest" class="flex-1 py-1 flex flex-col items-center justify-center text-slate-400 cursor-pointer transition">
+      <svg class="tab-icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span class="tab-label text-[10px] font-mono mt-0.5">Backtest</span>
+    </button>
+    <button type="button" data-action="set-view" data-view="rate-lab" class="flex-1 py-1 flex flex-col items-center justify-center text-slate-400 cursor-pointer transition">
+      <svg class="tab-icon w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <span class="tab-label text-[10px] font-mono mt-0.5">Rate Lab</span>
     </button>
   </nav>
 

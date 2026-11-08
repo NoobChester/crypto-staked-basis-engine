@@ -2196,6 +2196,8 @@ function init() {
       updateStressLab();
     } else if (view === 'backtest') {
       updateBacktest();
+    } else if (view === 'rate-lab') {
+      openRateLabModal(state.tradedAsset || 'ETH', state.solYieldType || 'real');
     } else {
       updateApp();
     }
