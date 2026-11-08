@@ -33,6 +33,8 @@ import {
   renderTermStructureCurve
 } from './rateLabCanvas.js';
 
+import { setView, getView } from './viewRouter.js';
+
 export interface RateLabCallbacks {
   onApplyRates: (fundingApr: number, stakingApy: number, ouParams?: OUProcessParams) => void;
   onStochasticStressTest?: (simResult: StochasticSimulationResult) => void;
@@ -72,7 +74,7 @@ let isInitialized = false;
  */
 export function initRateLabModal(handlers: RateLabCallbacks): void {
   callbacks = handlers;
-  modalEl = document.getElementById('rate-lab-modal');
+  modalEl = document.getElementById('view-rate-lab') || document.getElementById('rate-lab-modal');
   canvasEl = document.getElementById('rate-lab-canvas') as HTMLCanvasElement;
 
   if (!modalEl || isInitialized) return;
@@ -217,12 +219,15 @@ export async function openRateLabModal(
   state.asset = currentAsset;
   state.solYieldType = solYield;
 
-  if (modalEl) {
-    modalEl.classList.remove('hidden');
-    modalEl.classList.add('flex');
+  if (getView() !== 'rate-lab') {
+    setView('rate-lab', true);
   }
 
-  // Update asset badges in modal
+  if (modalEl) {
+    modalEl.classList.remove('hidden');
+  }
+
+  // Update asset badges in modal/view
   const assetBadges = modalEl?.querySelectorAll('[data-bind="rl-asset"]');
   assetBadges?.forEach(b => { b.textContent = currentAsset; });
 
@@ -231,13 +236,10 @@ export async function openRateLabModal(
 }
 
 /**
- * Closes the Rate Lab Modal.
+ * Closes the Rate Lab and returns to the Live Terminal view.
  */
 export function closeRateLabModal(): void {
-  if (modalEl) {
-    modalEl.classList.add('hidden');
-    modalEl.classList.remove('flex');
-  }
+  setView('terminal', true);
 }
 
 /**
