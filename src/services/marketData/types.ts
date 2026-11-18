@@ -58,6 +58,23 @@ export interface BtcLstLiveRates {
   native: { stakingAPY: number; source: string; status: 'live' | 'fallback'; discountPct: number; rawBasisPct: number };
 }
 
+export interface EthLstRateEntry {
+  stakingAPY: number;
+  source: string;
+  status: 'live' | 'fallback';
+  lstDiscount: LstDiscountInfo;
+  trailingStaking: {
+    staking7d: number;
+    staking30d: number;
+    staking90d: number;
+  };
+}
+
+export interface EthLstLiveRates {
+  wbeth: EthLstRateEntry;
+  wsteth: EthLstRateEntry;
+}
+
 export interface HistoricalRatePoint {
   date: string; // YYYY-MM-DD
   timestamp: number;
@@ -120,6 +137,7 @@ export interface MarketDataSnapshot {
   ETH: AssetLiveRates;
   BTC: AssetLiveRates;
   SOL: AssetLiveRates;
+  ethLst: EthLstLiveRates;
   btcLst: BtcLstLiveRates;
   selectedVenue: FundingVenue;
   lastSynced: number | null;
@@ -257,6 +275,48 @@ export const FALLBACK_MARKET_DATA: MarketDataSnapshot = {
     status: 'fallback',
     trailingAverages: DEFAULT_TRAILING_AVERAGES.SOL
   },
+  ethLst: {
+    wbeth: {
+      stakingAPY: 3.1,
+      source: 'Binance Staking Baseline (3.1%)',
+      status: 'fallback',
+      lstDiscount: {
+        discountPct: 0.06,
+        rawBasisPct: 0.06,
+        fairRatio: 1.1110,
+        marketRatio: 1.1103,
+        source: 'Binance WBETH (On-Chain exchangeRate Baseline)',
+        status: 'fallback',
+        isNative: false,
+        assetName: 'WBETH'
+      },
+      trailingStaking: {
+        staking7d: 3.1,
+        staking30d: 3.1,
+        staking90d: 3.1
+      }
+    },
+    wsteth: {
+      stakingAPY: 3.2,
+      source: 'Lido Protocol Preset',
+      status: 'fallback',
+      lstDiscount: {
+        discountPct: 0.08,
+        rawBasisPct: 0.08,
+        fairRatio: 1.1895,
+        marketRatio: 1.1885,
+        source: 'Lido wstETH (Canonical Wrap Baseline)',
+        status: 'fallback',
+        isNative: false,
+        assetName: 'wstETH'
+      },
+      trailingStaking: {
+        staking7d: DEFAULT_TRAILING_AVERAGES.ETH.staking7d,
+        staking30d: DEFAULT_TRAILING_AVERAGES.ETH.staking30d,
+        staking90d: DEFAULT_TRAILING_AVERAGES.ETH.staking90d
+      }
+    }
+  },
   btcLst: {
     lbtc: { stakingAPY: 3.2, source: 'Babylon Baseline (3.2%)', status: 'fallback', discountPct: 0.08, rawBasisPct: 0.08 },
     solvbtc: { stakingAPY: 3.5, source: 'Babylon Baseline (3.5%)', status: 'fallback', discountPct: 0.12, rawBasisPct: 0.12 },
@@ -268,6 +328,9 @@ export const FALLBACK_MARKET_DATA: MarketDataSnapshot = {
   isLive: false,
   error: null
 };
+
+export const WBETH_POOL_ID = '80b8bf92-b953-4c20-98ea-c9653ef2bb98';
+export const WBETH_ETH_CONTRACT = '0xa2E3356610840701BDf5611a53974510Ae27E2e1';
 
 export const POOL_IDS: Record<'ETH' | 'BTC' | 'SOL', string> = {
   ETH: '747c1d2a-c668-4682-b9f9-296708a3dd90', // Lido wstETH

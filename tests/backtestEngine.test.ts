@@ -35,6 +35,8 @@ import {
 } from '../src/services/marketData/backtestService.js';
 import {
   backtestState,
+  state,
+  applyCollateralPreset,
   toggleBacktestPlot,
   setBacktestStartDateIndex,
   setBacktestEndDateIndex,
@@ -900,6 +902,30 @@ describe('VOO (S&P 500 ETF Total Return) Benchmark & Unified Default Invariants'
         asset: 'ETH'
       });
       expect(resWbeth10x.tLiq).not.toBe(1);
+    });
+
+    it('defaults ETH backtester and live simulator preset to Binance WBETH (95% collateral, #1 rank)', () => {
+      setBacktestAsset('ETH');
+      expect(backtestState.collateralToken).toBe('wbeth');
+      expect(backtestState.collateralRatio).toBe(0.95);
+
+      const resDefaultEth = runHistoricalBacktest(series, {
+        capital: 10000,
+        leverage: 1.0,
+        mode: backtestState.mode,
+        collateralRatio: backtestState.collateralRatio,
+        collateralToken: backtestState.collateralToken,
+        asset: backtestState.asset
+      });
+      expect(resDefaultEth.instaLiqLeverage).toBeCloseTo(18.18, 2);
+      expect(resDefaultEth.venueName).toBe('Binance Portfolio Margin');
+
+      // Regression guard: selecting wbeth_95 in live staking mode must preserve non-zero WBETH APY
+      state.isLiveStaking = true;
+      applyCollateralPreset('wbeth_95');
+      expect(state.activePreset).toBe('wbeth_95');
+      expect(state.collateralRatio).toBe(0.95);
+      expect(state.stakingAPY).toBeGreaterThan(0);
     });
 
     it('triggers instant liquidation on WBETH when leverage reaches 19x', () => {

@@ -48,10 +48,17 @@ export function updateDepegControl(
 
   const asset = state.tradedAsset || 'ETH';
   if (asset === 'ETH') {
-    const info = snapshot.ETH?.lstDiscount;
-    livePct = info?.discountPct ?? 0.08;
-    sourceText = info?.source ?? 'DeFiLlama (wstETH vs Canonical Wrap)';
-    assetLabel = 'wstETH';
+    if (state.mode === 'unified' && state.activePreset === 'wbeth_95') {
+      const info = snapshot.ethLst?.wbeth?.lstDiscount;
+      livePct = info?.discountPct ?? 0.06;
+      sourceText = info?.source ?? 'Binance Spot (WBETH/ETH) vs On-Chain exchangeRate()';
+      assetLabel = 'WBETH';
+    } else {
+      const info = snapshot.ETH?.lstDiscount;
+      livePct = info?.discountPct ?? 0.08;
+      sourceText = info?.source ?? 'DeFiLlama (wstETH vs Canonical Wrap)';
+      assetLabel = 'wstETH';
+    }
   } else if (asset === 'SOL') {
     const info = snapshot.SOL?.lstDiscount;
     livePct = info?.discountPct ?? 0.05;

@@ -143,6 +143,7 @@ export interface UIElements {
   descStakingSource: HTMLElement | null;
   feedNextFundingCountdown: HTMLElement | null;
   subtextPreset90: HTMLElement | null;
+  subtextPresetWbeth: HTMLElement | null;
   subtextPreset85: HTMLElement | null;
   feedVenueBtnBinance: HTMLElement | null;
   feedVenueBtnHyperliquid: HTMLElement | null;
@@ -435,6 +436,7 @@ export function getUIElements(): UIElements {
     descStakingSource: document.getElementById('desc-staking-source'),
     feedNextFundingCountdown: document.getElementById('feed-next-funding-countdown'),
     subtextPreset90: document.getElementById('subtext-preset-90'),
+    subtextPresetWbeth: document.getElementById('subtext-preset-wbeth'),
     subtextPreset85: document.getElementById('subtext-preset-85'),
     feedVenueBtnBinance: document.getElementById('feed-venue-btn-binance'),
     feedVenueBtnHyperliquid: document.getElementById('feed-venue-btn-hyperliquid'),

@@ -5,6 +5,10 @@ import {
   parseLidoApr,
   parseJitoApy,
   parseDeFiLlamaChartApy,
+  computeDeFiLlamaTrailingStaking,
+  parseWbethExchangeRateHex,
+  fetchWbethStaking,
+  fetchWbethLiveDiscount,
   FALLBACK_MARKET_DATA,
   setFundingVenue,
   getLatestMarketData,
@@ -209,6 +213,8 @@ describe('Market Data Service & Quantitative Parsers', () => {
       const mockSnapshot = JSON.parse(JSON.stringify(FALLBACK_MARKET_DATA));
       mockSnapshot.ETH.stakingAPY = 2.45;
       mockSnapshot.ETH.stakingSource = 'Lido Test Oracle';
+      mockSnapshot.ethLst.wbeth.stakingAPY = 2.38;
+      mockSnapshot.ethLst.wbeth.source = 'DeFiLlama (Binance WBETH)';
       mockSnapshot.SOL.nominalStakingAPY = 5.12;
       mockSnapshot.SOL.realStakingAPY = 1.95;
       mockSnapshot.btcLst.lbtc.stakingAPY = 1.15;
@@ -216,12 +222,46 @@ describe('Market Data Service & Quantitative Parsers', () => {
 
       updatePresetsWithLiveData(mockSnapshot);
 
+      expect(COLLATERAL_PRESETS.wbeth_95.stakingAPY).toBe(2.38);
+      expect(COLLATERAL_PRESETS.wbeth_95.explainer).toContain('2.4%');
       expect(COLLATERAL_PRESETS.wsteth_90.stakingAPY).toBe(2.45);
       expect(COLLATERAL_PRESETS.wsteth_90.explainer).toContain('2.5%');
       expect(COLLATERAL_PRESETS.sol_lrt_85.nominalAPY).toBe(5.12);
       expect(COLLATERAL_PRESETS.sol_lrt_85.realAPY).toBe(1.95);
       expect(BTC_LST_VARIANTS.lbtc.stakingAPY).toBe(1.15);
       expect(BTC_LST_VARIANTS.solvbtc.stakingAPY).toBe(3.65);
+    });
+
+    it('parses WBETH on-chain exchangeRate() hex and DeFiLlama trailing averages accurately', () => {
+      // 0x0000000000000000000000000000000000000000000000000f6b15fe64719100 == 1.111006...
+      const parsed = parseWbethExchangeRateHex('0x0000000000000000000000000000000000000000000000000f6b15fe64719100');
+      expect(parsed).toBe(1.1110);
+      expect(() => parseWbethExchangeRateHex('0x')).toThrow();
+      expect(() => parseWbethExchangeRateHex('invalid')).toThrow();
+
+      const mockChart = {
+        data: [
+          ...Array.from({ length: 80 }, () => ({ apy: 2.5 })),
+          ...Array.from({ length: 10 }, () => ({ apy: 2.1 }))
+        ]
+      };
+      const trailing = computeDeFiLlamaTrailingStaking(mockChart, 2.1);
+      expect(trailing.staking7d).toBe(2.1);
+      expect(trailing.staking30d).toBeCloseTo(2.37, 2);
+      expect(trailing.staking90d).toBeCloseTo(2.46, 2);
+    });
+
+    it('fetches live or baseline WBETH staking APY and on-chain vs Binance Spot discount', async () => {
+      const wbethRate = await fetchWbethStaking();
+      expect(wbethRate.apy).toBeGreaterThan(0);
+      expect(['live', 'fallback']).toContain(wbethRate.status);
+      expect(wbethRate.trailingStaking.staking7d).toBeGreaterThan(0);
+
+      const wbethDiscount = await fetchWbethLiveDiscount();
+      expect(wbethDiscount.assetName).toBe('WBETH');
+      expect(wbethDiscount.isNative).toBe(false);
+      expect(wbethDiscount.fairRatio).toBeGreaterThanOrEqual(1.0);
+      expect(wbethDiscount.discountPct).toBeGreaterThanOrEqual(0);
     });
   });
 

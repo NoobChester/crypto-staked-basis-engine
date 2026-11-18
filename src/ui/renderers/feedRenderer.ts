@@ -38,8 +38,16 @@ export function renderMarketData(UI: UIElements, state: HedgingState): void {
   let liveStakingSource = assetRates.stakingSource;
 
   if (asset === 'ETH') {
-    liveStakingVal = data.ETH.stakingAPY;
-    liveStakingSource = data.ETH.stakingSource;
+    if (state.mode === 'unified' && state.activePreset === 'wbeth_95') {
+      liveStakingVal = data.ethLst?.wbeth?.stakingAPY ?? COLLATERAL_PRESETS.wbeth_95.stakingAPY;
+      liveStakingSource = data.ethLst?.wbeth?.source ?? 'Binance Staking (WBETH)';
+    } else if (state.mode === 'unified' && (state.activePreset === 'btc_eth_95' || state.activePreset === 'inverse_100')) {
+      liveStakingVal = 0.0;
+      liveStakingSource = 'Vanilla / Inverse Collateral (0%)';
+    } else {
+      liveStakingVal = data.ETH.stakingAPY;
+      liveStakingSource = data.ETH.stakingSource;
+    }
   } else if (asset === 'BTC') {
     if (state.mode === 'isolated') {
       const v = state.btcVariant || 'lbtc';
@@ -117,8 +125,9 @@ export function renderMarketData(UI: UIElements, state: HedgingState): void {
   }
   if (UI.feedStakingSource) {
     let srcShort = 'Native';
-    if (asset === 'ETH') srcShort = 'Lido';
-    else if (asset === 'SOL') srcShort = 'Jito';
+    if (asset === 'ETH') {
+      srcShort = (state.mode === 'unified' && state.activePreset === 'wbeth_95') ? 'Binance WBETH' : 'Lido';
+    } else if (asset === 'SOL') srcShort = 'Jito';
     else if (asset === 'BTC' && state.mode === 'isolated') {
       srcShort = state.btcVariant === 'lbtc' ? 'Lombard' : (state.btcVariant === 'solvbtc' ? 'Solv' : 'Cold');
     }
@@ -157,6 +166,10 @@ export function renderMarketData(UI: UIElements, state: HedgingState): void {
   }
 
   // Update Preset Cards Subtexts with Live Yields
+  if (UI.subtextPresetWbeth) {
+    const wbethApy = data.ethLst?.wbeth?.stakingAPY ?? COLLATERAL_PRESETS.wbeth_95.stakingAPY;
+    UI.subtextPresetWbeth.textContent = `5% Haircut | ${wbethApy.toFixed(1)}% Live Stake`;
+  }
   if (UI.subtextPreset90) {
     UI.subtextPreset90.textContent = `10% Haircut | ${data.ETH.stakingAPY.toFixed(1)}% Live Stake`;
   }
@@ -206,12 +219,17 @@ export function renderHistoricalPills(UI: UIElements, state: any, data: MarketDa
   let stake90d = assetRates.trailingAverages?.staking90d ?? liveStaking;
 
   if (state.mode === 'unified') {
-    if (state.activePreset === 'btc_95') {
+    if (state.activePreset === 'btc_eth_95' || state.activePreset === 'inverse_100' || state.activePreset === 'btc_95') {
       liveStaking = 0.0;
       stake7d = 0.0;
       stake30d = 0.0;
       stake90d = 0.0;
-    } else if (state.activePreset === 'sol_lrt_85' && state.solYieldType === 'nominal') {
+    } else if (asset === 'ETH' && state.activePreset === 'wbeth_95' && data.ethLst?.wbeth) {
+      liveStaking = data.ethLst.wbeth.stakingAPY;
+      stake7d = data.ethLst.wbeth.trailingStaking.staking7d;
+      stake30d = data.ethLst.wbeth.trailingStaking.staking30d;
+      stake90d = data.ethLst.wbeth.trailingStaking.staking90d;
+    } else if ((state.activePreset === 'sol_lrt_85' || state.activePreset === 'jitosol_85') && state.solYieldType === 'nominal') {
       liveStaking = assetRates.nominalStakingAPY ?? 7.2;
       stake7d = parseFloat((stake7d + 5.4).toFixed(2));
       stake30d = parseFloat((stake30d + 5.4).toFixed(2));

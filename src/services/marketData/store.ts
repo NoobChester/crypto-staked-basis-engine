@@ -15,9 +15,11 @@ import {
 import { fetchBinanceRates, fetchHyperliquidRates, fetchWithTimeout } from './fundingApi.js';
 import {
   fetchLidoStaking,
+  fetchWbethStaking,
   fetchJitoStaking,
   fetchBtcLstStaking,
-  fetchLstLiveDiscount
+  fetchLstLiveDiscount,
+  fetchWbethLiveDiscount
 } from './stakingApi.js';
 import { fetchAssetHistoricalAnalytics } from './historical.js';
 
@@ -50,9 +52,11 @@ export async function fetchLiveMarketData(): Promise<MarketDataSnapshot> {
       btcHl,
       solHl,
       lidoStaking,
+      wbethStaking,
       jitoStaking,
       btcLstRates,
       ethDiscount,
+      wbethDiscount,
       btcDiscount,
       solDiscount
     ] = await Promise.all([
@@ -63,9 +67,11 @@ export async function fetchLiveMarketData(): Promise<MarketDataSnapshot> {
       fetchHyperliquidRates('BTC', hlData),
       fetchHyperliquidRates('SOL', hlData),
       fetchLidoStaking(),
+      fetchWbethStaking(),
       fetchJitoStaking(),
       fetchBtcLstStaking(),
       fetchLstLiveDiscount('ETH'),
+      fetchWbethLiveDiscount(),
       fetchLstLiveDiscount('BTC'),
       fetchLstLiveDiscount('SOL')
     ]);
@@ -171,6 +177,26 @@ export async function fetchLiveMarketData(): Promise<MarketDataSnapshot> {
         lastUpdated: now,
         status: solVenues[venue].status,
         trailingAverages: solTrailing
+      },
+      ethLst: {
+        wbeth: {
+          stakingAPY: wbethStaking.apy,
+          source: wbethStaking.source,
+          status: wbethStaking.status,
+          lstDiscount: wbethDiscount,
+          trailingStaking: wbethStaking.trailingStaking
+        },
+        wsteth: {
+          stakingAPY: lidoStaking.apy,
+          source: lidoStaking.source,
+          status: ethDiscount.status,
+          lstDiscount: ethDiscount,
+          trailingStaking: {
+            staking7d: ethTrailing.staking7d,
+            staking30d: ethTrailing.staking30d,
+            staking90d: ethTrailing.staking90d
+          }
+        }
       },
       btcLst: btcLstRates,
       selectedVenue: venue,

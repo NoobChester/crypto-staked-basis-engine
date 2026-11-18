@@ -7,7 +7,9 @@ import {
   type LstDiscountInfo,
   type BtcLstLiveRates,
   type AssetLiveRates,
-  FALLBACK_MARKET_DATA
+  FALLBACK_MARKET_DATA,
+  WBETH_POOL_ID,
+  WBETH_ETH_CONTRACT
 } from './types.js';
 import { fetchWithTimeout } from './fundingApi.js';
 
@@ -62,6 +64,145 @@ export function parseDeFiLlamaChartApy(data: any): number {
     }
   }
   throw new Error('Invalid DeFiLlama chart response');
+}
+
+export function computeDeFiLlamaTrailingStaking(data: any, fallbackApy: number): {
+  staking7d: number;
+  staking30d: number;
+  staking90d: number;
+} {
+  const entries = Array.isArray(data?.data) ? data.data : [];
+  const validApys = entries
+    .map((entry: any) => parseFloat(entry?.apy))
+    .filter((v: number) => Number.isFinite(v) && v >= 0 && v < 100);
+
+  if (validApys.length === 0) {
+    return { staking7d: fallbackApy, staking30d: fallbackApy, staking90d: fallbackApy };
+  }
+
+  const avgLast = (n: number): number => {
+    const slice = validApys.slice(-n);
+    const avg = slice.reduce((acc: number, v: number) => acc + v, 0) / slice.length;
+    return parseFloat(avg.toFixed(2));
+  };
+
+  return {
+    staking7d: avgLast(7),
+    staking30d: avgLast(30),
+    staking90d: avgLast(90)
+  };
+}
+
+export function parseWbethExchangeRateHex(hexResult: unknown): number {
+  if (typeof hexResult !== 'string' || !/^0x[0-9a-fA-F]+$/.test(hexResult) || hexResult === '0x') {
+    throw new Error('Invalid WBETH exchangeRate hex payload');
+  }
+  const raw = BigInt(hexResult);
+  const scale = 1e18;
+  const rate = Number(raw) / scale;
+  if (!Number.isFinite(rate) || rate < 1.0 || rate > 5.0) {
+    throw new Error('Out-of-bounds WBETH exchangeRate value');
+  }
+  return parseFloat(rate.toFixed(4));
+}
+
+export async function fetchWbethStaking(): Promise<{
+  apy: number;
+  source: string;
+  status: 'live' | 'fallback';
+  trailingStaking: { staking7d: number; staking30d: number; staking90d: number };
+}> {
+  try {
+    const res = await fetchWithTimeout(`https://yields.llama.fi/chart/${WBETH_POOL_ID}`, undefined, 5000);
+    if (res.ok) {
+      const data = await res.json();
+      const apy = parseDeFiLlamaChartApy(data);
+      const trailingStaking = computeDeFiLlamaTrailingStaking(data, apy);
+      return {
+        apy,
+        source: 'DeFiLlama (Binance WBETH)',
+        status: 'live',
+        trailingStaking
+      };
+    }
+  } catch {
+    // Fall through to baseline
+  }
+
+  return {
+    apy: 3.1,
+    source: 'Binance Staking Baseline (3.1%)',
+    status: 'fallback',
+    trailingStaking: { staking7d: 3.1, staking30d: 3.1, staking90d: 3.1 }
+  };
+}
+
+const ETH_PUBLIC_RPCS = [
+  'https://ethereum-rpc.publicnode.com',
+  'https://1rpc.io/eth',
+  'https://eth.drpc.org'
+];
+
+export async function fetchWbethOnChainExchangeRate(): Promise<number | null> {
+  const payload = JSON.stringify({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'eth_call',
+    params: [{ to: WBETH_ETH_CONTRACT, data: '0x3ba0b9a9' }, 'latest']
+  });
+
+  try {
+    return await Promise.any(
+      ETH_PUBLIC_RPCS.map(async (rpcUrl) => {
+        const res = await fetchWithTimeout(
+          rpcUrl,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload
+          },
+          2500
+        );
+        if (!res.ok) throw new Error(`RPC ${rpcUrl} HTTP ${res.status}`);
+        const json = await res.json();
+        return parseWbethExchangeRateHex(json?.result);
+      })
+    );
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchWbethLiveDiscount(): Promise<LstDiscountInfo> {
+  try {
+    const [fairRatio, spotRes] = await Promise.all([
+      fetchWbethOnChainExchangeRate(),
+      fetchWithTimeout('https://api.binance.com/api/v3/ticker/price?symbol=WBETHETH', undefined, 4000)
+    ]);
+
+    if (fairRatio !== null && spotRes.ok) {
+      const spotData = await spotRes.json();
+      const marketRatioRaw = parseFloat(spotData?.price);
+      if (Number.isFinite(marketRatioRaw) && marketRatioRaw > 0) {
+        const marketRatio = parseFloat(marketRatioRaw.toFixed(4));
+        const { discountPct, rawBasisPct } = computeBasisDiscount(fairRatio, marketRatio);
+        return {
+          discountPct,
+          rawBasisPct,
+          fairRatio,
+          marketRatio,
+          source: 'Binance Spot (WBETH/ETH) vs On-Chain exchangeRate()',
+          status: 'live',
+          isNative: false,
+          assetName: 'WBETH'
+        };
+      }
+    }
+  } catch {
+    // Fall through to baseline
+  }
+
+  return { ...FALLBACK_MARKET_DATA.ethLst.wbeth.lstDiscount };
 }
 
 export async function fetchLidoStaking(): Promise<{ apy: number; source: string }> {

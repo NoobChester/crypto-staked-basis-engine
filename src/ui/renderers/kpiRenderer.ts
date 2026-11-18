@@ -11,7 +11,7 @@ import type { UIElements } from '../dom.js';
 import { renderMarketData } from './feedRenderer.js';
 
 export function renderCollateralIntelligence(UI: UIElements, state: HedgingState): void {
-  const presetKey = (state.activePreset || 'wsteth_90') as CollateralPresetKey;
+  const presetKey = (state.activePreset || 'wbeth_95') as CollateralPresetKey;
   const intel = COLLATERAL_INTELLIGENCE[presetKey];
   if (!intel) return;
 

@@ -292,7 +292,7 @@
                   DELTA-NEUTRAL PnL TRAJECTORY
                 </h2>
                 <span id="chart-instruments-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">
-                  PAIR: wstETH / ETH-PERP
+                  PAIR: WBETH / ETH-USDT PERP
                 </span>
               </div>
               <p class="text-xs text-slate-400" id="chart-sub-caption">Cross-collateralized: Spot collateral appreciation cushions perp losses</p>
@@ -463,7 +463,7 @@
                 TRADED INSTRUMENTS
               </h2>
               <span id="inst-pair-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold truncate max-w-[130px] sm:max-w-[170px] xl:max-w-none">
-                wstETH / ETH-USDT PERP
+                WBETH / ETH-USDT PERP
               </span>
             </div>
             <!-- Quick Asset Filter/Selector -->
@@ -488,13 +488,13 @@
                   <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                   LEG 1: SPOT LONG
                 </span>
-                <span id="inst-spot-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">LST SPOT</span>
+                <span id="inst-spot-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">CEX LST</span>
               </div>
               <div class="flex items-baseline justify-between gap-1 min-w-0">
-                <div id="inst-spot-symbol" class="text-base font-bold text-white tracking-tight truncate">wstETH</div>
-                <div id="inst-spot-yield" class="text-[11px] font-bold text-emerald-400 shrink-0">+3.2% APY</div>
+                <div id="inst-spot-symbol" class="text-base font-bold text-white tracking-tight truncate">WBETH</div>
+                <div id="inst-spot-yield" class="text-[11px] font-bold text-emerald-400 shrink-0">+3.1% APY</div>
               </div>
-              <div id="inst-spot-desc" class="text-[10px] text-slate-400 truncate">Lido Wrapped Staked ETH</div>
+              <div id="inst-spot-desc" class="text-[10px] text-slate-400 truncate">Binance Wrapped Beacon ETH</div>
               <div class="pt-1.5 border-t border-slate-800/90 flex items-center justify-between text-[11px]">
                 <span class="text-slate-400 shrink-0">Initial Allocation:</span>
                 <span id="inst-spot-amount" class="font-bold text-cyan-300 font-mono truncate text-right">$10,000.00</span>
@@ -536,7 +536,7 @@
               <span class="px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 font-bold border border-cyan-800/70 text-[9px] shrink-0">Δ = 0.00 NEUTRAL</span>
             </div>
             <div id="inst-margin-desc" class="text-white font-medium truncate text-[11px]">
-              wstETH (Unified Cross-Margin, 10% Haircut)
+              WBETH Collateral (Binance Portfolio Margin, 5% Haircut)
             </div>
           </div>
 
@@ -565,31 +565,31 @@
                 Collateral Valuation Ratio (Haircut)
                 <span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">CROSS-MARGIN</span>
               </label>
-              <span id="val-collateral-ratio" class="font-mono text-cyan-300 font-bold">90.0% (10% Haircut)</span>
+              <span id="val-collateral-ratio" class="font-mono text-cyan-300 font-bold">95%</span>
             </div>
 
-            <!-- Institutional Staking Podium (4 Champions + Secondary) -->
+            <!-- Institutional Staking Podium (Champions + Secondary) -->
             <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
-              <!-- #1 wstETH -->
-              <div data-action="apply-collateral-preset" data-preset="wsteth_90" id="btn-preset-wsteth" role="button" tabindex="0"
+              <!-- #1 Binance WBETH -->
+              <div data-action="apply-collateral-preset" data-preset="wbeth_95" id="btn-preset-wbeth" role="button" tabindex="0"
                 class="preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition cursor-pointer select-none">
                 <div class="flex items-center justify-between">
-                  <div class="font-bold text-cyan-300">#1 Lido wstETH</div>
-                  <span class="text-[9px] px-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">BYBIT</span>
-                </div>
-                <div id="subtext-preset-90" class="text-[10px] text-slate-300 mt-0.5">10% Haircut | ~3.2% Stake</div>
-                <div class="text-[9px] text-emerald-300 mt-0.5">Buffer: +852% runway</div>
-              </div>
-
-              <!-- #2 Binance WBETH -->
-              <div data-action="apply-collateral-preset" data-preset="wbeth_95" id="btn-preset-wbeth" role="button" tabindex="0"
-                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
-                <div class="flex items-center justify-between">
-                  <div class="font-bold text-yellow-300">#2 Binance WBETH</div>
+                  <div class="font-bold text-yellow-300">#1 Binance WBETH</div>
                   <span class="text-[9px] px-1 rounded bg-yellow-950 text-yellow-300 border border-yellow-700 font-bold">BINANCE PM</span>
                 </div>
-                <div id="subtext-preset-wbeth" class="text-[10px] text-slate-400 mt-0.5">5% Haircut | ~3.1% Stake</div>
-                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +1,718% runway</div>
+                <div id="subtext-preset-wbeth" class="text-[10px] text-slate-300 mt-0.5">5% Haircut | ~3.1% Stake</div>
+                <div class="text-[9px] text-emerald-300 mt-0.5">Buffer: +1,718% runway</div>
+              </div>
+
+              <!-- #2 Lido wstETH -->
+              <div data-action="apply-collateral-preset" data-preset="wsteth_90" id="btn-preset-wsteth" role="button" tabindex="0"
+                class="preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none">
+                <div class="flex items-center justify-between">
+                  <div class="font-bold text-cyan-300">#2 Lido wstETH</div>
+                  <span class="text-[9px] px-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">BYBIT</span>
+                </div>
+                <div id="subtext-preset-90" class="text-[10px] text-slate-400 mt-0.5">10% Haircut | ~3.2% Stake</div>
+                <div class="text-[9px] text-emerald-400 mt-0.5">Buffer: +852% runway</div>
               </div>
 
               <!-- #3 FBTC -->
@@ -646,7 +646,7 @@
             </div>
 
             <p id="collateral-ratio-explainer" class="text-[10px] text-slate-400 font-mono pt-1">
-              100% capital in spot. Collateral appreciation covers 90% of short perp losses, yielding an 8.5x (+852%) runway.
+              Rank #1 Institutional Efficiency Leader: Binance WBETH with 5% haircut (+1,718% runway at 1x), 18.2x leverage ceiling, and deep Binance Portfolio Margin liquidity.
             </p>
 
             <!-- Live Collateral Intelligence Explainer Card -->
@@ -654,31 +654,31 @@
               <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
                 <div class="flex items-center gap-1.5">
                   <span id="ci-rank-badge" class="px-1.5 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold">#1 RANK</span>
-                  <span id="ci-title" class="font-bold text-white text-[11px]">Lido wstETH (Ethereum)</span>
+                  <span id="ci-title" class="font-bold text-white text-[11px]">Binance Staking (WBETH) (Ethereum (ETH))</span>
                 </div>
-                <span id="ci-venue" class="text-[10px] text-slate-400 truncate max-w-[160px]">Bybit UTA & Binance PM</span>
+                <span id="ci-venue" class="text-[10px] text-slate-400 truncate max-w-[160px]">Unified Margin (0.95) // Binance Portfolio Margin</span>
               </div>
               <div class="grid grid-cols-2 gap-2 text-[10px]">
                 <div>
                   <span class="text-slate-500 block text-[9px] uppercase">Runway Buffer</span>
-                  <div id="ci-buffer" class="font-bold text-emerald-400">+852.4% Rally Runway</div>
+                  <div id="ci-buffer" class="font-bold text-emerald-400">+1,718.2% Rally Runway (5% Haircut)</div>
                 </div>
                 <div>
                   <span class="text-slate-500 block text-[9px] uppercase">Real Strategy APY</span>
-                  <div id="ci-real-apy" class="font-bold text-cyan-300">~3.2% PoS + Funding</div>
+                  <div id="ci-real-apy" class="font-bold text-cyan-300">~2.2% - 3.1% Base PoS + Perp</div>
                 </div>
               </div>
               <div class="text-[10px] text-slate-300 border-t border-slate-800/80 pt-1.5">
                 <span class="text-slate-500 block text-[9px] uppercase font-bold">Why Worth Using:</span>
-                <p id="ci-why" class="text-slate-300 mt-0.5 text-[10px] leading-relaxed">The undisputed Gold Standard. 10% haircut, multi-billion instant secondary liquidity, and 4 years of zero-exploit history.</p>
+                <p id="ci-why" class="text-slate-300 mt-0.5 text-[10px] leading-relaxed">Unlocks the tightest haircut (5%) on any tier-1 CEX. Doubles the 1x liquidation runway to +1,718%, raises the insta-liq ceiling to 18.2x, and lowers Binance PM execution fees (4 bps / 14 bps).</p>
               </div>
               <div class="text-[10px] text-amber-200/90 border-t border-slate-800/80 pt-1.5">
                 <span class="text-amber-400 block text-[9px] uppercase font-bold">Beats Alternative:</span>
-                <p id="ci-beats" class="mt-0.5 text-[10px] leading-relaxed">Ether.fi (weETH) gives ~+0.8% more yield, but Bybit hits you with a 20% haircut and exposes funds to EigenLayer AVS slashing bugs.</p>
+                <p id="ci-beats" class="mt-0.5 text-[10px] leading-relaxed">Lido wstETH carries a 10% haircut (+852% runway, 9.5x ceiling, 5/18 bps on Bybit UTA) for virtually identical ETH Beacon Chain staking yield.</p>
               </div>
               <div class="text-[10px] text-cyan-200/90 border-t border-slate-800/80 pt-1.5">
                 <span class="text-cyan-400 block text-[9px] uppercase font-bold">Quantitative Verdict:</span>
-                <p id="ci-verdict" class="mt-0.5 text-[10px] font-semibold leading-relaxed">For a 7-figure delta-neutral carry trade, wstETH is the cleanest, most sleep-at-night asset in crypto.</p>
+                <p id="ci-verdict" class="mt-0.5 text-[10px] font-semibold leading-relaxed">The premier ETH collateral for capital efficiency, lower fee drag, and leverage headroom on Binance Portfolio Margin.</p>
               </div>
             </div>
           </div>
@@ -990,15 +990,15 @@
               </button>
             </div>
 
-            <input type="range" id="input-staking" min="0" max="15" step="0.1" value="3.2" class="w-full">
+            <input type="range" id="input-staking" min="0" max="15" step="0.1" value="3.1" class="w-full">
             <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
               <span>0% (Vanilla Spot)</span>
-              <span>2.3% (wstETH)</span>
+              <span>2.2% (WBETH / wstETH)</span>
               <span>1.8% / 4.9% (SOL)</span>
               <span>15% (High Restake)</span>
             </div>
             <div class="text-[10px] font-mono text-slate-500 pt-0.5" id="desc-staking-source">
-              Source: Lido Protocol (stETH)
+              Source: Binance Staking (WBETH)
             </div>
           </div>
 
@@ -1595,21 +1595,21 @@
           <div class="flex items-center gap-2 flex-wrap">
             <span class="text-slate-400 font-bold shrink-0">COLLATERAL INSTRUMENT:</span>
             <div id="backtest-token-selector-group" class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800 text-xs font-mono">
-              <button type="button" id="backtest-btn-token-wsteth" data-action="set-backtest-token" data-token="wsteth"
-                class="px-2.5 py-1 rounded font-bold transition bg-purple-950 text-purple-300 border border-purple-700 shadow cursor-pointer">
-                wstETH (Bybit · 90%)
-              </button>
               <button type="button" id="backtest-btn-token-wbeth" data-action="set-backtest-token" data-token="wbeth"
-                class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer">
+                class="px-2.5 py-1 rounded font-bold transition bg-yellow-950 text-yellow-300 border border-yellow-700 shadow cursor-pointer">
                 WBETH (Binance · 95%)
+              </button>
+              <button type="button" id="backtest-btn-token-wsteth" data-action="set-backtest-token" data-token="wsteth"
+                class="px-2.5 py-1 rounded text-slate-400 hover:text-white transition cursor-pointer">
+                wstETH (Bybit · 90%)
               </button>
             </div>
           </div>
           <div id="backtest-instrument-card" class="flex items-center gap-2.5 px-3 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-xs font-mono shadow-sm">
             <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-            <span id="backtest-instrument-badge" class="font-bold text-white tracking-wide">wstETH / ETH-USDT PERP</span>
+            <span id="backtest-instrument-badge" class="font-bold text-white tracking-wide">WBETH / ETH-USDT PERP</span>
             <span class="text-slate-600">|</span>
-            <span id="backtest-instrument-venue" class="text-slate-400">Bybit UTA · 10% Haircut</span>
+            <span id="backtest-instrument-venue" class="text-slate-400">Binance PM · 5% Haircut</span>
           </div>
         </div>
 
@@ -1621,7 +1621,7 @@
               LEVERAGE:
             </span>
             <span id="backtest-val-leverage" class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-bold border border-purple-800">1.0x (Unlevered)</span>
-            <span id="backtest-val-leverage-buffer" class="px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 font-bold text-xs" title="Opening baseline liquidation buffer at this leverage">Buffer: +852.4%</span>
+            <span id="backtest-val-leverage-buffer" class="px-2 py-0.5 rounded bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 font-bold text-xs" title="Opening baseline liquidation buffer at this leverage">Buffer: +1,718.2%</span>
           </div>
           <div class="flex items-center gap-2 flex-1 max-w-sm">
             <div class="relative w-full flex items-center pt-2.5 pb-1">
@@ -2734,17 +2734,26 @@
               </thead>
               <tbody class="divide-y divide-slate-800 text-slate-300">
                 <tr class="hover:bg-cyan-950/30">
-                  <td class="py-1.5 px-1.5 font-bold text-cyan-300 flex items-center gap-1">
-                    <span class="text-amber-400">#1</span> Lido wstETH
+                  <td class="py-1.5 px-1.5 font-bold text-yellow-300 flex items-center gap-1">
+                    <span class="text-amber-400">#1</span> Binance WBETH
                   </td>
-                  <td class="py-1.5 px-1.5 text-slate-300">Bybit UTA & Binance PM</td>
+                  <td class="py-1.5 px-1.5 text-slate-300">Binance Portfolio Margin</td>
+                  <td class="py-1.5 px-1.5 text-emerald-400 font-bold">5% / +1,718%</td>
+                  <td class="py-1.5 px-1.5 font-bold text-white">~2.2–3.1% + Perp</td>
+                  <td class="py-1.5 px-1.5 text-[10px] text-slate-400">Beats wstETH on capital efficiency (95% vs 90% collateral, 18.2x vs 9.5x ceiling, 4/14 bps vs 5/18 bps fees).</td>
+                </tr>
+                <tr class="hover:bg-cyan-950/30">
+                  <td class="py-1.5 px-1.5 font-bold text-cyan-300 flex items-center gap-1">
+                    <span class="text-slate-300">#2</span> Lido wstETH
+                  </td>
+                  <td class="py-1.5 px-1.5 text-slate-300">Bybit UTA &amp; Binance PM</td>
                   <td class="py-1.5 px-1.5 text-emerald-400 font-bold">10% / +852%</td>
-                  <td class="py-1.5 px-1.5 font-bold text-white">~3.2% + Perp</td>
-                  <td class="py-1.5 px-1.5 text-[10px] text-slate-400">Beats weETH (weETH gets 20% haircut and exposes to AVS slashing). Multi-billion liquidity.</td>
+                  <td class="py-1.5 px-1.5 font-bold text-white">~2.2–3.2% + Perp</td>
+                  <td class="py-1.5 px-1.5 text-[10px] text-slate-400">Multi-venue DeFi/CEX Gold Standard. Beats weETH (20% haircut, AVS slashing) without single-CEX wrapper custody.</td>
                 </tr>
                 <tr class="hover:bg-cyan-950/30">
                   <td class="py-1.5 px-1.5 font-bold text-amber-300 flex items-center gap-1">
-                    <span class="text-slate-300">#2</span> Cobo FBTC
+                    <span class="text-amber-600">#3</span> Cobo FBTC
                   </td>
                   <td class="py-1.5 px-1.5 text-slate-300">Bybit UTA (Unified)</td>
                   <td class="py-1.5 px-1.5 text-emerald-400 font-bold">10% / +852%</td>
@@ -2753,16 +2762,16 @@
                 </tr>
                 <tr class="hover:bg-cyan-950/30">
                   <td class="py-1.5 px-1.5 font-bold text-purple-300 flex items-center gap-1">
-                    <span class="text-amber-600">#3</span> Jito JitoSOL
+                    <span class="text-slate-500">#4</span> Jito JitoSOL
                   </td>
-                  <td class="py-1.5 px-1.5 text-slate-300">Bybit UTA & Drift</td>
+                  <td class="py-1.5 px-1.5 text-slate-300">Bybit UTA &amp; Drift</td>
                   <td class="py-1.5 px-1.5 text-emerald-400 font-bold">15% / +545%</td>
                   <td class="py-1.5 px-1.5 font-bold text-white">1.8% Real (7.2% Nom)</td>
                   <td class="py-1.5 px-1.5 text-[10px] text-slate-400">Captures MEV priority tips directly to stakers. Beats mSOL (~1.4% real) and whitelisted on Bybit.</td>
                 </tr>
                 <tr class="hover:bg-cyan-950/30">
                   <td class="py-1.5 px-1.5 font-bold text-emerald-300 flex items-center gap-1">
-                    <span class="text-slate-500">#4</span> Sanctum INF
+                    <span class="text-slate-500">#5</span> Sanctum INF
                   </td>
                   <td class="py-1.5 px-1.5 text-slate-300">Drift Protocol (DeFi)</td>
                   <td class="py-1.5 px-1.5 text-emerald-400 font-bold">15% / +545%</td>

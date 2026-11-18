@@ -100,7 +100,7 @@ export const state: HedgingState & {
   priceMove: 0,
   days: 90,
   fundingAPR: 10.0,
-  stakingAPY: 3.2,
+  stakingAPY: 3.1,
   depegPct: 0.0,
   mmr: 0.005,
   roundtripFeePct: 0.10,
@@ -108,8 +108,8 @@ export const state: HedgingState & {
   feeTier: 'vip',
   tradedAsset: 'ETH',
   btcVariant: 'lbtc',
-  activePreset: 'wsteth_90',
-  collateralRatio: 0.90,
+  activePreset: 'wbeth_95',
+  collateralRatio: 0.95,
   leverage: 1.0,
   borrowAPR: 6.5,
   isCustomBorrowAPR: false,
@@ -289,11 +289,11 @@ export interface BacktestState {
 
 export const backtestState: BacktestState = {
   asset: 'ETH',
-  collateralToken: 'wsteth',
+  collateralToken: 'wbeth',
   capital: 10000,
   leverage: 1.0,
   mode: 'unified',
-  collateralRatio: 0.90,
+  collateralRatio: 0.95,
   splitSpot: 50,
   startDate: '2020-12-01',
   endDate: '2026-10-31',
@@ -762,8 +762,8 @@ export function setBacktestAsset(asset: TradedAsset): void {
   const prevInception = getAssetInceptionDate(previousAsset);
   backtestState.asset = asset;
   if (asset === 'ETH') {
-    backtestState.collateralToken = 'wsteth';
-    backtestState.collateralRatio = 0.90;
+    backtestState.collateralToken = 'wbeth';
+    backtestState.collateralRatio = 0.95;
     backtestState.mode = 'unified';
   } else if (asset === 'BTC') {
     backtestState.collateralToken = 'fbtc';
@@ -1023,7 +1023,9 @@ export function applyLiveDepeg(): void {
   if (state.mode === 'unified') {
     if (state.activePreset === 'inverse_100' || state.activePreset === 'btc_eth_95') {
       liveDiscount = 0.0;
-    } else if (state.activePreset === 'sol_lrt_85') {
+    } else if (state.activePreset === 'wbeth_95') {
+      liveDiscount = snapshot.ethLst?.wbeth?.lstDiscount?.discountPct ?? 0.06;
+    } else if (state.activePreset === 'sol_lrt_85' || state.activePreset === 'jitosol_85' || state.activePreset === 'sanctum_inf_85') {
       liveDiscount = snapshot.SOL?.lstDiscount?.discountPct ?? 0.05;
     } else {
       liveDiscount = snapshot.ETH?.lstDiscount?.discountPct ?? 0.08;
@@ -1091,7 +1093,9 @@ export function applyHistoricalStaking(window: 'live' | '7d' | '30d' | '90d'): v
   let chosenStaking = 0.0;
   if (window === 'live') {
     if (state.mode === 'unified') {
-      if (state.activePreset === 'wsteth_90') {
+      if (state.activePreset === 'wbeth_95') {
+        chosenStaking = data.ethLst?.wbeth?.stakingAPY ?? COLLATERAL_PRESETS.wbeth_95.stakingAPY;
+      } else if (state.activePreset === 'wsteth_90') {
         chosenStaking = data.ETH.stakingAPY;
       } else if (state.activePreset === 'fbtc_90') {
         chosenStaking = COLLATERAL_PRESETS.fbtc_90.stakingAPY;
@@ -1108,7 +1112,9 @@ export function applyHistoricalStaking(window: 'live' | '7d' | '30d' | '90d'): v
       }
     } else {
       if (asset === 'ETH') {
-        chosenStaking = data.ETH.stakingAPY;
+        chosenStaking = state.activePreset === 'wbeth_95'
+          ? (data.ethLst?.wbeth?.stakingAPY ?? COLLATERAL_PRESETS.wbeth_95.stakingAPY)
+          : data.ETH.stakingAPY;
       } else if (asset === 'SOL') {
         chosenStaking = (state.solYieldType === 'nominal')
           ? (data.SOL.nominalStakingAPY ?? 7.2)
@@ -1122,10 +1128,22 @@ export function applyHistoricalStaking(window: 'live' | '7d' | '30d' | '90d'): v
     state.isLiveStaking = true;
   } else {
     state.isLiveStaking = false;
+    const useWbethTrailing = state.activePreset === 'wbeth_95' && asset === 'ETH';
+    const wbethTrailing = data.ethLst?.wbeth?.trailingStaking;
     let base = 0.0;
-    if (window === '7d') base = assetRates?.trailingAverages?.staking7d ?? (assetRates?.stakingAPY ?? 0.0);
-    else if (window === '30d') base = assetRates?.trailingAverages?.staking30d ?? (assetRates?.stakingAPY ?? 0.0);
-    else if (window === '90d') base = assetRates?.trailingAverages?.staking90d ?? (assetRates?.stakingAPY ?? 0.0);
+    if (window === '7d') {
+      base = useWbethTrailing
+        ? (wbethTrailing?.staking7d ?? COLLATERAL_PRESETS.wbeth_95.stakingAPY)
+        : (assetRates?.trailingAverages?.staking7d ?? (assetRates?.stakingAPY ?? 0.0));
+    } else if (window === '30d') {
+      base = useWbethTrailing
+        ? (wbethTrailing?.staking30d ?? COLLATERAL_PRESETS.wbeth_95.stakingAPY)
+        : (assetRates?.trailingAverages?.staking30d ?? (assetRates?.stakingAPY ?? 0.0));
+    } else if (window === '90d') {
+      base = useWbethTrailing
+        ? (wbethTrailing?.staking90d ?? COLLATERAL_PRESETS.wbeth_95.stakingAPY)
+        : (assetRates?.trailingAverages?.staking90d ?? (assetRates?.stakingAPY ?? 0.0));
+    }
 
     if (state.mode === 'unified') {
       if (state.activePreset === 'btc_eth_95' || state.activePreset === 'inverse_100') {
@@ -1322,7 +1340,7 @@ export function setAccountMode(mode: MarginMode): void {
       if (UI.inputStaking) UI.inputStaking.value = '0.0';
       if (UI.valStaking) UI.valStaking.textContent = '0.0% APY';
     }
-    applyCollateralPreset(state.activePreset || 'wsteth_90');
+    applyCollateralPreset(state.activePreset || 'wbeth_95');
   } else {
     if (UI.modeIsolatedBtn) UI.modeIsolatedBtn.className = 'px-3.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 bg-cyan-500 text-black shadow cursor-pointer';
     if (UI.modeUnifiedBtn) {
@@ -1375,7 +1393,7 @@ export function setTradedAsset(asset: TradedAsset): void {
       applyCollateralPreset('fbtc_90');
       return;
     } else {
-      applyCollateralPreset('wsteth_90');
+      applyCollateralPreset('wbeth_95');
       return;
     }
   } else {
@@ -1389,7 +1407,10 @@ export function setTradedAsset(asset: TradedAsset): void {
         const solVal = state.solYieldType === 'nominal' ? (data.SOL.nominalStakingAPY ?? 7.2) : (data.SOL.realStakingAPY ?? 1.8);
         state.stakingAPY = state.isLiveStaking ? solVal : (state.solYieldType === 'nominal' ? 7.2 : 1.8);
       } else {
-        state.stakingAPY = state.isLiveStaking ? data.ETH.stakingAPY : 3.2;
+        const wbethVal = data.ethLst?.wbeth?.stakingAPY ?? COLLATERAL_PRESETS.wbeth_95.stakingAPY;
+        state.stakingAPY = state.isLiveStaking
+          ? (state.activePreset === 'wsteth_90' ? data.ETH.stakingAPY : wbethVal)
+          : (state.activePreset === 'wsteth_90' ? 3.2 : 3.1);
       }
     }
     if (UI.inputStaking) UI.inputStaking.value = state.stakingAPY.toString();
@@ -1467,6 +1488,8 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
 
   if (state.isLiveStaking) {
     applyLiveStaking();
+  } else if (state.stakingWindow === '7d' || state.stakingWindow === '30d' || state.stakingWindow === '90d') {
+    applyHistoricalStaking(state.stakingWindow);
   } else {
     state.stakingAPY = p.stakingAPY;
     if (UI?.inputStaking) UI.inputStaking.value = p.stakingAPY.toString();
@@ -1474,32 +1497,34 @@ export function applyCollateralPreset(presetKey: CollateralPresetKey): void {
   }
 
   // Update Preset Cards highlight
-  const presetBtns: Record<CollateralPresetKey, HTMLElement | null> = {
-    wsteth_90: document.getElementById('btn-preset-wsteth') || document.getElementById('btn-preset-90'),
-    wbeth_95: document.getElementById('btn-preset-wbeth'),
-    fbtc_90: document.getElementById('btn-preset-fbtc'),
-    jitosol_85: document.getElementById('btn-preset-jitosol') || document.getElementById('btn-preset-85'),
-    sanctum_inf_85: document.getElementById('btn-preset-sanctum'),
-    btc_eth_95: document.getElementById('btn-preset-95'),
-    inverse_100: document.getElementById('btn-preset-100'),
-    sol_lrt_85: document.getElementById('btn-preset-85')
-  };
+  if (typeof document !== 'undefined') {
+    const presetBtns: Record<CollateralPresetKey, HTMLElement | null> = {
+      wsteth_90: document.getElementById('btn-preset-wsteth') || document.getElementById('btn-preset-90'),
+      wbeth_95: document.getElementById('btn-preset-wbeth'),
+      fbtc_90: document.getElementById('btn-preset-fbtc'),
+      jitosol_85: document.getElementById('btn-preset-jitosol') || document.getElementById('btn-preset-85'),
+      sanctum_inf_85: document.getElementById('btn-preset-sanctum'),
+      btc_eth_95: document.getElementById('btn-preset-95'),
+      inverse_100: document.getElementById('btn-preset-100'),
+      sol_lrt_85: document.getElementById('btn-preset-85')
+    };
 
-  (Object.keys(presetBtns) as CollateralPresetKey[]).forEach(k => {
-    const el = presetBtns[k];
-    if (el) {
-      if (k === presetKey) {
-        el.className = 'preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition cursor-pointer select-none';
-      } else {
-        el.className = 'preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none';
+    (Object.keys(presetBtns) as CollateralPresetKey[]).forEach(k => {
+      const el = presetBtns[k];
+      if (el) {
+        if (k === presetKey) {
+          el.className = 'preset-choice p-2 rounded-lg bg-cyan-950/80 border border-cyan-500 text-left transition cursor-pointer select-none';
+        } else {
+          el.className = 'preset-choice p-2 rounded-lg bg-brand-dark hover:bg-slate-800 border border-brand-border text-left transition cursor-pointer select-none';
+        }
       }
-    }
-  });
+    });
+  }
 
-  if (UI.valCollateralRatio) {
+  if (UI?.valCollateralRatio) {
     UI.valCollateralRatio.textContent = (p.collateralRatio * 100).toFixed(0) + '%';
   }
-  if (UI.collateralRatioExplainer) {
+  if (UI?.collateralRatioExplainer) {
     UI.collateralRatioExplainer.textContent = p.getExplainer ? p.getExplainer(state.solYieldType) : (p.explainer ?? '');
   }
 
@@ -1913,7 +1938,7 @@ export function resetDefaults(): void {
 
   applyHistoricalFunding('live');
   applyHistoricalStaking('live');
-  applyCollateralPreset('wsteth_90');
+  applyCollateralPreset('wbeth_95');
   setSplit(50);
   syncHyperliquidMarginLock(getLatestMarketData().selectedVenue);
   updateApp();
@@ -2365,7 +2390,7 @@ function init() {
   // Start periodic 60s background polling
   startAutoRefresh(60000);
 
-  applyCollateralPreset('wsteth_90');
+  applyCollateralPreset('wbeth_95');
   setSplit(50);
   updateStatisticalCarry(30);
   updateApp();

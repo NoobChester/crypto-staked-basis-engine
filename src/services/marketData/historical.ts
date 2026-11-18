@@ -104,18 +104,18 @@ async function fetchRawDailySeries(
   const dayMs = 86400000;
   const hourMs = 3600000;
 
-  // 1. Fetch Binance Funding History with complete horizon coverage
-  let binanceData: any[] = [];
-  try {
-    if (rangeDays <= 90) {
-      const limit = Math.min(500, rangeDays * 3 + 20);
-      const res = await fetchWithTimeout(
-        `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=${limit}`,
-        undefined,
-        6000
-      );
-      if (res.ok) binanceData = await res.json();
-    } else {
+  // Fetch Binance Funding, Hyperliquid Funding, and DeFiLlama Staking concurrently
+  const fetchBinanceHistory = async (): Promise<any[]> => {
+    try {
+      if (rangeDays <= 90) {
+        const limit = Math.min(500, rangeDays * 3 + 20);
+        const res = await fetchWithTimeout(
+          `https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=${limit}`,
+          undefined,
+          6000
+        );
+        return res.ok ? await res.json() : [];
+      }
       // For 180D, fetch both the latest 166 days (500 records) and the preceding chunk
       const [r1, r2] = await Promise.all([
         fetchWithTimeout(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${symbol}USDT&limit=500`, undefined, 6000),
@@ -125,50 +125,57 @@ async function fetchRawDailySeries(
       const data2 = r2.ok ? await r2.json() : [];
       const map = new Map<number, any>();
       [...data2, ...data1].forEach((item: any) => map.set(item.fundingTime, item));
-      binanceData = Array.from(map.values()).sort((a, b) => a.fundingTime - b.fundingTime);
+      return Array.from(map.values()).sort((a, b) => a.fundingTime - b.fundingTime);
+    } catch {
+      return [];
     }
-  } catch {
-    // Binance historical fallback
-  }
+  };
 
-  // 2. Fetch Hyperliquid Funding History with chunked pagination covering all hours up to now
-  let hlData: any[] = [];
-  try {
-    const chunkCount = Math.ceil((rangeDays * 24 + 24) / 500);
-    const hlPromises = [];
-    for (let i = 0; i < chunkCount; i++) {
-      const start = now - (i + 1) * 500 * hourMs;
-      const end = now - i * 500 * hourMs;
-      hlPromises.push(
-        fetchWithTimeout(
-          'https://api.hyperliquid.xyz/info',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'fundingHistory', coin: symbol, startTime: start, endTime: end })
-          },
-          6000
-        ).then(r => r.ok ? r.json() : []).catch(() => [])
-      );
+  const fetchHyperliquidHistory = async (): Promise<any[]> => {
+    try {
+      const chunkCount = Math.ceil((rangeDays * 24 + 24) / 500);
+      const hlPromises = [];
+      for (let i = 0; i < chunkCount; i++) {
+        const start = now - (i + 1) * 500 * hourMs;
+        const end = now - i * 500 * hourMs;
+        hlPromises.push(
+          fetchWithTimeout(
+            'https://api.hyperliquid.xyz/info',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: 'fundingHistory', coin: symbol, startTime: start, endTime: end })
+            },
+            6000
+          ).then(r => r.ok ? r.json() : []).catch(() => [])
+        );
+      }
+      const hlResults = await Promise.all(hlPromises);
+      return hlResults.reverse().flat();
+    } catch {
+      return [];
     }
-    const hlResults = await Promise.all(hlPromises);
-    hlData = hlResults.reverse().flat();
-  } catch {
-    // Hyperliquid historical fallback
-  }
+  };
 
-  // 3. Fetch DeFiLlama Staking History
-  let stakingData: any[] = [];
-  try {
-    const poolId = POOL_IDS[symbol];
-    const res = await fetchWithTimeout(`https://yields.llama.fi/chart/${poolId}`, undefined, 6000);
-    if (res.ok) {
-      const json = await res.json();
-      if (Array.isArray(json?.data)) stakingData = json.data;
+  const fetchStakingHistory = async (): Promise<any[]> => {
+    try {
+      const poolId = POOL_IDS[symbol];
+      const res = await fetchWithTimeout(`https://yields.llama.fi/chart/${poolId}`, undefined, 6000);
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json?.data)) return json.data;
+      }
+    } catch {
+      // Staking fallback
     }
-  } catch {
-    // Staking fallback
-  }
+    return [];
+  };
+
+  const [binanceData, hlData, stakingData] = await Promise.all([
+    fetchBinanceHistory(),
+    fetchHyperliquidHistory(),
+    fetchStakingHistory()
+  ]);
 
   // Group Binance by Date (YYYY-MM-DD)
   const binanceByDate: Record<string, number[]> = {};

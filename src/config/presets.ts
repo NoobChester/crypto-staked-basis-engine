@@ -67,19 +67,19 @@ export interface StrategyStateLike {
 export const DEFAULT_MMR = 0.005;
 
 export const COLLATERAL_PRESETS: Record<CollateralPresetKey, CollateralPreset> = {
-  wsteth_90: {
-    collateralRatio: 0.90,
-    stakingAPY: 3.2,
-    defaultAsset: 'ETH',
-    badgeLabel: '#1 Lido wstETH (90%)',
-    explainer: 'Rank #1 Institutional Gold Standard: Lido wstETH with 10% haircut (+852% runway) and multi-billion secondary liquidity.'
-  },
   wbeth_95: {
     collateralRatio: 0.95,
     stakingAPY: 3.1,
     defaultAsset: 'ETH',
-    badgeLabel: '#2 Binance WBETH (95%)',
-    explainer: 'Binance Portfolio Margin Native Staked ETH: 95% collateral ratio (5% haircut, +1,718% runway at 1x) with 0-fee promotions and deep Binance CEX liquidity.'
+    badgeLabel: '#1 Binance WBETH (95%)',
+    explainer: 'Rank #1 Institutional Efficiency Leader: Binance WBETH with 5% haircut (+1,718% runway at 1x), 18.2x leverage ceiling, and deep Binance Portfolio Margin liquidity.'
+  },
+  wsteth_90: {
+    collateralRatio: 0.90,
+    stakingAPY: 3.2,
+    defaultAsset: 'ETH',
+    badgeLabel: '#2 Lido wstETH (90%)',
+    explainer: 'Rank #2 Multi-Venue Gold Standard: Lido wstETH with 10% haircut (+852% runway) and multi-billion secondary liquidity across Bybit UTA, Binance PM, and DeFi.'
   },
   fbtc_90: {
     collateralRatio: 0.90,
@@ -140,31 +140,31 @@ export const COLLATERAL_PRESETS: Record<CollateralPresetKey, CollateralPreset> =
 };
 
 export const COLLATERAL_INTELLIGENCE: Record<CollateralPresetKey, CollateralIntelligence> = {
-  wsteth_90: {
-    rank: 1,
-    asset: 'Ethereum (ETH)',
-    protocol: 'Lido (wstETH)',
-    marginVenue: 'Unified Margin (0.90) // Bybit UTA & Binance PM',
-    realApyText: '~3.2% Base PoS + Perp (~13% - 15% Gross)',
-    valuationRatio: 0.90,
-    bufferText: '+852.4% Rally Runway (10% Haircut)',
-    whyWorthUsing: 'The undisputed Gold Standard. 10% haircut, multi-billion instant secondary liquidity, and 4 years of battle-tested zero-exploit history.',
-    beatsAlternative: 'Ether.fi (weETH) gives ~+0.8% more yield, but Bybit hits you with a 20% haircut (reducing runway from +852% to +395%) and exposes funds to EigenLayer AVS slashing bugs.',
-    alternativeName: 'Ether.fi (weETH)',
-    verdict: 'For a 7-figure delta-neutral carry trade, wstETH is the cleanest, most sleep-at-night asset in crypto.'
-  },
   wbeth_95: {
-    rank: 2,
+    rank: 1,
     asset: 'Ethereum (ETH)',
     protocol: 'Binance Staking (WBETH)',
     marginVenue: 'Unified Margin (0.95) // Binance Portfolio Margin',
-    realApyText: '~3.1% Base PoS + Perp (~13% - 15% Gross)',
+    realApyText: '~2.2% - 3.1% Base PoS + Perp (~12% - 15% Gross)',
     valuationRatio: 0.95,
     bufferText: '+1,718.2% Rally Runway (5% Haircut)',
-    whyWorthUsing: 'Unlocks the tightest haircut (5%) on any tier-1 CEX. Maximizes capital efficiency, doubles the 1x liquidation runway to +1,718%, and allows leverage up to 18x.',
-    beatsAlternative: 'Lido wstETH carries a 10% haircut (+852% runway). WBETH only carries a 5% haircut (+1,718% runway) and offers 0-fee promotions on Binance.',
+    whyWorthUsing: 'Unlocks the tightest haircut (5%) on any tier-1 CEX. Doubles the 1x liquidation runway to +1,718%, raises the insta-liq ceiling to 18.2x, and lowers Binance PM execution fees (4 bps / 14 bps).',
+    beatsAlternative: 'Lido wstETH carries a 10% haircut (+852% runway, 9.5x ceiling, 5/18 bps on Bybit UTA) for virtually identical ETH Beacon Chain staking yield.',
     alternativeName: 'Lido (wstETH)',
-    verdict: 'The premier choice for high-leverage delta-neutral basis on Binance Portfolio Margin.'
+    verdict: 'The premier ETH collateral for capital efficiency, lower fee drag, and leverage headroom on Binance Portfolio Margin.'
+  },
+  wsteth_90: {
+    rank: 2,
+    asset: 'Ethereum (ETH)',
+    protocol: 'Lido (wstETH)',
+    marginVenue: 'Unified Margin (0.90) // Bybit UTA & Binance PM',
+    realApyText: '~2.2% - 3.2% Base PoS + Perp (~12% - 15% Gross)',
+    valuationRatio: 0.90,
+    bufferText: '+852.4% Rally Runway (10% Haircut)',
+    whyWorthUsing: 'The multi-venue DeFi & CEX Gold Standard. 10% haircut, multi-billion instant on-chain secondary liquidity, and zero single-CEX wrapper custody concentration.',
+    beatsAlternative: 'Ether.fi (weETH) gives ~+0.8% more yield, but Bybit hits you with a 20% haircut (reducing runway from +852% to +395%) and exposes funds to EigenLayer AVS slashing bugs.',
+    alternativeName: 'Ether.fi (weETH)',
+    verdict: 'Best multi-venue, non-CEX-custodied ETH LST when deploying across Bybit UTA or decentralized venues.'
   },
   fbtc_90: {
     rank: 2,
@@ -273,7 +273,7 @@ export const BTC_LST_VARIANTS: Record<BtcVariant, BtcLstVariant> = {
 export function getInstrumentDetails(s: StrategyStateLike): InstrumentDetails {
   const asset: TradedAsset = s.tradedAsset || 'ETH';
   const mode = s.mode;
-  const preset = s.activePreset || 'wsteth_90';
+  const preset = s.activePreset || 'wbeth_95';
 
   if (mode === 'isolated') {
     if (asset === 'BTC') {
@@ -328,7 +328,7 @@ export function getInstrumentDetails(s: StrategyStateLike): InstrumentDetails {
       perpName: 'Ethereum Linear Perpetual Short',
       perpTag: 'LINEAR PERP',
       marginDesc: 'wstETH Collateral (Bybit UTA / Binance PM, 10% Haircut)',
-      note: 'Rank #1 Institutional Gold Standard: wstETH accepted directly as margin collateral (90% valuation).'
+      note: 'Rank #2 Multi-Venue Gold Standard: wstETH accepted directly as margin collateral (90% valuation).'
     };
   } else if (preset === 'wbeth_95') {
     return {
@@ -340,7 +340,7 @@ export function getInstrumentDetails(s: StrategyStateLike): InstrumentDetails {
       perpName: 'Ethereum Linear Perpetual Short',
       perpTag: 'USDⓈ-M PERP',
       marginDesc: 'WBETH Collateral (Binance Portfolio Margin, 5% Haircut)',
-      note: 'Binance Native Staked ETH: 95% collateral credit ratio (5% haircut, +1,718% rally runway at 1x).'
+      note: 'Rank #1 Institutional Efficiency Leader: WBETH unlocks 95% collateral credit (+1,718% rally runway at 1x).'
     };
   } else if (preset === 'fbtc_90') {
     return {
@@ -412,9 +412,15 @@ export function getInstrumentDetails(s: StrategyStateLike): InstrumentDetails {
  * Dynamically updates whitelist preset staking yields and metadata using live market data.
  */
 export function updatePresetsWithLiveData(data: MarketDataSnapshot): void {
+  // Update Binance WBETH preset with live WBETH DeFiLlama APY
+  const wbethApy = data.ethLst?.wbeth?.stakingAPY ?? data.ETH.stakingAPY;
+  const wbethSrc = data.ethLst?.wbeth?.source ?? data.ETH.stakingSource;
+  COLLATERAL_PRESETS.wbeth_95.stakingAPY = wbethApy;
+  COLLATERAL_PRESETS.wbeth_95.explainer = `Rank #1 Institutional Efficiency Leader: Binance WBETH. Live ${wbethApy.toFixed(1)}% base staking APY with a 5% haircut (+1,718% upside buffer). (${wbethSrc})`;
+
   // Update Lido wstETH preset with live Lido/DeFiLlama APY
   COLLATERAL_PRESETS.wsteth_90.stakingAPY = data.ETH.stakingAPY;
-  COLLATERAL_PRESETS.wsteth_90.explainer = `Lido wstETH (Ethereum LST). Live ${data.ETH.stakingAPY.toFixed(1)}% base staking APY with an 8.5x (+852%) upside buffer. (${data.ETH.stakingSource})`;
+  COLLATERAL_PRESETS.wsteth_90.explainer = `Rank #2 Multi-Venue Standard: Lido wstETH. Live ${data.ETH.stakingAPY.toFixed(1)}% base staking APY with an 8.5x (+852%) upside buffer. (${data.ETH.stakingSource})`;
 
   // Update Solana LRT preset with live Jito nominal and real yield
   const solNominal = data.SOL.nominalStakingAPY ?? 7.2;
