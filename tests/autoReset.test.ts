@@ -152,7 +152,7 @@ describe('Auto Baseline Reset (Rebalance Engine) Quantitative Calculus', () => {
   });
 
   it('runs seamlessly on empirical multi-year ETH historical data (2020 to 2026)', () => {
-    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-10-31');
+    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-11-18');
 
     // Run 2.0x leveraged ETH backtest without auto-reset
     const noResetResult = runHistoricalBacktest(ethSeries, {
@@ -188,7 +188,7 @@ describe('Auto Baseline Reset (Rebalance Engine) Quantitative Calculus', () => {
   });
 
   it('supports up to 9.0x institutional leverage ceiling for wstETH without Day 1 liquidation', () => {
-    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-10-31');
+    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-11-18');
     const res9 = runHistoricalBacktest(ethSeries, {
       capital: 10000,
       mode: 'unified',
@@ -208,7 +208,7 @@ describe('Auto Baseline Reset (Rebalance Engine) Quantitative Calculus', () => {
   });
 
   it('calculates realistic fee drag (5 bps on perp roll + spot net trim, 18 bps on gross retail)', () => {
-    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-10-31');
+    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-11-18');
     const res2_opt = runHistoricalBacktest(ethSeries, {
       capital: 10000,
       mode: 'unified',

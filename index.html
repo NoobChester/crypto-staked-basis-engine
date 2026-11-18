@@ -287,15 +287,32 @@
           <!-- Chart Header & Legend -->
           <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
                 <h2 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
                   DELTA-NEUTRAL PnL TRAJECTORY
                 </h2>
                 <span id="chart-instruments-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold">
                   PAIR: WBETH / ETH-USDT PERP
                 </span>
+                <!-- Compact Asset Filter/Selector -->
+                <div class="flex items-center gap-1 text-[10px] font-mono shrink-0" id="asset-selector-group">
+                  <span class="text-slate-500 text-[10px] mr-0.5 hidden sm:inline">ASSET:</span>
+                  <button data-action="set-traded-asset" data-asset="ETH" id="asset-btn-eth" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition cursor-pointer">ETH</button>
+                  <button data-action="set-traded-asset" data-asset="BTC" id="asset-btn-btc" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer">BTC</button>
+                  <button data-action="set-traded-asset" data-asset="SOL" id="asset-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer">SOL</button>
+                  <button data-action="open-triad-modal" id="btn-triad-info" class="text-slate-400 hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-600 transition flex items-center gap-1 text-[10px] font-mono cursor-pointer" title="Institutional Asset Whitelist: Why only BTC, ETH, and SOL?">
+                    <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <span class="hidden sm:inline">Why 3?</span>
+                  </button>
+                </div>
+                <button type="button" id="btn-toggle-traded-legs" data-action="toggle-traded-legs" aria-expanded="false" aria-controls="traded-legs-drawer"
+                  class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold flex items-center gap-1 cursor-pointer transition"
+                  title="Expand or collapse Traded Instrument Legs &amp; Margin Details">
+                  <span>Legs</span>
+                  <svg id="chevron-traded-legs" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
               </div>
-              <p class="text-xs text-slate-400" id="chart-sub-caption">Cross-collateralized: Spot collateral appreciation cushions perp losses</p>
+              <p class="text-xs text-slate-400 mt-0.5" id="chart-sub-caption">Cross-collateralized: Spot collateral appreciation cushions perp losses</p>
             </div>
             <!-- Legend -->
             <div class="flex items-center gap-3 text-[11px] font-mono">
@@ -308,6 +325,81 @@
               <span class="flex items-center gap-1.5 text-rose-400">
                 <span class="w-2.5 h-0.5 border-t border-dashed border-rose-500"></span> Liq Cliff
               </span>
+            </div>
+          </div>
+
+          <!-- Collapsible Traded Instruments Drawer (Collapsed by default) -->
+          <div id="traded-legs-drawer" class="hidden mb-3.5 p-3 rounded-xl bg-brand-surface/75 border border-brand-border/80 space-y-2.5">
+            <div class="flex items-center justify-between gap-2 border-b border-slate-800/90 pb-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"></div>
+                <span class="text-[11px] font-bold tracking-tight text-white uppercase font-mono">TRADED INSTRUMENTS</span>
+                <span id="inst-pair-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold truncate">
+                  WBETH / ETH-USDT PERP
+                </span>
+              </div>
+              <span class="px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 font-bold border border-cyan-800/70 text-[9px] font-mono shrink-0">Δ = 0.00 NEUTRAL</span>
+            </div>
+
+            <!-- Traded Legs 2-Column Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
+              <!-- Leg 1: Spot Long -->
+              <div class="p-2.5 bg-brand-dark/80 rounded-xl border border-emerald-900/40 flex flex-col justify-between space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    LEG 1: SPOT LONG
+                  </span>
+                  <span id="inst-spot-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">CEX LST</span>
+                </div>
+                <div class="flex items-baseline justify-between gap-1 min-w-0">
+                  <div id="inst-spot-symbol" class="text-sm font-bold text-white tracking-tight truncate">WBETH</div>
+                  <div id="inst-spot-yield" class="text-[11px] font-bold text-emerald-400 shrink-0">+3.1% APY</div>
+                </div>
+                <div id="inst-spot-desc" class="text-[10px] text-slate-400 truncate">Binance Wrapped Beacon ETH</div>
+                <div class="pt-1 border-t border-slate-800/90 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400 shrink-0">Initial Allocation:</span>
+                  <span id="inst-spot-amount" class="font-bold text-cyan-300 font-mono truncate text-right">$10,000.00</span>
+                </div>
+              </div>
+
+              <!-- Leg 2: Derivative Short -->
+              <div class="p-2.5 bg-brand-dark/80 rounded-xl border border-rose-900/40 flex flex-col justify-between space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
+                    LEG 2: SHORT PERP
+                  </span>
+                  <div class="flex items-center gap-1">
+                    <span id="badge-forward-carry" class="group relative inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-950/90 text-indigo-300 border border-indigo-700/80 font-bold cursor-help" title="Forward Carry (Contango) Rationale: Crypto futures maintain persistent positive funding because natural market demand is net-long. Speculators pay continuous funding to rent leverage, creating a perpetual positive carry harvest for delta-neutral hedgers.">
+                      <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                      CARRY
+                    </span>
+                    <span id="inst-perp-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">USDⓈ-M PERP</span>
+                  </div>
+                </div>
+                <div class="flex items-baseline justify-between gap-1 min-w-0">
+                  <div id="inst-perp-symbol" class="text-sm font-bold text-white tracking-tight truncate">ETH-USDT PERP</div>
+                  <div id="inst-perp-rate" class="text-[11px] font-bold text-emerald-400 shrink-0">+10.0% APR</div>
+                </div>
+                <div id="inst-perp-desc" class="text-[10px] text-slate-400 truncate">Ethereum Linear Perpetual Short</div>
+                <div class="pt-1 border-t border-slate-800/90 flex items-center justify-between text-[11px]">
+                  <span class="text-slate-400 shrink-0">Hedge Notional:</span>
+                  <span id="inst-perp-amount" class="font-bold text-rose-300 font-mono truncate text-right">-$10,000.00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Margin / Collateral Strip & Note -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px] font-mono">
+              <div class="px-2.5 py-1.5 rounded-lg bg-brand-dark/60 border border-slate-800/90 flex items-center gap-2 min-w-0">
+                <span class="text-slate-400 shrink-0">Margin:</span>
+                <span id="inst-margin-desc" class="text-white font-medium truncate">WBETH Collateral (Binance Portfolio Margin, 5% Haircut)</span>
+              </div>
+              <div id="inst-collateral-note" class="px-2.5 py-1.5 rounded-lg bg-brand-dark/40 border border-slate-800 text-slate-400 flex items-center gap-1.5 min-w-0">
+                <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="inst-collateral-note-text" class="truncate">Cross-collateralized: Spot collateral appreciation cushions perp losses</span>
+              </div>
             </div>
           </div>
 
@@ -450,103 +542,6 @@
 
       <!-- Controls Column (5 Cols) -->
       <div class="lg:col-span-5 space-y-4">
-        
-        <!-- ACTIVE INSTRUMENTS TRADED PANEL -->
-        <div id="traded-instruments-panel" class="bg-brand-card rounded-2xl border border-brand-border p-4 flex flex-col justify-between sm:h-[340px]">
-          <div class="flex items-center justify-between gap-2 border-b border-brand-border pb-2.5 min-w-0">
-            <div class="flex items-center gap-2 min-w-0">
-              <div class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"></div>
-              <h2 class="text-xs font-bold tracking-tight text-white uppercase font-mono flex items-center gap-1.5 shrink-0">
-                <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                </svg>
-                TRADED INSTRUMENTS
-              </h2>
-              <span id="inst-pair-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 font-bold truncate max-w-[130px] sm:max-w-[170px] xl:max-w-none">
-                WBETH / ETH-USDT PERP
-              </span>
-            </div>
-            <!-- Quick Asset Filter/Selector -->
-            <div class="flex items-center gap-1 text-[10px] font-mono shrink-0" id="asset-selector-group">
-              <span class="text-slate-500 text-[10px] mr-0.5">ASSET:</span>
-              <button data-action="set-traded-asset" data-asset="ETH" id="asset-btn-eth" class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-700 font-bold transition">ETH</button>
-              <button data-action="set-traded-asset" data-asset="BTC" id="asset-btn-btc" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">BTC</button>
-              <button data-action="set-traded-asset" data-asset="SOL" id="asset-btn-sol" class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 hover:text-white transition">SOL</button>
-              <button data-action="open-triad-modal" id="btn-triad-info" class="ml-1 text-slate-400 hover:text-cyan-300 px-1.5 py-0.5 rounded hover:bg-slate-800 border border-slate-700/60 hover:border-cyan-600 transition flex items-center gap-1 text-[10px] font-mono" title="Institutional Asset Whitelist: Why only BTC, ETH, and SOL?">
-                <svg class="w-3.5 h-3.5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span class="hidden sm:inline">Why 3?</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Traded Legs 2-Column Grid -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs font-mono">
-            <!-- Leg 1: Spot Long -->
-            <div class="p-3 bg-brand-surface/85 rounded-xl border border-emerald-900/40 relative overflow-hidden flex flex-col justify-between h-[124px]">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                  LEG 1: SPOT LONG
-                </span>
-                <span id="inst-spot-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">CEX LST</span>
-              </div>
-              <div class="flex items-baseline justify-between gap-1 min-w-0">
-                <div id="inst-spot-symbol" class="text-base font-bold text-white tracking-tight truncate">WBETH</div>
-                <div id="inst-spot-yield" class="text-[11px] font-bold text-emerald-400 shrink-0">+3.1% APY</div>
-              </div>
-              <div id="inst-spot-desc" class="text-[10px] text-slate-400 truncate">Binance Wrapped Beacon ETH</div>
-              <div class="pt-1.5 border-t border-slate-800/90 flex items-center justify-between text-[11px]">
-                <span class="text-slate-400 shrink-0">Initial Allocation:</span>
-                <span id="inst-spot-amount" class="font-bold text-cyan-300 font-mono truncate text-right">$10,000.00</span>
-              </div>
-            </div>
-
-            <!-- Leg 2: Derivative Short -->
-            <div class="p-3 bg-brand-surface/85 rounded-xl border border-rose-900/40 relative overflow-hidden flex flex-col justify-between h-[124px]">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-                  LEG 2: SHORT PERP
-                </span>
-                <div class="flex items-center gap-1.5">
-                  <span id="badge-forward-carry" class="group relative inline-flex items-center gap-1 text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-950/90 text-indigo-300 border border-indigo-700/80 font-bold cursor-help" title="Forward Carry (Contango) Rationale: Crypto futures maintain persistent positive funding because natural market demand is net-long. Speculators pay continuous funding to rent leverage, creating a perpetual positive carry harvest for delta-neutral hedgers.">
-                    <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                    FORWARD CARRY
-                    <svg class="w-2.5 h-2.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                  </span>
-                  <span id="inst-perp-tag" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">LINEAR PERP</span>
-                </div>
-              </div>
-              <div class="flex items-baseline justify-between gap-1 min-w-0">
-                <div id="inst-perp-symbol" class="text-base font-bold text-white tracking-tight truncate">ETH-USDT PERP</div>
-                <div id="inst-perp-rate" class="text-[11px] font-bold text-emerald-400 shrink-0">+10.0% APR</div>
-              </div>
-              <div id="inst-perp-desc" class="text-[10px] text-slate-400 truncate">Ethereum Linear Perpetual</div>
-              <div class="pt-1.5 border-t border-slate-800/90 flex items-center justify-between text-[11px]">
-                <span class="text-slate-400 shrink-0">Hedge Notional:</span>
-                <span id="inst-perp-amount" class="font-bold text-rose-300 font-mono truncate text-right">-$10,000.00</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Margin / Collateral Architecture Strip -->
-          <div class="p-2.5 rounded-xl bg-brand-surface/60 border border-slate-800/90 flex flex-col justify-center space-y-1 text-[11px] font-mono h-[58px]">
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-slate-400 text-[10px]">Margin Collateral:</span>
-              <span class="px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-300 font-bold border border-cyan-800/70 text-[9px] shrink-0">Δ = 0.00 NEUTRAL</span>
-            </div>
-            <div id="inst-margin-desc" class="text-white font-medium truncate text-[11px]">
-              WBETH Collateral (Binance Portfolio Margin, 5% Haircut)
-            </div>
-          </div>
-
-          <!-- Dynamic Institutional Collateral Notice -->
-          <div id="inst-collateral-note" class="text-[10px] font-mono px-2.5 py-1.5 rounded-lg bg-brand-surface/40 border border-slate-800 text-slate-400 flex items-start gap-1.5 leading-snug h-[48px] overflow-hidden">
-            <svg class="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span id="inst-collateral-note-text" class="line-clamp-2">Cross-collateralized: Spot collateral appreciation cushions perp losses</span>
-          </div>
-        </div>
-        
         <div class="bg-brand-card rounded-2xl border border-brand-border p-5 space-y-4">
           <div class="border-b border-brand-border pb-2.5 flex items-center justify-between">
             <h2 class="text-xs font-bold tracking-tight text-white uppercase font-mono flex items-center gap-2">
@@ -558,17 +553,22 @@
             <button data-action="reset-defaults" class="text-[11px] font-mono text-cyan-400 hover:text-cyan-300">Reset</button>
           </div>
 
-          <!-- UNIFIED MARGIN PRESETS (Visible in Unified Mode) -->
+          <!-- UNIFIED MARGIN PRESETS (Visible in Unified Mode, Collapsible) -->
           <div id="panel-unified-presets" class="space-y-2 p-3.5 rounded-xl bg-brand-surface/70 border border-cyan-900/40">
-            <div class="flex items-center justify-between text-xs">
-              <label class="font-bold text-cyan-300 flex items-center gap-1">
-                Collateral Valuation Ratio (Haircut)
+            <button type="button" id="btn-toggle-collateral-panel" data-action="toggle-collateral-panel" aria-expanded="true" aria-controls="collateral-presets-body"
+              class="w-full flex items-center justify-between text-xs cursor-pointer group text-left">
+              <span class="font-bold text-cyan-300 flex items-center gap-1.5 group-hover:text-cyan-200 transition">
+                <span>Collateral Valuation Ratio (Haircut)</span>
                 <span class="text-[9px] px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">CROSS-MARGIN</span>
-              </label>
-              <span id="val-collateral-ratio" class="font-mono text-cyan-300 font-bold">95%</span>
-            </div>
+              </span>
+              <span class="flex items-center gap-1.5 shrink-0">
+                <span id="val-collateral-ratio" class="font-mono text-cyan-300 font-bold">95%</span>
+                <svg id="chevron-collateral-panel" class="w-3.5 h-3.5 text-cyan-400 rotate-180 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </span>
+            </button>
 
-            <!-- Institutional Staking Podium (Champions + Secondary) -->
+            <div id="collateral-presets-body" class="space-y-2 pt-1">
+              <!-- Institutional Staking Podium (Champions + Secondary) -->
             <div class="grid grid-cols-2 gap-2 text-xs font-mono pt-1">
               <!-- #1 Binance WBETH -->
               <div data-action="apply-collateral-preset" data-preset="wbeth_95" id="btn-preset-wbeth" role="button" tabindex="0"
@@ -680,6 +680,7 @@
                 <span class="text-cyan-400 block text-[9px] uppercase font-bold">Quantitative Verdict:</span>
                 <p id="ci-verdict" class="mt-0.5 text-[10px] font-semibold leading-relaxed">The premier ETH collateral for capital efficiency, lower fee drag, and leverage headroom on Binance Portfolio Margin.</p>
               </div>
+            </div>
             </div>
           </div>
 
@@ -1829,12 +1830,12 @@
         <div class="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs font-mono text-slate-400 border-t border-slate-800/80">
           <div class="flex items-center gap-2">
             <span>Start Date:</span>
-            <input type="date" id="backtest-start-date" value="2020-12-01" min="2020-12-01" max="2026-10-31"
+            <input type="date" id="backtest-start-date" value="2020-12-01" min="2020-12-01" max="2026-11-18"
               class="px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-purple-500">
           </div>
           <div class="flex items-center gap-2">
             <span>End Date:</span>
-            <input type="date" id="backtest-end-date" value="2026-10-31" min="2020-12-01" max="2026-10-31"
+            <input type="date" id="backtest-end-date" value="2026-11-18" min="2020-12-01" max="2026-11-18"
               class="px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg text-white font-mono text-xs focus:outline-none focus:border-purple-500">
           </div>
           <button type="button" id="btn-apply-custom-dates" data-action="apply-backtest-dates" class="px-3 py-1 bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-700 rounded-lg cursor-pointer transition font-bold">
@@ -1977,11 +1978,11 @@
               </span>
               <span class="text-slate-500 font-bold">→</span>
               <span id="backtest-slider-end-display" class="font-bold text-purple-300 bg-purple-950/80 px-2 py-0.5 rounded border border-purple-700/60">
-                2026-10-31
+                2026-11-18
               </span>
             </div>
             <span id="backtest-slider-days-remaining" class="text-[11px] text-slate-300 font-mono bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700/60">
-              2,161 Days Duration
+              2,179 Days Duration
             </span>
           </div>
 
@@ -1996,7 +1997,7 @@
               <span class="text-[10px] text-slate-500">Drag to adjust inception horizon</span>
             </div>
             <div class="relative pt-0.5 pb-0.5">
-              <input type="range" id="backtest-slider-start-date" min="0" max="2147" step="1" value="0"
+              <input type="range" id="backtest-slider-start-date" min="0" max="2178" step="1" value="0"
                 class="w-full cursor-pointer accent-cyan-400" aria-label="Adjust Backtest Start Date">
             </div>
           </div>
@@ -2007,12 +2008,12 @@
               <span class="flex items-center gap-1.5">
                 <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
                 <span class="font-semibold text-slate-300">End Date:</span>
-                <span id="backtest-slider-end-label" class="font-bold text-purple-300">2026-10-31</span>
+                <span id="backtest-slider-end-label" class="font-bold text-purple-300">2026-11-18</span>
               </span>
               <span class="text-[10px] text-slate-500">Drag to adjust terminal horizon</span>
             </div>
             <div class="relative pt-0.5 pb-0.5">
-              <input type="range" id="backtest-slider-end-date" min="0" max="2147" step="1" value="2147"
+              <input type="range" id="backtest-slider-end-date" min="0" max="2178" step="1" value="2178"
                 class="w-full cursor-pointer accent-purple-400" aria-label="Adjust Backtest End Date">
             </div>
           </div>

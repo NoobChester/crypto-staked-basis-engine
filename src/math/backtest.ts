@@ -7,6 +7,7 @@
 import { type MarginMode, VENUE_FEE_SCHEDULES } from '../config/presets.js';
 import type { DailyHistoricalMarketStep } from '../data/historical/ethBeaconSeries.js';
 import { getVooPrice } from '../data/historical/vooSeries.js';
+import { getWbethHistoricalStakingAPY } from '../data/historical/wbethSeries.js';
 
 export type BacktestExecutionMode = 'optimized' | 'retail';
 
@@ -230,8 +231,11 @@ export function runHistoricalBacktest(
     const r_total = (step.spotPrice - P0) / P0;
     const depeg = Math.max(0, Math.min(1, step.depegPct / 100));
 
-    // Staking accrual on current spot collateral
-    const dailyStaking = currentS0 * (step.stakingAPY / 100) * (1 / 365);
+    // Staking accrual on current spot collateral (token-aware for WBETH vs wstETH)
+    const effectiveStakingAPY = (mode === 'unified' && token === 'wbeth')
+      ? getWbethHistoricalStakingAPY(step.date, step.stakingAPY)
+      : step.stakingAPY;
+    const dailyStaking = currentS0 * (effectiveStakingAPY / 100) * (1 / 365);
     cumStaking += dailyStaking;
 
     // Funding accrues only if hedge is solvent
@@ -487,7 +491,7 @@ export function runHistoricalBacktest(
       spotPrice: step.spotPrice,
       priceReturnPct: round2(r_total * 100),
       fundingAPR: step.fundingAPR,
-      stakingAPY: step.stakingAPY,
+      stakingAPY: effectiveStakingAPY,
       depegPct: step.depegPct,
       strategyEquity: round2(strategyEquity),
       spotBenchmarkEquity: round2(spotBenchmarkEquity),

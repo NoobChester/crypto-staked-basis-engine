@@ -46,9 +46,9 @@ import {
 
 describe('Historical Time-Series Dataset & Ingestion Service', () => {
   it('contains full contiguous daily series for ETH starting at Beacon Chain Genesis (2020-12-01)', () => {
-    expect(ETH_BEACON_CHAIN_HISTORICAL_SERIES.length).toBe(2161);
+    expect(ETH_BEACON_CHAIN_HISTORICAL_SERIES.length).toBe(2179);
     expect(ETH_BEACON_CHAIN_HISTORICAL_SERIES[0].date).toBe('2020-12-01');
-    expect(ETH_BEACON_CHAIN_HISTORICAL_SERIES[ETH_BEACON_CHAIN_HISTORICAL_SERIES.length - 1].date).toBe('2026-10-31');
+    expect(ETH_BEACON_CHAIN_HISTORICAL_SERIES[ETH_BEACON_CHAIN_HISTORICAL_SERIES.length - 1].date).toBe('2026-11-18');
     expect(ETH_BEACON_CHAIN_HISTORICAL_SERIES[0].spotPrice).toBeCloseTo(597.11, 2);
   });
 
@@ -57,10 +57,10 @@ describe('Historical Time-Series Dataset & Ingestion Service', () => {
     expect(getAssetInceptionDate('SOL')).toBe('2022-10-01');
     expect(getAssetInceptionDate('BTC')).toBe('2020-12-01');
 
-    expect(SOL_HISTORICAL_SERIES.length).toBe(1492);
+    expect(SOL_HISTORICAL_SERIES.length).toBe(1510);
     expect(SOL_HISTORICAL_SERIES[0].date).toBe('2022-10-01');
 
-    expect(BTC_HISTORICAL_SERIES.length).toBe(2161);
+    expect(BTC_HISTORICAL_SERIES.length).toBe(2179);
     expect(BTC_HISTORICAL_SERIES[0].date).toBe('2020-12-01');
     expect(BTC_HISTORICAL_SERIES[0].spotPrice).toBeCloseTo(19345.5, 0);
   });
@@ -94,7 +94,7 @@ describe('Historical Time-Series Dataset & Ingestion Service', () => {
 
 describe('Quantitative Backtest Engine: Unified vs Isolated Margin Dynamics', () => {
   it('proves Unified Margin survives the entire 2020-2026 multi-year run with 0 liquidations', () => {
-    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-10-31');
+    const ethSeries = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-11-18');
     const result: BacktestSummaryResult = runHistoricalBacktest(ethSeries, {
       capital: 10000,
       mode: 'unified',
@@ -103,7 +103,7 @@ describe('Quantitative Backtest Engine: Unified vs Isolated Margin Dynamics', ()
       tbillRate: 4.35
     });
 
-    expect(result.horizonDays).toBe(2161);
+    expect(result.horizonDays).toBe(2179);
     expect(result.initialCapital).toBe(10000);
     expect(result.isLiquidated).toBe(false);
     expect(result.tLiq).toBeNull();
@@ -188,8 +188,8 @@ describe('Quantitative Backtest Engine: Unified vs Isolated Margin Dynamics', ()
   });
 
   it('runs Bitcoin multi-year cash-and-carry basis from Dec 2020 through Babylon era', () => {
-    const btcSeries = getHistoricalBacktestSeries('BTC', '2020-12-01', '2026-10-31');
-    expect(btcSeries.length).toBe(2161);
+    const btcSeries = getHistoricalBacktestSeries('BTC', '2020-12-01', '2026-11-18');
+    expect(btcSeries.length).toBe(2179);
     expect(btcSeries[0].date).toBe('2020-12-01');
 
     // Pre-Babylon steps must have 0.0% staking APY
@@ -209,7 +209,7 @@ describe('Quantitative Backtest Engine: Unified vs Isolated Margin Dynamics', ()
       tbillRate: 4.35
     });
 
-    expect(result.horizonDays).toBe(2161);
+    expect(result.horizonDays).toBe(2179);
     expect(result.isLiquidated).toBe(false);
     expect(result.totalHarvestedFunding).toBeGreaterThan(1500);
     expect(result.terminalStrategyEquity).toBeGreaterThan(10000);
@@ -227,7 +227,7 @@ describe('Ledger Table Rendering & CSV Export', () => {
   it('formats pagination bounds and avoids negative indexes', () => {
     const onPageChange = vi.fn();
     const mockContainer = { innerHTML: '', classList: { add: vi.fn(), remove: vi.fn() } } as unknown as HTMLElement;
-    renderBacktestPagination(mockContainer, 2161, 1, 50, onPageChange);
+    renderBacktestPagination(mockContainer, 2179, 1, 50, onPageChange);
     expect(mockContainer).toBeDefined();
   });
 
@@ -370,7 +370,7 @@ describe('Backtest Chart Toggleable Plots & Start Date Slider Horizon', () => {
 
   it('adjusts start date horizon dynamically via slider index', () => {
     const rawEth = getRawAssetSeries('ETH');
-    expect(rawEth.length).toBe(2161);
+    expect(rawEth.length).toBe(2179);
 
     // Move start date slider to day index 365 (start of 2022)
     setBacktestStartDateIndex(365);
@@ -926,6 +926,40 @@ describe('VOO (S&P 500 ETF Total Return) Benchmark & Unified Default Invariants'
       expect(state.activePreset).toBe('wbeth_95');
       expect(state.collateralRatio).toBe(0.95);
       expect(state.stakingAPY).toBeGreaterThan(0);
+    });
+
+    it('reflects real WBETH vs wstETH staking APY difference in historical backtest output', () => {
+      const fullEth = getHistoricalBacktestSeries('ETH', '2020-12-01', '2026-11-18');
+      const resWsteth = runHistoricalBacktest(fullEth, {
+        capital: 10000,
+        leverage: 1.0,
+        mode: 'unified',
+        collateralRatio: 0.90,
+        collateralToken: 'wsteth',
+        asset: 'ETH'
+      });
+      const resWbeth = runHistoricalBacktest(fullEth, {
+        capital: 10000,
+        leverage: 1.0,
+        mode: 'unified',
+        collateralRatio: 0.95,
+        collateralToken: 'wbeth',
+        asset: 'ETH'
+      });
+
+      // WBETH and wstETH must produce distinct harvested staking totals and daily trajectory APYs
+      expect(resWbeth.totalHarvestedStaking).not.toBe(resWsteth.totalHarvestedStaking);
+      expect(resWbeth.terminalStrategyEquity).not.toBe(resWsteth.terminalStrategyEquity);
+      // Pre-launch 2021 step reflects empirical -0.06% spread; post-2023-06-16 reflects audited DeFiLlama WBETH APY
+      const preLaunchWsteth = resWsteth.dailyTrajectory.find(s => s.date === '2021-06-01');
+      const preLaunchWbeth = resWbeth.dailyTrajectory.find(s => s.date === '2021-06-01');
+      expect(preLaunchWsteth && preLaunchWbeth).toBeTruthy();
+      expect(preLaunchWbeth!.stakingAPY).toBeCloseTo(preLaunchWsteth!.stakingAPY - 0.06, 2);
+
+      // Stitched Nov 2026 window must be present and continuous
+      const nov18 = resWbeth.dailyTrajectory.find(s => s.date === '2026-11-18');
+      expect(nov18).toBeDefined();
+      expect(nov18!.vooBenchmarkEquity).toBeGreaterThan(10000);
     });
 
     it('triggers instant liquidation on WBETH when leverage reaches 19x', () => {

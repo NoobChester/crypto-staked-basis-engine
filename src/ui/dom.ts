@@ -145,6 +145,12 @@ export interface UIElements {
   subtextPreset90: HTMLElement | null;
   subtextPresetWbeth: HTMLElement | null;
   subtextPreset85: HTMLElement | null;
+  btnToggleTradedLegs: HTMLElement | null;
+  tradedLegsDrawer: HTMLElement | null;
+  chevronTradedLegs: HTMLElement | null;
+  btnToggleCollateralPanel: HTMLElement | null;
+  collateralPresetsBody: HTMLElement | null;
+  chevronCollateralPanel: HTMLElement | null;
   feedVenueBtnBinance: HTMLElement | null;
   feedVenueBtnHyperliquid: HTMLElement | null;
   sliderVenueBtnBinance: HTMLElement | null;
@@ -438,6 +444,12 @@ export function getUIElements(): UIElements {
     subtextPreset90: document.getElementById('subtext-preset-90'),
     subtextPresetWbeth: document.getElementById('subtext-preset-wbeth'),
     subtextPreset85: document.getElementById('subtext-preset-85'),
+    btnToggleTradedLegs: document.getElementById('btn-toggle-traded-legs'),
+    tradedLegsDrawer: document.getElementById('traded-legs-drawer'),
+    chevronTradedLegs: document.getElementById('chevron-traded-legs'),
+    btnToggleCollateralPanel: document.getElementById('btn-toggle-collateral-panel'),
+    collateralPresetsBody: document.getElementById('collateral-presets-body'),
+    chevronCollateralPanel: document.getElementById('chevron-collateral-panel'),
     feedVenueBtnBinance: document.getElementById('feed-venue-btn-binance'),
     feedVenueBtnHyperliquid: document.getElementById('feed-venue-btn-hyperliquid'),
     sliderVenueBtnBinance: document.getElementById('slider-venue-btn-binance'),

@@ -26,7 +26,7 @@ export const HISTORICAL_EPOCH_PRESETS: Record<string, BacktestEpochPreset> = {
     label: 'Full Beacon Era',
     sublabel: 'Dec 2020 – Present',
     startDate: '2020-12-01',
-    endDate: '2026-10-31'
+    endDate: '2026-11-18'
   },
   bull_2021: {
     key: 'bull_2021',
@@ -54,7 +54,7 @@ export const HISTORICAL_EPOCH_PRESETS: Record<string, BacktestEpochPreset> = {
     label: '2024–Present Institutional',
     sublabel: 'ETF Inflows & Restaking Era',
     startDate: '2024-01-01',
-    endDate: '2026-10-31'
+    endDate: '2026-11-18'
   }
 };
 

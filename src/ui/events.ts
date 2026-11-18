@@ -69,6 +69,8 @@ export interface AppActions {
   setBacktestToken?: (token: 'wsteth' | 'wbeth') => void;
   openExecutionModal?: () => void;
   closeExecutionModal?: () => void;
+  toggleTradedLegs?: () => void;
+  toggleCollateralPanel?: () => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -321,6 +323,14 @@ export function setupEventDelegation(actions: AppActions): void {
       }
       case 'close-execution-modal': {
         if (actions.closeExecutionModal) actions.closeExecutionModal();
+        break;
+      }
+      case 'toggle-traded-legs': {
+        if (actions.toggleTradedLegs) actions.toggleTradedLegs();
+        break;
+      }
+      case 'toggle-collateral-panel': {
+        if (actions.toggleCollateralPanel) actions.toggleCollateralPanel();
         break;
       }
     }

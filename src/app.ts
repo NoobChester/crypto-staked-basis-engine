@@ -296,7 +296,7 @@ export const backtestState: BacktestState = {
   collateralRatio: 0.95,
   splitSpot: 50,
   startDate: '2020-12-01',
-  endDate: '2026-10-31',
+  endDate: '2026-11-18',
   activeEpoch: 'all',
   currentPage: 1,
   pageSize: 50,
@@ -668,12 +668,12 @@ export function updateBacktest(): void {
   if (UI.backtestStartDate) {
     const inception = getAssetInceptionDate(backtestState.asset);
     UI.backtestStartDate.min = inception;
-    UI.backtestStartDate.max = '2026-10-31';
+    UI.backtestStartDate.max = '2026-11-18';
   }
   if (UI.backtestEndDate) {
     const inception = getAssetInceptionDate(backtestState.asset);
     UI.backtestEndDate.min = inception;
-    UI.backtestEndDate.max = '2026-10-31';
+    UI.backtestEndDate.max = '2026-11-18';
   }
   if (UI.backtestInputCapital && document.activeElement !== UI.backtestInputCapital) {
     UI.backtestInputCapital.value = backtestState.capital.toString();
@@ -778,13 +778,13 @@ export function setBacktestAsset(asset: TradedAsset): void {
   const inception = getAssetInceptionDate(asset);
   if (backtestState.activeEpoch === 'all' || backtestState.startDate === prevInception) {
     backtestState.startDate = inception;
-    backtestState.endDate = '2026-10-31';
+    backtestState.endDate = '2026-11-18';
   } else {
     // If current date range is invalid for this asset (e.g. before inception like Bull 2021 for SOL)
     if (backtestState.endDate < inception) {
       backtestState.activeEpoch = 'all';
       backtestState.startDate = inception;
-      backtestState.endDate = '2026-10-31';
+      backtestState.endDate = '2026-11-18';
     } else if (backtestState.startDate < inception) {
       backtestState.startDate = inception;
     }
@@ -831,7 +831,7 @@ export function setBacktestEpoch(epochKey: string): void {
 
   if (epochKey === 'all') {
     backtestState.startDate = inception;
-    backtestState.endDate = '2026-10-31';
+    backtestState.endDate = '2026-11-18';
   } else {
     const preset = HISTORICAL_EPOCH_PRESETS[epochKey];
     if (preset) {
@@ -846,7 +846,7 @@ export function setBacktestEpoch(epochKey: string): void {
 export function setBacktestDates(startDate: string, endDate: string): void {
   const inception = getAssetInceptionDate(backtestState.asset);
   backtestState.startDate = (!startDate || startDate < inception) ? inception : startDate;
-  backtestState.endDate = (!endDate || endDate > '2026-10-31') ? '2026-10-31' : endDate;
+  backtestState.endDate = (!endDate || endDate > '2026-11-18') ? '2026-11-18' : endDate;
   backtestState.activeEpoch = 'custom';
   backtestState.currentPage = 1;
   updateBacktest();
@@ -895,6 +895,33 @@ export function setBacktestEndDateIndex(index: number, isDragging = false): void
   } else {
     backtestState.currentPage = 1;
     updateBacktest();
+  }
+}
+
+export function toggleTradedLegs(): void {
+  if (!UI?.tradedLegsDrawer) return;
+  const isHidden = UI.tradedLegsDrawer.classList.toggle('hidden');
+  const expanded = !isHidden;
+  if (UI.btnToggleTradedLegs) {
+    UI.btnToggleTradedLegs.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    UI.btnToggleTradedLegs.className = expanded
+      ? 'text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-600 font-bold flex items-center gap-1 cursor-pointer transition shadow-sm'
+      : 'text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800/90 hover:bg-slate-700 text-slate-300 border border-slate-700 font-semibold flex items-center gap-1 cursor-pointer transition';
+  }
+  if (UI.chevronTradedLegs) {
+    UI.chevronTradedLegs.classList.toggle('rotate-180', expanded);
+  }
+}
+
+export function toggleCollateralPanel(): void {
+  if (!UI?.collateralPresetsBody) return;
+  const isHidden = UI.collateralPresetsBody.classList.toggle('hidden');
+  const expanded = !isHidden;
+  if (UI.btnToggleCollateralPanel) {
+    UI.btnToggleCollateralPanel.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }
+  if (UI.chevronCollateralPanel) {
+    UI.chevronCollateralPanel.classList.toggle('rotate-180', expanded);
   }
 }
 
@@ -2200,7 +2227,9 @@ function init() {
     resetBacktestThresholdDefault,
     setBacktestToken,
     openExecutionModal,
-    closeExecutionModal
+    closeExecutionModal,
+    toggleTradedLegs,
+    toggleCollateralPanel
   });
   bindSliderListeners(
     UI,
