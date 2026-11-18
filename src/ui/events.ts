@@ -71,6 +71,7 @@ export interface AppActions {
   closeExecutionModal?: () => void;
   toggleTradedLegs?: () => void;
   toggleCollateralPanel?: () => void;
+  toggleBacktestProvenance?: () => void;
 }
 
 export function setupEventDelegation(actions: AppActions): void {
@@ -331,6 +332,10 @@ export function setupEventDelegation(actions: AppActions): void {
       }
       case 'toggle-collateral-panel': {
         if (actions.toggleCollateralPanel) actions.toggleCollateralPanel();
+        break;
+      }
+      case 'toggle-backtest-provenance': {
+        if (actions.toggleBacktestProvenance) actions.toggleBacktestProvenance();
         break;
       }
     }

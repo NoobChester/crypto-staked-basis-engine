@@ -1527,6 +1527,9 @@
               <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-700 font-bold uppercase">
                 BEACON INCEPTION (DEC 2020) — PRESENT
               </span>
+              <span id="backtest-header-model-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-700/70 font-bold uppercase" title="Combines regime-synthesized crypto trajectories (2020–Oct 2026) with empirical market feeds">
+                HYBRID MODEL
+              </span>
             </div>
             <p class="text-xs text-slate-300 font-mono mt-0.5 hidden sm:block">
               Simulate delta-neutral staked basis performance across 6 years of market cycles, bull contango, liquidity freezes, and re-pegs.
@@ -1539,6 +1542,56 @@
             class="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition text-xs font-mono flex items-center gap-1.5 cursor-pointer">
             ← Live Terminal
           </button>
+        </div>
+      </div>
+
+      <!-- Data Provenance & Methodology Disclosure Banner -->
+      <div id="backtest-provenance-banner" class="bg-slate-900/90 border border-slate-800 rounded-2xl px-4 py-3 space-y-3 shadow-md">
+        <div class="flex items-start sm:items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-start sm:items-center gap-2.5 text-xs font-mono text-slate-300 flex-1 min-w-[260px]">
+            <span class="px-1.5 py-0.5 rounded bg-amber-950/90 text-amber-300 border border-amber-700/70 text-[10px] font-bold uppercase shrink-0 mt-0.5 sm:mt-0">
+              DATA PROVENANCE
+            </span>
+            <p class="text-[11px] sm:text-xs text-slate-300 leading-relaxed">
+              <strong class="text-white">Hybrid Dataset:</strong> 2020–Oct 2026 crypto trajectories &amp; borrow APRs are <span class="text-amber-300 font-semibold">regime-synthesized</span>; Nov 2026 extension (return-chained), post-Jun 2023 WBETH staking (DeFiLlama), and VOO total return (Yahoo Finance) use <span class="text-emerald-400 font-semibold">empirical market feeds</span>.
+            </p>
+          </div>
+          <button type="button" id="btn-toggle-backtest-provenance" data-action="toggle-backtest-provenance" aria-expanded="false"
+            class="px-2.5 py-1 rounded-lg bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition shrink-0">
+            <span>Methodology</span>
+            <svg id="chevron-backtest-provenance" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Expandable Breakdown Drawer (Collapsed by default) -->
+        <div id="backtest-provenance-details" class="hidden pt-3 border-t border-slate-800/90 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+          <!-- Column 1: Synthesized / Modeled Inputs -->
+          <div class="p-3 rounded-xl bg-slate-950/80 border border-amber-800/40 space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <span class="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Synthesized / Regime-Modeled Inputs</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/60">Parametric</span>
+            </div>
+            <ul class="space-y-1.5 text-[11px] text-slate-300">
+              <li><strong class="text-white">Crypto Base Series (ETH, SOL, BTC) · 2020-12-01 – 2026-10-31:</strong> Regime-calibrated daily spot, funding APR, staking APY, and LST depeg curves in <code class="text-amber-300">ethBeaconSeries.ts</code>.</li>
+              <li><strong class="text-white">USD Margin Borrow APR · 2020-12-01 – 2026-11-18:</strong> Regime formula <code class="text-amber-300">getAuditedHistoricalBorrowAPR()</code> combining macro policy rates (SOFR/Fed Funds) with exchange utilization proxies.</li>
+              <li><strong class="text-white">WBETH Pre-Launch Staking · 2020-12-01 – 2023-06-15:</strong> Synthesized proxy using ETH Beacon staking minus <code class="text-amber-300">-0.06%</code> empirical spread prior to Binance WBETH series inception.</li>
+            </ul>
+          </div>
+
+          <!-- Column 2: Empirical Market Feeds -->
+          <div class="p-3 rounded-xl bg-slate-950/80 border border-emerald-800/40 space-y-2">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+              <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Empirical / Return-Chained Market Feeds</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">Observed</span>
+            </div>
+            <ul class="space-y-1.5 text-[11px] text-slate-300">
+              <li><strong class="text-white">Crypto Recent Extension (ETH, SOL, BTC) · 2026-11-01 – 2026-11-18:</strong> Real Binance 8h perp funding &amp; DeFiLlama staking APYs + daily Binance spot % returns chained onto the <code class="text-emerald-300">2026-10-31</code> anchor.</li>
+              <li><strong class="text-white">WBETH Post-Launch Staking · 2023-06-16 – 2026-11-18:</strong> Empirical DeFiLlama <code class="text-emerald-300">binance-staked-eth</code> pool APY series (<code class="text-slate-400">80b8bf92-b953-4c20-98ea-c9653ef2bb98</code>).</li>
+              <li><strong class="text-white">VOO S&amp;P 500 Benchmark · 2020-12-01 – 2026-11-18:</strong> Empirical Yahoo Finance <code class="text-emerald-300">VOO</code> dividend-reinvested Adjusted Close (forward-filled across non-trading days).</li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -2031,7 +2084,7 @@
 
         <div class="flex items-center justify-between text-[11px] font-mono text-slate-500 pt-1">
           <span>Hover / Scrub across canvas to inspect historical mark-to-market performance at any date</span>
-          <span class="text-purple-400 font-semibold">DELTA-Q Historical Simulation Engine</span>
+          <span class="text-purple-400 font-semibold">DELTA-Q Hybrid Backtest Engine (Synthesized Base + Empirical Feeds)</span>
         </div>
       </div>
 
@@ -2047,7 +2100,7 @@
             <div>
               <div class="flex items-center gap-2">
                 <h3 class="text-sm font-bold font-mono text-white tracking-tight">DAY-BY-DAY HISTORICAL BACKTEST LEDGER</h3>
-                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 font-bold">AUDIT GRADE</span>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-700/70 font-bold">HYBRID MODEL</span>
               </div>
               <p class="text-xs text-slate-400 font-mono mt-0.5">Granular daily close prices, funding rate accruals, staking yields, and mark-to-market equity.</p>
             </div>

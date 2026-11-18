@@ -1,8 +1,10 @@
 /**
  * @file ethBeaconSeries.ts
- * @description Audited continuous daily historical market time-series for ETH, SOL, and BTC Staked Basis
+ * @description Hybrid continuous daily historical market time-series for ETH, SOL, and BTC Staked Basis
  * from protocol inception milestones (Beacon Chain Dec 1, 2020 for ETH & BTC Pure Cash-and-Carry) to Present.
- * Encoded using compact columnar tuples for optimal memory footprint and GitHub Pages bundle loading.
+ * Base trajectories (2020-12-01 through 2026-10-31) are regime-synthesized historical approximations;
+ * 2026-11-01 through 2026-11-18 is stitched using return-chained Binance spot prices and empirical
+ * Binance 8h perp funding / DeFiLlama staking APY feeds.
  */
 
 export interface DailyHistoricalMarketStep {
@@ -18,9 +20,9 @@ export interface DailyHistoricalMarketStep {
 type CompactTuple = [string, number, number, number, number, number?];
 
 /**
- * Resolves the audited historical USD margin borrowing APR for a given date and funding regime.
- * Integrates prevailing macro policy rates (Fed Funds / SOFR) with exchange lending pool
- * utilization records across historical crypto bull/bear regimes (Binance Margin / Bybit UTA).
+ * Resolves the regime-synthesized historical USD margin borrowing APR for a given date and funding regime.
+ * Models prevailing macro policy rates (Fed Funds / SOFR) with exchange lending pool utilization proxies
+ * across historical crypto bull/bear regimes (Binance Margin / Bybit UTA).
  */
 export function getAuditedHistoricalBorrowAPR(date: string, fundingAPR: number): number {
   const ymd = date;

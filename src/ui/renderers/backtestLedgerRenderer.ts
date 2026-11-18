@@ -229,7 +229,7 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
   ]);
 
   const metadata = [
-    `# DELTA-Q QUANT TERMINAL - MULTI-YEAR HISTORICAL BACKTEST AUDIT PACKET`,
+    `# DELTA-Q QUANT TERMINAL - MULTI-YEAR BACKTEST EXPORT (HYBRID SYNTHETIC + EMPIRICAL)`,
     `# Horizon: ${result.startDate} to ${result.endDate} (${result.horizonDays} Days)`,
     `# Initial Capital: $${result.initialCapital.toFixed(2)}`,
     `# Active Leverage: ${(result.leverage ?? 1.0).toFixed(1)}x | Total Borrow Interest Paid: $${(result.totalBorrowInterestPaid ?? 0).toFixed(2)}`,
@@ -245,6 +245,7 @@ export function exportBacktestCsv(result: BacktestSummaryResult): void {
     `# Benchmarks: Buy-and-Hold Spot: ${result.spotBenchmarkReturnPct.toFixed(2)}% | VOO (S&P 500 ETF): ${result.vooBenchmarkReturnPct.toFixed(2)}% | US T-Bills Cash: ${result.tbillBenchmarkReturnPct.toFixed(2)}%`,
     `# Total Harvested Staking Yield: $${result.totalHarvestedStaking.toFixed(2)} | Total Harvested Funding: $${result.totalHarvestedFunding.toFixed(2)}`,
     `# Export Timestamp: ${new Date().toISOString()}`,
+    `# Data Provenance: Crypto base (2020-12-01 to 2026-10-31), borrow APRs, and pre-2023-06-16 WBETH (-6 bps proxy) are regime-synthesized; Nov 1-18 2026 uses return-chained Binance spot + live funding/staking; post-2023-06-16 WBETH (DeFiLlama) & VOO Adj Close (Yahoo Finance) are empirical.`,
     `# Methodology: Multi-Year Path-Dependent Cross-Margin vs Isolated Simulation`,
     ``
   ];

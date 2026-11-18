@@ -925,6 +925,18 @@ export function toggleCollateralPanel(): void {
   }
 }
 
+export function toggleBacktestProvenance(): void {
+  if (!UI?.backtestProvenanceDetails) return;
+  const isHidden = UI.backtestProvenanceDetails.classList.toggle('hidden');
+  const expanded = !isHidden;
+  if (UI.btnToggleBacktestProvenance) {
+    UI.btnToggleBacktestProvenance.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }
+  if (UI.chevronBacktestProvenance) {
+    UI.chevronBacktestProvenance.classList.toggle('rotate-180', expanded);
+  }
+}
+
 export function toggleBacktestPlot(plot: keyof VisiblePlots): void {
   const current = backtestState.visiblePlots[plot];
   if (plot !== 'resets' && current) {
@@ -2229,7 +2241,8 @@ function init() {
     openExecutionModal,
     closeExecutionModal,
     toggleTradedLegs,
-    toggleCollateralPanel
+    toggleCollateralPanel,
+    toggleBacktestProvenance
   });
   bindSliderListeners(
     UI,

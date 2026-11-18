@@ -587,6 +587,8 @@ describe('VOO (S&P 500 ETF Total Return) Benchmark & Unified Default Invariants'
       exportBacktestCsv(result);
       expect(capturedCsv).toContain('VOO_Benchmark_USD');
       expect(capturedCsv).toContain('VOO (S&P 500 ETF):');
+      expect(capturedCsv).toContain('HYBRID SYNTHETIC + EMPIRICAL');
+      expect(capturedCsv).toContain('# Data Provenance:');
     } finally {
       (globalThis as any).Blob = originalBlob;
       (globalThis as any).URL = originalUrl;

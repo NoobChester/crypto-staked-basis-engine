@@ -408,6 +408,9 @@ export interface UIElements {
   badgeTogglePlotTbill: HTMLElement | null;
   badgeTogglePlotVoo: HTMLElement | null;
   badgeTogglePlotResets: HTMLElement | null;
+  btnToggleBacktestProvenance: HTMLElement | null;
+  backtestProvenanceDetails: HTMLElement | null;
+  chevronBacktestProvenance: HTMLElement | null;
 
   // Spot Staking Sub-Chart Elements
   historicalStakingSubCanvas: HTMLCanvasElement | null;
@@ -827,6 +830,9 @@ export function getUIElements(): UIElements {
     badgeTogglePlotTbill: document.getElementById('badge-toggle-plot-tbill'),
     badgeTogglePlotVoo: document.getElementById('badge-toggle-plot-voo'),
     badgeTogglePlotResets: document.getElementById('badge-toggle-plot-resets'),
+    btnToggleBacktestProvenance: document.getElementById('btn-toggle-backtest-provenance'),
+    backtestProvenanceDetails: document.getElementById('backtest-provenance-details'),
+    chevronBacktestProvenance: document.getElementById('chevron-backtest-provenance'),
 
     // Spot Staking Sub-Chart Elements
     historicalStakingSubCanvas: document.getElementById('historicalStakingSubCanvas') as HTMLCanvasElement | null,
