@@ -57,7 +57,7 @@ export interface AppActions {
   exportBacktestCsv?: () => void;
   setBacktestStartDateIndex?: (index: number, isDragging?: boolean) => void;
   setBacktestEndDateIndex?: (index: number, isDragging?: boolean) => void;
-  toggleBacktestPlot?: (plot: 'strategy' | 'spot' | 'tbill' | 'sp500' | 'resets') => void;
+  toggleBacktestPlot?: (plot: 'strategy' | 'spot' | 'tbill' | 'voo' | 'resets') => void;
   setLeverage?: (leverage: number) => void;
   toggleBorrowAuto?: () => void;
   setBorrowAPR?: (apr: number) => void;
@@ -277,7 +277,7 @@ export function setupEventDelegation(actions: AppActions): void {
         break;
       }
       case 'toggle-backtest-plot': {
-        const plot = target.getAttribute('data-plot') as 'strategy' | 'spot' | 'tbill' | 'sp500' | 'resets';
+        const plot = target.getAttribute('data-plot') as 'strategy' | 'spot' | 'tbill' | 'voo' | 'resets';
         if (plot && actions.toggleBacktestPlot) {
           actions.toggleBacktestPlot(plot);
         }

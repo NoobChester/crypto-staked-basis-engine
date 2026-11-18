@@ -11,7 +11,7 @@ export interface VisiblePlots {
   strategy: boolean;
   spot: boolean;
   tbill: boolean;
-  sp500: boolean;
+  voo: boolean;
   resets?: boolean;
 }
 
@@ -105,9 +105,9 @@ ${activePlots.tbill ? `          <div class="flex items-center justify-between g
             <span>US T-Bill Cash:</span>
             <span>${fmtUSD(step.tbillBenchmarkEquity)}</span>
           </div>` : ''}
-${activePlots.sp500 ? `          <div class="flex items-center justify-between gap-3 text-amber-400 font-medium">
-            <span>S&amp;P 500 Index:</span>
-            <span>${fmtUSD(step.sp500BenchmarkEquity)}</span>
+${activePlots.voo ? `          <div class="flex items-center justify-between gap-3 text-amber-400 font-medium">
+            <span>VOO (S&amp;P 500 ETF):</span>
+            <span>${fmtUSD(step.vooBenchmarkEquity)}</span>
           </div>` : ''}
 ${step.isResetStep ? `          <div class="py-1 px-1.5 my-1 rounded bg-amber-950/90 border border-amber-500/80 text-[10px] text-amber-300 font-bold flex items-center justify-between shadow">
             <span>🔄 Auto-Reset Baseline</span>
@@ -172,7 +172,7 @@ export function drawBacktestChart(
   canvas: HTMLCanvasElement | null,
   result: BacktestSummaryResult | null,
   asset: string = 'ETH',
-  visiblePlots: VisiblePlots = { strategy: true, spot: true, tbill: true, sp500: true }
+  visiblePlots: VisiblePlots = { strategy: true, spot: true, tbill: true, voo: true }
 ): void {
   if (!canvas || !result || !result.dailyTrajectory || result.dailyTrajectory.length === 0) return;
 
@@ -213,7 +213,7 @@ export function drawBacktestChart(
   const hasStrategy = visiblePlots.strategy;
   const hasSpot = visiblePlots.spot;
   const hasTbill = visiblePlots.tbill;
-  const hasSp500 = visiblePlots.sp500;
+  const hasVoo = visiblePlots.voo;
 
   for (let i = 0; i < n; i++) {
     const s = steps[i];
@@ -229,9 +229,9 @@ export function drawBacktestChart(
       if (s.tbillBenchmarkEquity < minVal) minVal = s.tbillBenchmarkEquity;
       if (s.tbillBenchmarkEquity > maxVal) maxVal = s.tbillBenchmarkEquity;
     }
-    if (hasSp500) {
-      if (s.sp500BenchmarkEquity < minVal) minVal = s.sp500BenchmarkEquity;
-      if (s.sp500BenchmarkEquity > maxVal) maxVal = s.sp500BenchmarkEquity;
+    if (hasVoo) {
+      if (s.vooBenchmarkEquity < minVal) minVal = s.vooBenchmarkEquity;
+      if (s.vooBenchmarkEquity > maxVal) maxVal = s.vooBenchmarkEquity;
     }
   }
   // Fallback to strategy equity if no curves active or non-finite
@@ -326,15 +326,15 @@ export function drawBacktestChart(
     ctx.restore();
   }
 
-  // Curve 4: S&P 500 Index Benchmark (Amber Solid Line)
-  if (hasSp500) {
+  // Curve 4: VOO (S&P 500 ETF Total Return) Benchmark (Amber Solid Line)
+  if (hasVoo) {
     ctx.save();
     ctx.strokeStyle = '#f59e0b';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
       const x = getX(i);
-      const y = getY(steps[i].sp500BenchmarkEquity);
+      const y = getY(steps[i].vooBenchmarkEquity);
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     }

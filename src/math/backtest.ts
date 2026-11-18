@@ -6,7 +6,7 @@
 
 import { type MarginMode, VENUE_FEE_SCHEDULES } from '../config/presets.js';
 import type { DailyHistoricalMarketStep } from '../data/historical/ethBeaconSeries.js';
-import { getSp500Price } from '../data/historical/sp500Series.js';
+import { getVooPrice } from '../data/historical/vooSeries.js';
 
 export type BacktestExecutionMode = 'optimized' | 'retail';
 
@@ -37,7 +37,7 @@ export interface BacktestStepResult {
   strategyEquity: number;
   spotBenchmarkEquity: number;
   tbillBenchmarkEquity: number;
-  sp500BenchmarkEquity: number;
+  vooBenchmarkEquity: number;
   marginRatio: number;
   isLiquidated: boolean;
   cumulativeFunding: number;
@@ -81,7 +81,7 @@ export interface BacktestSummaryResult {
   baselineLiquidationBufferPct: number;
   spotBenchmarkReturnPct: number;
   tbillBenchmarkReturnPct: number;
-  sp500BenchmarkReturnPct: number;
+  vooBenchmarkReturnPct: number;
   dailyTrajectory: BacktestStepResult[];
   totalResetsCount: number;
   totalResetFeesPaid: number;
@@ -175,7 +175,7 @@ export function runHistoricalBacktest(
   }
 
   const P0 = series[0].spotPrice;
-  const sp500P0 = getSp500Price(series[0].date);
+  const vooP0 = getVooPrice(series[0].date);
   const trajectory: BacktestStepResult[] = [];
   let cumFunding = 0;
   let cumStaking = 0;
@@ -477,8 +477,8 @@ export function runHistoricalBacktest(
     // Benchmarks
     const spotBenchmarkEquity = C * (1 + r_total);
     const tbillBenchmarkEquity = C * Math.pow(1 + (tbillRate / 100), (day / 365));
-    const sp500Price = getSp500Price(step.date);
-    const sp500BenchmarkEquity = sp500P0 > 0 ? C * (sp500Price / sp500P0) : C;
+    const vooPrice = getVooPrice(step.date);
+    const vooBenchmarkEquity = vooP0 > 0 ? C * (vooPrice / vooP0) : C;
 
     trajectory.push({
       day,
@@ -492,7 +492,7 @@ export function runHistoricalBacktest(
       strategyEquity: round2(strategyEquity),
       spotBenchmarkEquity: round2(spotBenchmarkEquity),
       tbillBenchmarkEquity: round2(tbillBenchmarkEquity),
-      sp500BenchmarkEquity: round2(sp500BenchmarkEquity),
+      vooBenchmarkEquity: round2(vooBenchmarkEquity),
       marginRatio: round4(marginRatio),
       isLiquidated,
       cumulativeFunding: round2(cumFunding),
@@ -587,7 +587,7 @@ export function runHistoricalBacktest(
 
   const spotBenchmarkReturnPct = round2(((lastStep.spotBenchmarkEquity - C) / C) * 100);
   const tbillBenchmarkReturnPct = round2(((lastStep.tbillBenchmarkEquity - C) / C) * 100);
-  const sp500BenchmarkReturnPct = round2(((lastStep.sp500BenchmarkEquity - C) / C) * 100);
+  const vooBenchmarkReturnPct = round2(((lastStep.vooBenchmarkEquity - C) / C) * 100);
 
   const summaryResult: BacktestSummaryResult = {
     horizonDays,
@@ -617,7 +617,7 @@ export function runHistoricalBacktest(
     baselineLiquidationBufferPct,
     spotBenchmarkReturnPct,
     tbillBenchmarkReturnPct,
-    sp500BenchmarkReturnPct,
+    vooBenchmarkReturnPct,
     dailyTrajectory: trajectory,
     totalResetsCount,
     totalResetFeesPaid: round2(totalResetFeesPaid),

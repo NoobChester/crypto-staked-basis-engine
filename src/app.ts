@@ -304,7 +304,7 @@ export const backtestState: BacktestState = {
     strategy: true,
     spot: true,
     tbill: true,
-    sp500: true,
+    voo: true,
     resets: true
   },
   autoResetEnabled: false,
@@ -475,9 +475,9 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
     const sign = res.tbillBenchmarkReturnPct >= 0 ? '+' : '';
     UI.backtestLegendTbillReturn.textContent = `${sign}${res.tbillBenchmarkReturnPct.toFixed(1)}%`;
   }
-  if (UI.backtestLegendSp500Return) {
-    const sign = res.sp500BenchmarkReturnPct >= 0 ? '+' : '';
-    UI.backtestLegendSp500Return.textContent = `${sign}${res.sp500BenchmarkReturnPct.toFixed(1)}%`;
+  if (UI.backtestLegendVooReturn) {
+    const sign = res.vooBenchmarkReturnPct >= 0 ? '+' : '';
+    UI.backtestLegendVooReturn.textContent = `${sign}${res.vooBenchmarkReturnPct.toFixed(1)}%`;
   }
   if (UI.backtestLegendSpotAsset) {
     UI.backtestLegendSpotAsset.textContent = backtestState.asset;
@@ -486,7 +486,7 @@ export function updateBacktestFast(): BacktestSummaryResult | null {
     UI.backtestChartHeading.textContent = `Historical Comparative Trajectory · ${backtestState.asset} [${res.startDate} → ${res.endDate}]`;
   }
   if (UI.backtestChartSubheading) {
-    UI.backtestChartSubheading.textContent = `Staked Basis Strategy Equity vs Buy-and-Hold Spot ${backtestState.asset} vs S&P 500 Index vs US T-Bills Risk-Free Rate`;
+    UI.backtestChartSubheading.textContent = `Staked Basis Strategy Equity vs Buy-and-Hold Spot ${backtestState.asset} vs VOO (S&P 500 ETF) vs US T-Bills Risk-Free Rate`;
   }
 
   // Dual Slider Labels and Badges
@@ -902,7 +902,7 @@ export function toggleBacktestPlot(plot: keyof VisiblePlots): void {
   const current = backtestState.visiblePlots[plot];
   if (plot !== 'resets' && current) {
     // Keep at least 1 actual curve active
-    const curvePlots: (keyof VisiblePlots)[] = ['strategy', 'spot', 'tbill', 'sp500'];
+    const curvePlots: (keyof VisiblePlots)[] = ['strategy', 'spot', 'tbill', 'voo'];
     const activeCurves = curvePlots.filter(p => backtestState.visiblePlots[p]).length;
     if (activeCurves <= 1) return;
   }
@@ -915,7 +915,7 @@ export function toggleBacktestPlot(plot: keyof VisiblePlots): void {
 
 export function updateBacktestPlotTogglesUI(): void {
   if (!UI) return;
-  const { strategy, spot, tbill, sp500 } = backtestState.visiblePlots;
+  const { strategy, spot, tbill, voo } = backtestState.visiblePlots;
   const resets = backtestState.visiblePlots.resets !== false;
 
   // Strategy Button & Badge
@@ -944,16 +944,16 @@ export function updateBacktestPlotTogglesUI(): void {
     }
   }
 
-  // S&P 500 Button & Badge
-  if (UI.btnTogglePlotSp500 && UI.badgeTogglePlotSp500) {
-    if (sp500) {
-      UI.btnTogglePlotSp500.className = 'px-2.5 py-1 rounded-lg border border-amber-500/80 bg-amber-950/60 text-amber-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-amber-900/60 shadow-sm';
-      UI.badgeTogglePlotSp500.textContent = 'ON';
-      UI.badgeTogglePlotSp500.className = 'text-[10px] px-1 rounded bg-amber-900/80 text-amber-200 border border-amber-700/60 font-bold';
+  // VOO (S&P 500 ETF) Button & Badge
+  if (UI.btnTogglePlotVoo && UI.badgeTogglePlotVoo) {
+    if (voo) {
+      UI.btnTogglePlotVoo.className = 'px-2.5 py-1 rounded-lg border border-amber-500/80 bg-amber-950/60 text-amber-300 font-semibold flex items-center gap-2 cursor-pointer transition hover:bg-amber-900/60 shadow-sm';
+      UI.badgeTogglePlotVoo.textContent = 'ON';
+      UI.badgeTogglePlotVoo.className = 'text-[10px] px-1 rounded bg-amber-900/80 text-amber-200 border border-amber-700/60 font-bold';
     } else {
-      UI.btnTogglePlotSp500.className = 'px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-slate-500 font-normal flex items-center gap-2 cursor-pointer transition opacity-50 line-through hover:opacity-75';
-      UI.badgeTogglePlotSp500.textContent = 'OFF';
-      UI.badgeTogglePlotSp500.className = 'text-[10px] px-1 rounded bg-slate-800 text-slate-500 border border-slate-700 font-normal';
+      UI.btnTogglePlotVoo.className = 'px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900/80 text-slate-500 font-normal flex items-center gap-2 cursor-pointer transition opacity-50 line-through hover:opacity-75';
+      UI.badgeTogglePlotVoo.textContent = 'OFF';
+      UI.badgeTogglePlotVoo.className = 'text-[10px] px-1 rounded bg-slate-800 text-slate-500 border border-slate-700 font-normal';
     }
   }
 

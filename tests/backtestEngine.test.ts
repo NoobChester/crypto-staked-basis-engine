@@ -120,9 +120,9 @@ describe('Quantitative Backtest Engine: Unified vs Isolated Margin Dynamics', ()
     // Benchmarks comparison
     expect(result.tbillBenchmarkReturnPct).toBeGreaterThan(0);
     expect(result.spotBenchmarkReturnPct).toBeGreaterThan(0);
-    expect(result.sp500BenchmarkReturnPct).toBeGreaterThan(0);
-    expect(result.dailyTrajectory[0].sp500BenchmarkEquity).toBe(10000);
-    expect(result.dailyTrajectory[result.dailyTrajectory.length - 1].sp500BenchmarkEquity).toBeGreaterThan(10000);
+    expect(result.vooBenchmarkReturnPct).toBeGreaterThan(0);
+    expect(result.dailyTrajectory[0].vooBenchmarkEquity).toBe(10000);
+    expect(result.dailyTrajectory[result.dailyTrajectory.length - 1].vooBenchmarkEquity).toBeGreaterThan(10000);
   });
 
   it('demonstrates Isolated Margin breaches liquidation during 2021 parabolic rally (+100% price move)', () => {
@@ -328,42 +328,42 @@ describe('Backtest Chart Toggleable Plots & Start Date Slider Horizon', () => {
     backtestState.visiblePlots.strategy = true;
     backtestState.visiblePlots.spot = true;
     backtestState.visiblePlots.tbill = true;
-    backtestState.visiblePlots.sp500 = true;
+    backtestState.visiblePlots.voo = true;
 
     // Toggle spot off
     toggleBacktestPlot('spot');
     expect(backtestState.visiblePlots.spot).toBe(false);
     expect(backtestState.visiblePlots.strategy).toBe(true);
     expect(backtestState.visiblePlots.tbill).toBe(true);
-    expect(backtestState.visiblePlots.sp500).toBe(true);
+    expect(backtestState.visiblePlots.voo).toBe(true);
 
     // Toggle tbill off
     toggleBacktestPlot('tbill');
     expect(backtestState.visiblePlots.tbill).toBe(false);
 
-    // Toggle sp500 off
-    toggleBacktestPlot('sp500');
-    expect(backtestState.visiblePlots.sp500).toBe(false);
+    // Toggle voo off
+    toggleBacktestPlot('voo');
+    expect(backtestState.visiblePlots.voo).toBe(false);
     expect(backtestState.visiblePlots.strategy).toBe(true);
 
     // Attempting to toggle strategy off should be blocked (only 1 plot left active)
     toggleBacktestPlot('strategy');
     expect(backtestState.visiblePlots.strategy).toBe(true); // Must remain true!
 
-    // Toggle sp500 back on
-    toggleBacktestPlot('sp500');
-    expect(backtestState.visiblePlots.sp500).toBe(true);
+    // Toggle voo back on
+    toggleBacktestPlot('voo');
+    expect(backtestState.visiblePlots.voo).toBe(true);
 
-    // Now strategy can be toggled off because sp500 is active
+    // Now strategy can be toggled off because voo is active
     toggleBacktestPlot('strategy');
     expect(backtestState.visiblePlots.strategy).toBe(false);
-    expect(backtestState.visiblePlots.sp500).toBe(true);
+    expect(backtestState.visiblePlots.voo).toBe(true);
 
     // Clean up
     backtestState.visiblePlots.strategy = true;
     backtestState.visiblePlots.spot = true;
     backtestState.visiblePlots.tbill = true;
-    backtestState.visiblePlots.sp500 = true;
+    backtestState.visiblePlots.voo = true;
   });
 
   it('adjusts start date horizon dynamically via slider index', () => {
@@ -419,7 +419,7 @@ describe('Backtest Chart Toggleable Plots & Start Date Slider Horizon', () => {
       strategy: true,
       spot: false, // Spot disabled
       tbill: true,
-      sp500: true
+      voo: true
     };
 
     expect(() => drawBacktestChart(mockCanvas, result, 'ETH', visiblePlots)).not.toThrow();
@@ -509,29 +509,29 @@ describe('Asset Disambiguation & Cross-Asset Cache Collision Safeguards', () => 
   });
 });
 
-describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
-  it('calculates S&P 500 benchmark equity starting at capital C on Day 1 and tracking index level accurately', () => {
+describe('VOO (S&P 500 ETF Total Return) Benchmark & Unified Default Invariants', () => {
+  it('calculates VOO benchmark equity starting at capital C on Day 1 and tracking total return accurately', () => {
     const series = getHistoricalBacktestSeries('ETH', '2020-12-01', '2021-12-31');
     const result = runHistoricalBacktest(series, { capital: 10000, mode: 'unified' });
 
     // Day 1 must match initial capital C exactly
-    expect(result.dailyTrajectory[0].sp500BenchmarkEquity).toBe(10000);
+    expect(result.dailyTrajectory[0].vooBenchmarkEquity).toBe(10000);
 
-    // Terminal S&P 500 equity and return:
-    // S&P 500 closed at 3,662.45 on 2020-12-01 and 4,766.18 on 2021-12-31 (+30.14%)
-    const expectedReturnPct = Math.round(((4766.18 - 3662.45) / 3662.45) * 10000) / 100;
-    expect(result.sp500BenchmarkReturnPct).toBeCloseTo(expectedReturnPct, 1);
-    expect(result.dailyTrajectory[result.dailyTrajectory.length - 1].sp500BenchmarkEquity).toBeCloseTo(13013.6, 0);
+    // Terminal VOO total-return equity and return:
+    // VOO Adj Close was 309.0769 on 2020-12-01 and 408.4849 on 2021-12-31 (+32.16%)
+    const expectedReturnPct = Math.round(((408.4849 - 309.0769) / 309.0769) * 10000) / 100;
+    expect(result.vooBenchmarkReturnPct).toBeCloseTo(expectedReturnPct, 1);
+    expect(result.dailyTrajectory[result.dailyTrajectory.length - 1].vooBenchmarkEquity).toBeCloseTo(13216.29, 0);
   });
 
-  it('normalizes S&P 500 benchmark starting equity to initial capital for custom start dates', () => {
-    // 2022 Bear market (2022-01-01 to 2022-12-31): S&P 500 experienced significant drawdown (~ -19%)
+  it('normalizes VOO benchmark starting equity to initial capital for custom start dates', () => {
+    // 2022 Bear market (2022-01-01 to 2022-12-31): VOO experienced significant drawdown (~ -18.2%)
     const series = getHistoricalBacktestSeries('ETH', '2022-01-01', '2022-12-31');
     const result = runHistoricalBacktest(series, { capital: 25000, mode: 'unified' });
 
-    expect(result.dailyTrajectory[0].sp500BenchmarkEquity).toBe(25000);
-    expect(result.sp500BenchmarkReturnPct).toBeLessThan(0);
-    expect(result.dailyTrajectory[result.dailyTrajectory.length - 1].sp500BenchmarkEquity).toBeLessThan(25000);
+    expect(result.dailyTrajectory[0].vooBenchmarkEquity).toBe(25000);
+    expect(result.vooBenchmarkReturnPct).toBeLessThan(0);
+    expect(result.dailyTrajectory[result.dailyTrajectory.length - 1].vooBenchmarkEquity).toBeLessThan(25000);
   });
 
   it('verifies backtest uses unified margin mode by default across all assets', () => {
@@ -552,7 +552,7 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
     expect(backtestState.mode).toBe('unified');
   });
 
-  it('includes S&P 500 column and benchmark return in CSV export', () => {
+  it('includes VOO column and benchmark return in CSV export', () => {
     const series = getHistoricalBacktestSeries('ETH', '2024-01-01', '2024-06-30');
     const result = runHistoricalBacktest(series, { capital: 10000, mode: 'unified' });
 
@@ -583,8 +583,8 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
 
     try {
       exportBacktestCsv(result);
-      expect(capturedCsv).toContain('SP500_Benchmark_USD');
-      expect(capturedCsv).toContain('S&P 500:');
+      expect(capturedCsv).toContain('VOO_Benchmark_USD');
+      expect(capturedCsv).toContain('VOO (S&P 500 ETF):');
     } finally {
       (globalThis as any).Blob = originalBlob;
       (globalThis as any).URL = originalUrl;
@@ -764,7 +764,7 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
         baselineLiquidationBufferPct: 852.4,
         spotBenchmarkReturnPct: 2.1,
         tbillBenchmarkReturnPct: 0.04,
-        sp500BenchmarkReturnPct: 0.3,
+        vooBenchmarkReturnPct: 0.3,
         totalResetsCount: 0,
         totalResetFeesPaid: 0,
         savedFromLiquidation: false,
@@ -789,7 +789,7 @@ describe('S&P 500 Index Benchmark & Unified Default Invariants', () => {
             strategyEquity: 10000,
             spotBenchmarkEquity: 10000,
             tbillBenchmarkEquity: 10000,
-            sp500BenchmarkEquity: 10000,
+            vooBenchmarkEquity: 10000,
             marginRatio: 0.05,
             isLiquidated: false,
             cumulativeFunding: 0,
